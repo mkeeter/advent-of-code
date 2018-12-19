@@ -120,6 +120,7 @@ fn main() {
         ip = state.0[ip_reg] + 1;
     }
 
+    // Spoilers: we're counting the sum of divisors for a particular value
     let t = state.0[2];
     let out: usize = (1..=t).filter(|i| t % i == 0).sum();
     println!("Part 2: {}", out);

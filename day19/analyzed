@@ -1,21 +1,24 @@
-0: addi 5 16 5 # jmp 16
-1: seti 1 3
-2: seti 1 1
-    3: mulr 3 1 4
-    4: eqrr 4 2 4
-    5: addr 4 5 5
-    6: addi 5 1 5
-    7: addr 3 0 0
-    8: addi 1 1 1
-    9: gtrr 1 2 4
-    10: addr 5 4 5
-    11: seti 2 5
-12: addi 3 1 3
-13: gtrr 3 2 4
-14: addr 4 5 5
-15: seti 1 5
-16: mulr 5 5 5
-17: addi 2 2 2 # to here
+0: addi 5 16 5 # jmp 16 (to setup zone
+
+1: seti 1 3 # v[3] = 1
+    2: seti 1 1 # v[1] = 1
+        3: mulr 3 1 4 # v[4] = v[3] * v[1]
+        4: eqrr 4 2 4 # v[4] = v[4] == v[2]
+        5: addr 4 5 5 # ip += v[4]
+        6: addi 5 1 5 # ip++
+            7: addr 3 0 0 # v[0] = v[3] + v[0]
+        8: addi 1 1 1 # v[1]++
+        9: gtrr 1 2 4 # v[4] = v[1] > v[2]
+        10: addr 5 4 5 # ip += v[4]
+        11: seti 2 5 # jmp 2
+    12: addi 3 1 3 # v[3]++
+    13: gtrr 3 2 4 # v[4] = v[3] > v[2]
+    14: addr 4 5 5 # terminate if v[3] > v[2]
+15: seti 1 5 # jmp 1
+
+16: mulr 5 5 5 # terminate
+
+17: addi 2 2 2 # setup zone?
 18: mulr 2 2 2
 19: mulr 5 2 2
 20: muli 2 11 2
@@ -23,8 +26,8 @@
 22: mulr 4 5 4
 23: addi 4 20 4
 24: addr 2 4 2
-25: addr 5 0 5
-26: seti 0 5
+25: addr 5 0 5 # This line differs when v[0] = 1
+26: seti 0 5 # we skip this line
 27: setr 5 8 4
 28: mulr 4 5 4
 29: addr 5 4 4
