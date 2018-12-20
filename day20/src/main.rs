@@ -9,18 +9,13 @@ struct Map {
 }
 
 impl Map {
-    fn from_str(s: &str) -> Map {
-        let mut itr = s.chars();
-
-        let mut start = HashSet::new();
-        start.insert((0, 0));
-
+    fn from_str(s: &str, start: Pt) -> Map {
         let mut out = Map { graph: HashMap::new() };
-        out.from_iter(&mut itr, &start);
+        out.walk(&mut s.chars(), &[start].iter().cloned().collect());
         out
     }
 
-    fn from_iter<I>(&mut self, s: &mut I, start: &HashSet<Pt>) -> HashSet<Pt>
+    fn walk<I>(&mut self, s: &mut I, start: &HashSet<Pt>) -> HashSet<Pt>
         where I: Iterator<Item=char>
     {
         let mut heads = start.clone();
@@ -28,22 +23,20 @@ impl Map {
         while let Some(c) = s.next() {
             match c {
                 '^' => continue,
-                '$' => return HashSet::new(),
+                '$' => return HashSet::new(), // Termination condition
                 'N'|'S'|'E'|'W' => {
                     heads = self.step(&heads, c);
                 },
-                '|' => { // Reset to initial heads and store final heads
-                    for h in heads { out.insert(h.clone()); }
-                    heads = start.iter().cloned().collect();
+                '|' => { // Store new heads, then reset to original
+                    out = out.union(&heads).cloned().collect();
+                    heads = start.clone();
                 }
-                '(' => { // Recursive call
-                    for h in self.from_iter(s, &heads) {
-                        heads.insert(h);
-                    }
+                '(' => { // Recursive call, returning more heads
+                    heads = heads.union(&self.walk(s, &heads))
+                                 .cloned().collect();
                 }
                 ')' => { // Return from recursive call
-                    for h in heads { out.insert(h.clone()); }
-                    return out;
+                    return out.union(&heads).cloned().collect();
                 }
                  _  => unreachable!("oh no"),
             }
@@ -59,33 +52,35 @@ impl Map {
             'W' => (-1,  0),
              _  => unreachable!("invalid direction"),
         };
-        heads.iter().map(|a| {
-            let b = (a.0 + d.0, a.1 + d.1);
-            self.link(*a, b);
-            b }).collect()
+        heads.iter()
+            .map(|a| self.link(*a, (a.0 + d.0, a.1 + d.1)))
+            .collect()
     }
-    fn link(&mut self, a: Pt, b: Pt) {
+
+    fn link(&mut self, a: Pt, b: Pt) -> Pt {
         self.graph.entry(a)
             .or_insert(HashSet::new())
             .insert(b);
         self.graph.entry(b)
             .or_insert(HashSet::new())
             .insert(a);
+        b
     }
 
-    fn flood(&self) -> HashMap<Pt, usize> {
-        let mut todo = VecDeque::new();
-        todo.push_back((0, 0));
+    fn bfs(&self, start: Pt) -> HashMap<Pt, usize> {
+        let mut todo: VecDeque<_> = [start].iter().cloned().collect();
 
-        let mut distances = HashMap::new();
-        distances.insert((0, 0), 0);
+        let mut distances: HashMap<Pt, usize> = [
+            (start, 0)
+        ].iter().cloned().collect();
 
         while let Some(p) = todo.pop_front() {
             for next in self.graph.get(&p).unwrap() {
-                if !distances.contains_key(next) {
-                    distances.insert(*next, distances.get(&p).unwrap() + 1);
-                    todo.push_back(*next);
-                }
+                let d = distances.get(&p).unwrap().clone();
+                distances.entry(*next)
+                    .or_insert_with(|| {
+                        todo.push_back(*next);
+                        d + 1 });
             }
         }
         distances
@@ -96,11 +91,11 @@ fn main() {
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer).unwrap();
 
-    let m = Map::from_str(&buffer);
+    let start = (0, 0);
+    let m = Map::from_str(&buffer, start);
+    let distances = m.bfs(start);
 
-    let distances = m.flood();
     let max_distance = distances.values().max().unwrap();
     let over1k = distances.values().filter(|i| **i >= 1000).count();
     println!("{}, {}", max_distance, over1k);
-
 }
