@@ -1,0 +1,152 @@
+use std::io::{self, Read};
+use std::collections::HashSet;
+
+#[derive(Debug, Eq, PartialEq)]
+struct Registers([usize; 6]);
+
+#[allow(non_camel_case_types)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+enum Op {
+    addr, addi,
+    mulr, muli,
+    banr, bani,
+    borr, bori,
+    setr, seti,
+    gtir, gtri, gtrr,
+    eqir, eqri, eqrr,
+}
+use crate::Op::*;
+
+impl Op {
+    fn from_str(s: &str) -> Op {
+        match s {
+            "addr" => addr,
+            "addi" => addi,
+            "mulr" => mulr,
+            "muli" => muli,
+            "banr" => banr,
+            "bani" => bani,
+            "borr" => borr,
+            "bori" => bori,
+            "setr" => setr,
+            "seti" => seti,
+            "gtir" => gtir,
+            "gtri" => gtri,
+            "gtrr" => gtrr,
+            "eqir" => eqir,
+            "eqri" => eqri,
+            "eqrr" => eqrr,
+            _ => unimplemented!(),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct Instruction {
+    op: Op,
+    a: usize,
+    b: usize,
+    c: usize,
+}
+
+impl Instruction {
+    fn eval(&self, s: &Registers) -> Registers {
+        let mut out = s.0.clone();
+        out[self.c] = match self.op {
+            addr => out[self.a] + out[self.b],
+            addi => out[self.a] + self.b,
+            mulr => out[self.a] * out[self.b],
+            muli => out[self.a] * self.b,
+            banr => out[self.a] & out[self.b],
+            bani => out[self.a] & self.b,
+            borr => out[self.a] | out[self.b],
+            bori => out[self.a] | self.b,
+            setr => out[self.a],
+            seti => self.a,
+            gtir => (self.a > out[self.b]) as usize,
+            gtri => (out[self.a] > self.b) as usize,
+            gtrr => (out[self.a] > out[self.b]) as usize,
+            eqir => (self.a == out[self.b]) as usize,
+            eqri => (out[self.a] == self.b) as usize,
+            eqrr => (out[self.a] == out[self.b]) as usize,
+        };
+        return Registers(out);
+    }
+}
+
+// Optimized implementation of the weird calculation,
+// tracking the value of reg[3] at the termination
+// condition and returning the last non-looping result.
+fn part2() {
+    let mut v3 = 0;
+    let mut v2;
+
+    let mut seen = HashSet::new();
+    let mut prev = 0;
+
+    loop {
+        v2 = v3 | 65536;
+        v3 = 1099159;
+        loop {
+            v3 += v2 & 255;
+            v3 = ((v3 & 16777215) * 65899) & 16777215;
+            if v2 < 256 {
+                break;
+            }
+            v2 = (0..).skip_while(|i| (i + 1) * 256 <= v2)
+                      .next().unwrap();
+        }
+
+        if seen.contains(&v3) {
+            println!("Part 2: {}", prev);
+            break;
+        } else {
+            prev = v3;
+            seen.insert(v3);
+        }
+    }
+}
+
+fn main() {
+    let mut buffer = String::new();
+    io::stdin().read_to_string(&mut buffer).unwrap();
+
+    let mut ip_reg = 0;
+    let tape = buffer
+        .lines()
+        .filter_map(|line| {
+            let words = line.split(' ').collect::<Vec<_>>();
+            if words[0] == "#ip" {
+                ip_reg = str::parse::<usize>(words[1]).unwrap();
+                None
+            } else {
+                let op = Op::from_str(words[0]);
+                let a = str::parse::<usize>(words[1]).unwrap();
+                let b = str::parse::<usize>(words[2]).unwrap();
+                let c = str::parse::<usize>(words[3]).unwrap();
+                Some(Instruction { op: op, a: a, b: b, c: c})
+            }
+        })
+        .collect::<Vec<Instruction>>();
+
+    // Run until we hit line 28 for the first time, which is
+    // our termination condition (if reg[3] == reg[0]).  We
+    // then pull out reg[3]'s value, which is the value for reg[0]
+    // that will cause the earliest possible termination.
+    let mut state = Registers([0, 0, 0, 0, 0, 0]);
+    let mut ip = 0;
+    loop {
+        if ip >= tape.len() {
+            break;
+        }
+        state.0[ip_reg] = ip;
+        state = tape[ip].eval(&state);
+        ip = state.0[ip_reg] + 1;
+        if ip == 28 {
+            println!("Part 1: {}", state.0[3]);
+            break;
+        }
+    }
+
+    part2();
+}
