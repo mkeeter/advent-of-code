@@ -21,7 +21,7 @@ static mut i: usize = 0;
 unsafe extern "C" fn callback(reg: *mut i32) -> i32 {
     i += 1;
     println!("HIIIII {}", i);
-    return (i == 1) as i32;
+    return (i == 5) as i32;
 }
 
 fn main() -> Result<(), Box<std::error::Error>> {
@@ -40,28 +40,31 @@ fn main() -> Result<(), Box<std::error::Error>> {
 
     // Here is our JITted function
     let void_type = context.void_type();
-    let fn_type = void_type.fn_type(&[cb_type.ptr_type(AddressSpace::Global).into()], false);
-    let function = module.add_function("run", fn_type, None);
+    let fn_type = void_type.fn_type(&[], false);
+    let function = module.add_function("jit", fn_type, None);
 
     // HEEEEERE WE GO
-    let run_block = context.append_basic_block(&function, "run");
-    builder.position_at_end(&run_block);
+    let setup_block = context.append_basic_block(&function, "setup");
+    let run_block = context.insert_basic_block_after(&setup_block, "run");
+    let exit_block = context.insert_basic_block_after(&run_block, "exit");
 
-    // Install the block that lets us exit from the program
-    let exit_block = context.append_basic_block(&function, "exit");
-    builder.position_at_end(&exit_block);
-    builder.build_return(None);
-    builder.position_at_end(&run_block);
-
+    builder.position_at_end(&setup_block);
     let six = i32_type.const_int(6, false);
     let regs = builder.build_array_alloca(i32_type, six, "regs");
+    builder.build_store(regs, i32_type.const_zero());
+    builder.build_unconditional_branch(&run_block);
 
+    builder.position_at_end(&run_block);
     let cb_result = builder.build_call(cb_func, &[regs.into()], "cb_call").try_as_basic_value().left().unwrap();
     builder.build_conditional_branch(*cb_result.as_int_value(), &exit_block, &run_block);
 
+    // Install the block that lets us exit from the program
+    builder.position_at_end(&exit_block);
+    builder.build_return(None);
+
     module.print_to_stderr();
 
-    let run_fn: JitFunction<RunFunction> = unsafe { execution_engine.get_function("run").ok() }.unwrap();
+    let run_fn: JitFunction<RunFunction> = unsafe { execution_engine.get_function("jit")? };
     unsafe { run_fn.call() };
 
     Ok(())
