@@ -192,13 +192,16 @@ fn main() -> Result<(), Box<std::error::Error>> {
         };
         builder.build_store(get(line.c), value);
 
+        // Increment address register by 1
+        let ip = *builder.build_load(get(ip_reg), "ip").as_int_value();
+        let ip = builder.build_int_add(ip, i64_type.const_int(1, false), "");
+        builder.build_store(get(ip_reg), ip);
+
+        // If this is an instruction that could change the instruction
+        // register, then we need to handle it carefully.
         let next = if line.c == ip_reg {
             &jump_block
         } else {
-            // Increment address register by 1
-            let ip = *builder.build_load(get(ip_reg), "ip").as_int_value();
-            let ip = builder.build_int_add(ip, i64_type.const_int(1, false), "");
-            builder.build_store(get(ip_reg), ip);
             instruction_blocks.get(i + 1).unwrap_or(&exit_block)
         };
 
@@ -219,8 +222,6 @@ fn main() -> Result<(), Box<std::error::Error>> {
     // Write out the jump table
     builder.position_at_end(&jump_block);
     let ip = *builder.build_load(get(ip_reg), "ip").as_int_value();
-    let ip = builder.build_int_add(ip, i64_type.const_int(1, false), "");
-    builder.build_store(get(ip_reg), ip);
     let mut jump_blocks = Vec::new();
     for i in 0..tape.len() {
         jump_blocks.push(
