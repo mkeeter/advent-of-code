@@ -188,6 +188,16 @@ fn main() -> Result<(), Box<std::error::Error>> {
         };
         builder.build_store(get(line.c), value);
 
+        let next = if line.c == ip_reg {
+            &jump_block
+        } else {
+            // Increment address register by 1
+            let ip = *builder.build_load(get(ip_reg), "ip").as_int_value();
+            let ip = builder.build_int_add(ip, i64_type.const_int(1, false), "");
+            builder.build_store(get(ip_reg), ip);
+            instruction_blocks.get(i + 1).unwrap_or(&exit_block)
+        };
+
         // Run the callback, exiting if it returns true
         if line.breakpoint {
             let cb_result = builder
@@ -196,9 +206,9 @@ fn main() -> Result<(), Box<std::error::Error>> {
                 .left()
                 .unwrap();
             builder.build_conditional_branch(
-                *cb_result.as_int_value(), &exit_block, &jump_block);
+                *cb_result.as_int_value(), &exit_block, next);
         } else {
-            builder.build_unconditional_branch(&jump_block);
+            builder.build_unconditional_branch(next);
         }
     }
 
