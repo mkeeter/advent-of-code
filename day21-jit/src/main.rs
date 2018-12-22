@@ -75,14 +75,12 @@ struct Instruction {
 }
 
 //  The callback should return 1 if we should terminate
-static mut CB_INDEX: usize = 0;
-unsafe extern "C" fn callback(reg: [i32; 6]) -> i32 {
-    CB_INDEX += 1;
-    println!("HIIIII {}", CB_INDEX);
-    for i in reg.iter() {
-        println!("  {}", i);
+unsafe extern "C" fn callback(reg: *const i64) -> i64 {
+    for i in 0..6 {
+        print!("  {}", *reg.offset(i));
     }
-    return (CB_INDEX == 5) as i32;
+    print!("\n");
+    return 0;
 }
 
 fn main() -> Result<(), Box<std::error::Error>> {
@@ -102,7 +100,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
                 let a = str::parse::<usize>(words[1]).unwrap();
                 let b = str::parse::<usize>(words[2]).unwrap();
                 let c = str::parse::<usize>(words[3]).unwrap();
-                Some(Instruction { op: op, a: a, b: b, c: c, breakpoint: false})
+                Some(Instruction { op: op, a: a, b: b, c: c, breakpoint: true})
             }
         })
         .collect::<Vec<Instruction>>();
@@ -116,9 +114,8 @@ fn main() -> Result<(), Box<std::error::Error>> {
     let execution_engine = module.create_jit_execution_engine(OptimizationLevel::None)?;
 
     /*  Install our global callback into the system */
-    let i32_type = context.i32_type();
     let i64_type = context.i64_type();
-    let cb_type = i32_type.fn_type(&[i32_type.array_type(6).into()], false);
+    let cb_type = i64_type.fn_type(&[i64_type.array_type(6).ptr_type(AddressSpace::Generic).into()], false);
     let cb_func = module.add_function("cb", cb_type, None);
     execution_engine.add_global_mapping(&cb_func, callback as usize);
 
@@ -130,43 +127,46 @@ fn main() -> Result<(), Box<std::error::Error>> {
     // Set up the main blocks
     let setup_block = context.append_basic_block(&function, "setup");
     let jump_block = context.insert_basic_block_after(&setup_block, "jump_table");
-    let run_block = context.insert_basic_block_after(&jump_block, "run");
-    let exit_block = context.insert_basic_block_after(&run_block, "exit");
 
     builder.position_at_end(&setup_block);
-    let regs = builder.build_alloca(i32_type.array_type(6), "regs");
+    let regs = builder.build_alloca(i64_type.array_type(6), "regs");
 
     let get = |i: usize| -> PointerValue {
         let reg_ptr = builder.build_ptr_to_int(regs, i64_type, "");
-        let offset = i64_type.const_int((i * 4) as u64, false);
+        let offset = i64_type.const_int((i * 8) as u64, false);
         let sum = builder.build_int_add(reg_ptr, offset, "");
-        builder.build_int_to_ptr(sum, i32_type.ptr_type(AddressSpace::Generic), "")
+        builder.build_int_to_ptr(sum, i64_type.ptr_type(AddressSpace::Generic), "")
     };
 
     for i in 0..6 {
-        builder.build_store(get(i), i32_type.const_zero());
+        builder.build_store(get(i), i64_type.const_zero());
     }
-    builder.build_unconditional_branch(&run_block);
 
     let mut instruction_blocks = Vec::new();
     for i in 0..tape.len() {
         instruction_blocks.push(
             context.insert_basic_block_after(
-                if i == 0 { &run_block }
+                if i == 0 { &setup_block }
                 else {  instruction_blocks.last().unwrap() },
                 &format!("i{}", i)));
     }
+    let exit_block = context.insert_basic_block_after(
+        instruction_blocks.last().unwrap(), "exit");
 
+    builder.build_call(cb_func, &[regs.into()], "first_call");
+    builder.build_unconditional_branch(&instruction_blocks[0]);
+
+    // Write out the actual instructions
     for (i, instruction) in tape.iter().enumerate() {
         builder.position_at_end(&instruction_blocks[i]);
 
         let a = if instruction.op.a_is_immediate() {
-            i32_type.const_int(instruction.a as u64, false)
+            i64_type.const_int(instruction.a as u64, false)
         } else {
             *builder.build_load(get(instruction.a), "").as_int_value()
         };
         let b = if instruction.op.b_is_immediate() {
-            i32_type.const_int(instruction.b as u64, false)
+            i64_type.const_int(instruction.b as u64, false)
         } else {
             *builder.build_load(get(instruction.b), "").as_int_value()
         };
@@ -181,14 +181,47 @@ fn main() -> Result<(), Box<std::error::Error>> {
             eqir | eqri | eqrr => builder.build_int_compare(IntPredicate::EQ, a, b, ""),
         };
         builder.build_store(get(instruction.c), value);
+
+        // Run the callback, exiting if it returns true
+        if instruction.breakpoint {
+            let cb_result = builder
+                .build_call(cb_func, &[regs.into()], "cb_call")
+                .try_as_basic_value()
+                .left()
+                .unwrap();
+            builder.build_conditional_branch(
+                *cb_result.as_int_value(), &exit_block, &jump_block);
+        } else {
+            builder.build_unconditional_branch(&jump_block);
+        }
     }
 
-    builder.position_at_end(&run_block);
-    let cb_result = builder.build_call(cb_func, &[regs.into()], "cb_call").try_as_basic_value().left().unwrap();
-    builder.build_conditional_branch(*cb_result.as_int_value(), &exit_block, &run_block);
+    // Write out the jump table
+    builder.position_at_end(&jump_block);
+    let ip = *builder.build_load(get(ip_reg), "ip").as_int_value();
+    let ip = builder.build_int_add(ip, i64_type.const_int(1, false), "");
+    builder.build_store(get(ip_reg), ip);
+    let mut jump_blocks = Vec::new();
+    for i in 0..tape.len() {
+        jump_blocks.push(
+            context.insert_basic_block_after(
+                if i == 0 { &jump_block }
+                else {  jump_blocks.last().unwrap() },
+                &format!("j{}", i)));
+    }
+    for i in 0..tape.len() {
+        builder.position_at_end(&jump_blocks[i]);
+        let eq = builder.build_int_compare(
+            IntPredicate::EQ, ip, i64_type.const_int(i as u64, false), "");
+        builder.build_conditional_branch(eq,
+            &instruction_blocks[i], jump_blocks.get(i + 1).unwrap_or(&exit_block));
+    }
+    builder.position_at_end(&jump_block);
+    builder.build_unconditional_branch(&jump_blocks[0]);
 
     // Install the block that lets us exit from the program
     builder.position_at_end(&exit_block);
+    builder.build_call(cb_func, &[regs.into()], "final_call");
     builder.build_return(None);
 
     module.print_to_stderr();
