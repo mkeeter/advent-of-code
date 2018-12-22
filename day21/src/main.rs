@@ -50,27 +50,25 @@ struct Instruction {
 }
 
 impl Instruction {
-    fn eval(&self, s: &Registers) -> Registers {
-        let mut out = s.0.clone();
-        out[self.c] = match self.op {
-            addr => out[self.a] + out[self.b],
-            addi => out[self.a] + self.b,
-            mulr => out[self.a] * out[self.b],
-            muli => out[self.a] * self.b,
-            banr => out[self.a] & out[self.b],
-            bani => out[self.a] & self.b,
-            borr => out[self.a] | out[self.b],
-            bori => out[self.a] | self.b,
-            setr => out[self.a],
+    fn eval(&self, s: &mut Registers) {
+        s.0[self.c] = match self.op {
+            addr => s.0[self.a] + s.0[self.b],
+            addi => s.0[self.a] + self.b,
+            mulr => s.0[self.a] * s.0[self.b],
+            muli => s.0[self.a] * self.b,
+            banr => s.0[self.a] & s.0[self.b],
+            bani => s.0[self.a] & self.b,
+            borr => s.0[self.a] | s.0[self.b],
+            bori => s.0[self.a] | self.b,
+            setr => s.0[self.a],
             seti => self.a,
-            gtir => (self.a > out[self.b]) as usize,
-            gtri => (out[self.a] > self.b) as usize,
-            gtrr => (out[self.a] > out[self.b]) as usize,
-            eqir => (self.a == out[self.b]) as usize,
-            eqri => (out[self.a] == self.b) as usize,
-            eqrr => (out[self.a] == out[self.b]) as usize,
+            gtir => (self.a > s.0[self.b]) as usize,
+            gtri => (s.0[self.a] > self.b) as usize,
+            gtrr => (s.0[self.a] > s.0[self.b]) as usize,
+            eqir => (self.a == s.0[self.b]) as usize,
+            eqri => (s.0[self.a] == self.b) as usize,
+            eqrr => (s.0[self.a] == s.0[self.b]) as usize,
         };
-        return Registers(out);
     }
 }
 
@@ -140,7 +138,7 @@ fn main() {
             break;
         }
         state.0[ip_reg] = ip;
-        state = tape[ip].eval(&state);
+        tape[ip].eval(&mut state);
         ip = state.0[ip_reg] + 1;
         if ip == 28 {
             println!("Part 1: {}", state.0[3]);
