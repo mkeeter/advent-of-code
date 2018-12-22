@@ -17,57 +17,46 @@ struct Registers([usize; 6]);
 #[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 enum Op {
-    addr, addi,
-    mulr, muli,
-    banr, bani,
-    borr, bori,
-    setr, seti,
-    gtir, gtri, gtrr,
-    eqir, eqri, eqrr,
+    Add,
+    Mul,
+    And,
+    Or,
+    Set,
+    Gt,
+    Eq,
 }
+
+#[derive(Eq, PartialEq, Debug)]
+enum Source { Register, Immediate }
+
 use crate::Op::*;
-
-impl Op {
-    fn from_str(s: &str) -> Op {
-        match s {
-            "addr" => addr,
-            "addi" => addi,
-            "mulr" => mulr,
-            "muli" => muli,
-            "banr" => banr,
-            "bani" => bani,
-            "borr" => borr,
-            "bori" => bori,
-            "setr" => setr,
-            "seti" => seti,
-            "gtir" => gtir,
-            "gtri" => gtri,
-            "gtrr" => gtrr,
-            "eqir" => eqir,
-            "eqri" => eqri,
-            "eqrr" => eqrr,
-            _ => unimplemented!(),
-        }
-    }
-
-    fn a_is_immediate(&self) -> bool {
-        match self {
-            seti | gtir | eqir => true,
-            _ => false,
-        }
-    }
-
-    fn b_is_immediate(&self) -> bool {
-        match self {
-            addi | muli | bani | bori | gtri | eqri => true,
-            _ => false,
-        }
+use crate::Source::*;
+type Opcode = (Op, Source, Source);
+fn str_to_opcode(s: &str) -> Opcode {
+    match s {
+        "addr" => (Add, Register, Register),
+        "addi" => (Add, Register, Immediate),
+        "mulr" => (Mul, Register, Register),
+        "muli" => (Mul, Register, Immediate),
+        "banr" => (And, Register, Register),
+        "bani" => (And, Register, Immediate),
+        "borr" => (Or, Register, Register),
+        "bori" => (Or, Register, Immediate),
+        "setr" => (Set, Register, Immediate),
+        "seti" => (Set, Immediate, Immediate),
+        "gtir" => (Gt, Immediate, Register),
+        "gtri" => (Gt, Register, Immediate),
+        "gtrr" => (Gt, Register, Register),
+        "eqir" => (Eq, Immediate, Register),
+        "eqri" => (Eq, Register, Immediate),
+        "eqrr" => (Eq, Register, Register),
+        _ => unimplemented!(),
     }
 }
 
 #[derive(Debug)]
 struct Instruction {
-    op: Op,
+    op: Opcode,
     a: usize,
     b: usize,
     c: usize,
@@ -96,7 +85,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
                 ip_reg = str::parse::<usize>(words[1]).unwrap();
                 None
             } else {
-                let op = Op::from_str(words[0]);
+                let op = str_to_opcode(words[0]);
                 let a = str::parse::<usize>(words[1]).unwrap();
                 let b = str::parse::<usize>(words[2]).unwrap();
                 let c = str::parse::<usize>(words[3]).unwrap();
@@ -111,15 +100,16 @@ fn main() -> Result<(), Box<std::error::Error>> {
     let context = Context::create();
     let module = context.create_module("cb");
     let builder = context.create_builder();
-    let execution_engine = module.create_jit_execution_engine(OptimizationLevel::None)?;
+    let execution_engine = module.create_jit_execution_engine(
+        OptimizationLevel::Aggressive)?;
 
-    /*  Install our global callback into the system */
+    //  Install our global callback into the system
     let i64_type = context.i64_type();
     let cb_type = i64_type.fn_type(&[i64_type.array_type(6).ptr_type(AddressSpace::Generic).into()], false);
     let cb_func = module.add_function("cb", cb_type, None);
     execution_engine.add_global_mapping(&cb_func, callback as usize);
 
-    // Here is our JITted function
+    // Here is our JITted function, which takes no arguments and returns void
     let void_type = context.void_type();
     let fn_type = void_type.fn_type(&[], false);
     let function = module.add_function("jit", fn_type, None);
@@ -157,39 +147,37 @@ fn main() -> Result<(), Box<std::error::Error>> {
     builder.build_unconditional_branch(&instruction_blocks[0]);
 
     // Write out the actual instructions
-    for (i, instruction) in tape.iter().enumerate() {
+    for (i, line) in tape.iter().enumerate() {
         builder.position_at_end(&instruction_blocks[i]);
 
-        let a = if instruction.op.a_is_immediate() {
-            i64_type.const_int(instruction.a as u64, false)
-        } else {
-            *builder.build_load(get(instruction.a), "").as_int_value()
+        let a = match line.op.1 {
+            Source::Immediate => i64_type.const_int(line.a as u64, false),
+            Source::Register  => *builder.build_load(get(line.a), "a")
+                                         .as_int_value()
         };
-        let b = if instruction.op.b_is_immediate() {
-            i64_type.const_int(instruction.b as u64, false)
-        } else {
-            *builder.build_load(get(instruction.b), "").as_int_value()
+        let b = match line.op.2 {
+            Source::Immediate => i64_type.const_int(line.b as u64, false),
+            Source::Register  => *builder.build_load(get(line.b), "b")
+                                         .as_int_value()
         };
 
-        let value = match instruction.op {
-            addr | addi => builder.build_int_add(a, b, ""),
-            mulr | muli => builder.build_int_mul(a, b, ""),
-            banr | bani => builder.build_and(a, b, ""),
-            borr | bori => builder.build_or(a, b, ""),
-            setr | seti => a,
-            gtir | gtri | gtrr =>
-                builder.build_int_z_extend(
+        let value = match line.op.0 {
+            Add => builder.build_int_add(a, b, ""),
+            Mul => builder.build_int_mul(a, b, ""),
+            And => builder.build_and(a, b, ""),
+            Or => builder.build_or(a, b, ""),
+            Set => a,
+            Gt => builder.build_int_z_extend(
                     builder.build_int_compare(IntPredicate::UGT, a, b, ""),
                     i64_type, ""),
-            eqir | eqri | eqrr =>
-                builder.build_int_z_extend(
+            Eq => builder.build_int_z_extend(
                     builder.build_int_compare(IntPredicate::EQ, a, b, ""),
                     i64_type, ""),
         };
-        builder.build_store(get(instruction.c), value);
+        builder.build_store(get(line.c), value);
 
         // Run the callback, exiting if it returns true
-        if instruction.breakpoint {
+        if line.breakpoint {
             let cb_result = builder
                 .build_call(cb_func, &[regs.into()], "cb_call")
                 .try_as_basic_value()
