@@ -66,29 +66,32 @@ struct Instruction {
 static mut SEEN: Option<HashSet<i64>> = None;
 static mut PREV: i64 = 0;
 unsafe extern "C" fn callback(reg: *const i64) -> bool {
+    // Initialize static global
     if SEEN.is_none() {
         SEEN = Some(HashSet::new());
     }
     let seen = SEEN.as_mut().unwrap();
 
     let target = *reg.offset(3);
-    if PREV == 0 {
-        println!("{}", target);
+    if PREV == 0 && target != 0 {
+        println!("Part 1: {}", target);
     }
 
     if seen.contains(&target) {
-        println!("{}", PREV);
+        println!("Part 2: {}", PREV);
         return true;
+    } else {
+        seen.insert(target);
+        PREV = target;
+        return false;
     }
-    seen.insert(target);
-    PREV = target;
-    return false;
 }
 
 fn main() -> Result<(), Box<std::error::Error>> {
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer).unwrap();
 
+    println!("Parsing instructions...");
     let mut ip_reg = 0;
     let mut tape = buffer
         .lines()
@@ -102,14 +105,15 @@ fn main() -> Result<(), Box<std::error::Error>> {
                 let a = str::parse::<usize>(words[1]).unwrap();
                 let b = str::parse::<usize>(words[2]).unwrap();
                 let c = str::parse::<usize>(words[3]).unwrap();
-                Some(Instruction { op: op, a: a, b: b, c: c, breakpoint: false})
+                println!("{}", words.get(4).unwrap_or(&""));
+                Some(Instruction { op: op, a: a, b: b, c: c, breakpoint: bp})
             }
         })
         .collect::<Vec<Instruction>>();
-    if tape.len() > 28 {
-        tape[28].breakpoint = true;
-    }
+    println!("  Found {} instructions with {} breakpoints", tape.len(),
+             tape.iter().filter(|i| i.breakpoint).count());
 
+    println!("Building JIT engine");
     Target::initialize_native(&InitializationConfig::default())?;
 
     let context = Context::create();
@@ -137,6 +141,8 @@ fn main() -> Result<(), Box<std::error::Error>> {
     builder.position_at_end(&setup_block);
     let reg_array = builder.build_alloca(i64_type.array_type(6), "reg_array");
 
+    println!("Creating function block");
+    println!("  Initializing register array");
     // Build an array of the register addresses, for store + load operations
     let reg = {
         let mut reg = Vec::new();
@@ -156,6 +162,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
     };
 
     // Each instruction gets one i block, plus an optional j block
+    println!("  Creating instruction blocks");
     let mut instruction_blocks = Vec::new();
     for i in 0..tape.len() {
         instruction_blocks.push(
@@ -173,6 +180,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
     builder.build_unconditional_branch(&instruction_blocks[0]);
 
     // Write out the actual instructions
+    println!("  Writing instruction");
     for (i, line) in tape.iter().enumerate() {
         builder.position_at_end(&instruction_blocks[i]);
 
@@ -220,12 +228,15 @@ fn main() -> Result<(), Box<std::error::Error>> {
 
             // If this is a fixed jump (from seti), then only add that target.
             if line.op.0 == Set && line.op.1 == Immediate {
+                println!("    Found fixed absolute jump at {}", i);
                 target_list.push(line.a + 1);
             // If this is a jump with a fixed offset, then only add it
             } else if line.op.0 == Add && line.op.1 == Immediate {
+                println!("    Found fixed relative jump at {}", i);
                 target_list.push(i + line.a + 1);
             // Otherwise, prioritize the next two slots
             } else if line.op.0 == Add {
+                println!("    Found basic jump at {}", i);
                 target_list.push(i + 1);
                 target_list.push(i + 2);
                 for j in 0..tape.len() {
@@ -238,6 +249,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
             // If we either got no targets or ended up with invalid targets,
             // then deploy the safe table (which includes every single target)
             if target_list.is_empty() || target_list.iter().any(|i| *i >= tape.len()) {
+                println!("    Building expensive jump table at {}", i);
                 target_list.clear();
                 for i in 0..tape.len() {
                     target_list.push(i);
@@ -292,16 +304,18 @@ fn main() -> Result<(), Box<std::error::Error>> {
     }
 
     // Install the block that lets us exit from the program
+    println!("  Building exit block");
     builder.position_at_end(&exit_block);
     builder.build_call(cb_func, &[reg_array.into()], "final_call");
     builder.build_return(None);
 
     //module.print_to_stderr();
 
+    println!("Compiling...");
     type RunFunction = unsafe extern "C" fn();
-    println!("BUILDING\n");
     let run_fn: JitFunction<RunFunction> = unsafe { execution_engine.get_function("jit")? };
-    println!("RUNNING\n");
+
+    println!("Running...");
     unsafe { run_fn.call() };
 
     Ok(())
