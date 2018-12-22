@@ -93,7 +93,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
 
     println!("Parsing instructions...");
     let mut ip_reg = 0;
-    let mut tape = buffer
+    let tape = buffer
         .lines()
         .filter_map(|line| {
             let words = line.split(' ').collect::<Vec<_>>();
@@ -105,7 +105,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
                 let a = str::parse::<usize>(words[1]).unwrap();
                 let b = str::parse::<usize>(words[2]).unwrap();
                 let c = str::parse::<usize>(words[3]).unwrap();
-                println!("{}", words.get(4).unwrap_or(&""));
+                let bp = *words.get(4).unwrap_or(&"") == "#break";
                 Some(Instruction { op: op, a: a, b: b, c: c, breakpoint: bp})
             }
         })
@@ -220,9 +220,6 @@ fn main() -> Result<(), Box<std::error::Error>> {
         // register, then we build a long list of conditional jumps (and
         // hope that the compiler optimizes it to a jump table).
         let jump_table_block = if line.c == ip_reg {
-            // Write out the jump table
-            let mut jump_blocks = VecDeque::new();
-
             // Decide which targets to put at the top of the jump table:
             let mut target_list = Vec::new();
 
@@ -257,6 +254,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
             }
 
             // Create the blocks themselves
+            let mut jump_blocks = VecDeque::new();
             for j in target_list.iter() {
                 jump_blocks.push_back(
                     context.insert_basic_block_after(
