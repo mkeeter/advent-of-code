@@ -106,7 +106,9 @@ fn main() -> Result<(), Box<std::error::Error>> {
             }
         })
         .collect::<Vec<Instruction>>();
-    tape[28].breakpoint = true;
+    if tape.len() > 28 {
+        tape[28].breakpoint = true;
+    }
 
     Target::initialize_native(&InitializationConfig::default())?;
 
@@ -212,20 +214,58 @@ fn main() -> Result<(), Box<std::error::Error>> {
         let jump_table_block = if line.c == ip_reg {
             // Write out the jump table
             let mut jump_blocks = VecDeque::new();
-            for j in 0..tape.len() {
+
+            // Decide which targets to put at the top of the jump table:
+            let mut target_list = Vec::new();
+
+            // If this is a fixed jump (from seti), then only add that target.
+            if line.op.0 == Set && line.op.1 == Immediate {
+                target_list.push(line.a + 1);
+            // If this is a jump with a fixed offset, then only add it
+            } else if line.op.0 == Add && line.op.1 == Immediate {
+                target_list.push(i + line.a + 1);
+            // Otherwise, prioritize the next two slots
+            } else if line.op.0 == Add {
+                target_list.push(i + 1);
+                target_list.push(i + 2);
+                for j in 0..tape.len() {
+                    if !target_list.contains(&j) {
+                        target_list.push(j);
+                    }
+                }
+            }
+
+            // If we either got no targets or ended up with invalid targets,
+            // then deploy the safe table (which includes every single target)
+            if target_list.is_empty() || target_list.iter().any(|i| *i >= tape.len()) {
+                target_list.clear();
+                for i in 0..tape.len() {
+                    target_list.push(i);
+                }
+            }
+
+            // Create the blocks themselves
+            for j in target_list.iter() {
                 jump_blocks.push_back(
                     context.insert_basic_block_after(
-                        if j == 0 { &instruction_blocks[i] }
-                        else {  jump_blocks.back().unwrap() },
+                        if *j == target_list[0] {
+                            &instruction_blocks[i]
+                        } else {
+                            jump_blocks.back().unwrap()
+                        },
                         &format!("i{}j{}", i, j)));
             }
-            for j in 0..tape.len() {
+            // Build the logic within each block
+            for j in 0..target_list.len() {
                 builder.position_at_end(&jump_blocks[j]);
+                let t = target_list[j];
                 let eq = builder.build_int_compare(
-                    IntPredicate::EQ, ip, i64_type.const_int(j as u64, false),
-                    &format!("cmp_{}_{}", i, j));
+                    IntPredicate::EQ, ip, i64_type.const_int(t as u64, false),
+                    &format!("cmp_{}_{}", i, t));
                 builder.build_conditional_branch(eq,
-                    &instruction_blocks[j], jump_blocks.get(j + 1).unwrap_or(&exit_block));
+                    &instruction_blocks[t],
+                    jump_blocks.get(j + 1)
+                               .unwrap_or(&exit_block));
             }
             builder.position_at_end(&instruction_blocks[i]);
             Some(jump_blocks.pop_front().unwrap())
@@ -256,7 +296,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
     builder.build_call(cb_func, &[reg_array.into()], "final_call");
     builder.build_return(None);
 
-    module.print_to_stderr();
+    //module.print_to_stderr();
 
     type RunFunction = unsafe extern "C" fn();
     println!("BUILDING\n");
