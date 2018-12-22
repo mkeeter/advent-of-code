@@ -100,11 +100,11 @@ fn main() -> Result<(), Box<std::error::Error>> {
                 let a = str::parse::<usize>(words[1]).unwrap();
                 let b = str::parse::<usize>(words[2]).unwrap();
                 let c = str::parse::<usize>(words[3]).unwrap();
-                Some(Instruction { op: op, a: a, b: b, c: c, breakpoint: true})
+                Some(Instruction { op: op, a: a, b: b, c: c, breakpoint: false})
             }
         })
         .collect::<Vec<Instruction>>();
-    //tape[28].breakpoint = true;
+    tape[28].breakpoint = true;
 
     Target::initialize_native(&InitializationConfig::default())?;
 
@@ -177,8 +177,14 @@ fn main() -> Result<(), Box<std::error::Error>> {
             banr | bani => builder.build_and(a, b, ""),
             borr | bori => builder.build_or(a, b, ""),
             setr | seti => a,
-            gtir | gtri | gtrr => builder.build_int_compare(IntPredicate::UGT, a, b, ""),
-            eqir | eqri | eqrr => builder.build_int_compare(IntPredicate::EQ, a, b, ""),
+            gtir | gtri | gtrr =>
+                builder.build_int_z_extend(
+                    builder.build_int_compare(IntPredicate::UGT, a, b, ""),
+                    i64_type, ""),
+            eqir | eqri | eqrr =>
+                builder.build_int_z_extend(
+                    builder.build_int_compare(IntPredicate::EQ, a, b, ""),
+                    i64_type, ""),
         };
         builder.build_store(get(instruction.c), value);
 
