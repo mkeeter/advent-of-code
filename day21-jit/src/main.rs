@@ -76,9 +76,12 @@ struct Instruction {
 
 //  The callback should return 1 if we should terminate
 static mut CB_INDEX: usize = 0;
-unsafe extern "C" fn callback(reg: *mut i32) -> i32 {
+unsafe extern "C" fn callback(reg: [i32; 6]) -> i32 {
     CB_INDEX += 1;
     println!("HIIIII {}", CB_INDEX);
+    for i in reg.iter() {
+        println!("  {}", i);
+    }
     return (CB_INDEX == 5) as i32;
 }
 
@@ -115,7 +118,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
     /*  Install our global callback into the system */
     let i32_type = context.i32_type();
     let i64_type = context.i64_type();
-    let cb_type = i32_type.fn_type(&[i32_type.ptr_type(AddressSpace::Generic).into()], false);
+    let cb_type = i32_type.fn_type(&[i32_type.array_type(6).into()], false);
     let cb_func = module.add_function("cb", cb_type, None);
     execution_engine.add_global_mapping(&cb_func, callback as usize);
 
@@ -135,7 +138,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
 
     let get = |i: usize| -> PointerValue {
         let reg_ptr = builder.build_ptr_to_int(regs, i64_type, "");
-        let offset = i64_type.const_int(i as u64, false);
+        let offset = i64_type.const_int((i * 4) as u64, false);
         let sum = builder.build_int_add(reg_ptr, offset, "");
         builder.build_int_to_ptr(sum, i32_type.ptr_type(AddressSpace::Generic), "")
     };
