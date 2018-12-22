@@ -64,11 +64,23 @@ struct Instruction {
 }
 
 //  The callback should return 1 if we should terminate
+static mut seen: Option<HashSet<i64>> = None;
+static mut prev: i64 = 0;
 unsafe extern "C" fn callback(reg: *const i64) -> i64 {
-    for i in 0..6 {
-        print!("  {}", *reg.offset(i));
+    if seen.is_none() {
+        seen = Some(HashSet::new());
     }
-    print!("\n");
+
+    let target = *reg.offset(3);
+    if prev == 0 {
+        println!("{}", target);
+    }
+    if seen.as_ref().unwrap().contains(&target) {
+        println!("{}", prev);
+        return 1;
+    }
+    seen.as_mut().unwrap().insert(target);
+    prev = target;
     return 0;
 }
 
