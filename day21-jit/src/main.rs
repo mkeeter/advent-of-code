@@ -8,14 +8,14 @@ use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::execution_engine::JitFunction;
 use inkwell::targets::{InitializationConfig, Target};
-use inkwell::values::{PointerValue, VectorValue, BasicValueEnum};
+use inkwell::values::PointerValue;
 use inkwell::IntPredicate;
 
 #[derive(Debug, Eq, PartialEq)]
 struct Registers([usize; 6]);
 
 #[allow(non_camel_case_types)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum Op {
     Add,
     Mul,
@@ -64,24 +64,25 @@ struct Instruction {
 }
 
 //  The callback should return 1 if we should terminate
-static mut seen: Option<HashSet<i64>> = None;
-static mut prev: i64 = 0;
-unsafe extern "C" fn callback(reg: *const i64) -> i64 {
-    if seen.is_none() {
-        seen = Some(HashSet::new());
+static mut SEEN: Option<HashSet<i64>> = None;
+static mut PREV: i64 = 0;
+unsafe extern "C" fn callback(reg: *const i64) -> bool {
+    if SEEN.is_none() {
+        SEEN = Some(HashSet::new());
     }
+    let seen = SEEN.as_mut().unwrap();
 
     let target = *reg.offset(3);
-    if prev == 0 {
+    if PREV == 0 {
         println!("{}", target);
     }
-    if seen.as_ref().unwrap().contains(&target) {
-        println!("{}", prev);
-        return 1;
+    if seen.contains(&target) {
+        println!("{}", PREV);
+        return true;
     }
-    seen.as_mut().unwrap().insert(target);
-    prev = target;
-    return 0;
+    seen.insert(target);
+    PREV = target;
+    return false;
 }
 
 fn main() -> Result<(), Box<std::error::Error>> {
@@ -117,7 +118,10 @@ fn main() -> Result<(), Box<std::error::Error>> {
 
     //  Install our global callback into the system
     let i64_type = context.i64_type();
-    let cb_type = i64_type.fn_type(&[i64_type.array_type(6).ptr_type(AddressSpace::Generic).into()], false);
+    let i1_type = context.custom_width_int_type(1);
+    let reg_type = i64_type.array_type(6);
+    let cb_type = i1_type.fn_type(
+        &[reg_type.ptr_type(AddressSpace::Generic).into()], false);
     let cb_func = module.add_function("cb", cb_type, None);
     execution_engine.add_global_mapping(&cb_func, callback as usize);
 
