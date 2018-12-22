@@ -1,14 +1,13 @@
 extern crate inkwell;
 
 use std::io::{self, Read};
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 
 use inkwell::OptimizationLevel;
 use inkwell::AddressSpace;
 use inkwell::context::Context;
 use inkwell::execution_engine::JitFunction;
 use inkwell::targets::{InitializationConfig, Target};
-use inkwell::values::PointerValue;
 use inkwell::IntPredicate;
 
 #[derive(Debug, Eq, PartialEq)]
@@ -76,6 +75,7 @@ unsafe extern "C" fn callback(reg: *const i64) -> bool {
     if PREV == 0 {
         println!("{}", target);
     }
+
     if seen.contains(&target) {
         println!("{}", PREV);
         return true;
@@ -130,24 +130,30 @@ fn main() -> Result<(), Box<std::error::Error>> {
     let fn_type = void_type.fn_type(&[], false);
     let function = module.add_function("jit", fn_type, None);
 
-    // Set up the main blocks
+    // The setup block initializes our registers to all zeros
     let setup_block = context.append_basic_block(&function, "setup");
-    let jump_block = context.insert_basic_block_after(&setup_block, "jump_table");
-
     builder.position_at_end(&setup_block);
-    let regs = builder.build_alloca(i64_type.array_type(6), "regs");
+    let reg_array = builder.build_alloca(i64_type.array_type(6), "reg_array");
 
-    let get = |i: usize| -> PointerValue {
-        let reg_ptr = builder.build_ptr_to_int(regs, i64_type, "");
-        let offset = i64_type.const_int((i * 8) as u64, false);
-        let sum = builder.build_int_add(reg_ptr, offset, "");
-        builder.build_int_to_ptr(sum, i64_type.ptr_type(AddressSpace::Generic), "")
+    // Build an array of the register addresses, for store + load operations
+    let reg = {
+        let mut reg = Vec::new();
+        let mut reg_ptr = builder.build_ptr_to_int(reg_array, i64_type, "reg_addr_int");
+        let reg_offset = i64_type.const_int(8, false);
+        for i in 0..6 {
+            let r = builder.build_int_to_ptr(
+                reg_ptr,
+                i64_type.ptr_type(AddressSpace::Generic),
+                &format!("reg{}", i));
+            builder.build_store(r, i64_type.const_zero());
+            reg.push(r);
+            reg_ptr = builder.build_int_add(reg_ptr, reg_offset,
+                                            &format!("reg_{}_addr_int", i));
+        }
+        reg
     };
 
-    for i in 0..6 {
-        builder.build_store(get(i), i64_type.const_zero());
-    }
-
+    // Each instruction gets one i block, plus an optional j block
     let mut instruction_blocks = Vec::new();
     for i in 0..tape.len() {
         instruction_blocks.push(
@@ -156,24 +162,27 @@ fn main() -> Result<(), Box<std::error::Error>> {
                 else {  instruction_blocks.last().unwrap() },
                 &format!("i{}", i)));
     }
+
+    // Finally, the exit block is at the end of our instructions
     let exit_block = context.insert_basic_block_after(
         instruction_blocks.last().unwrap(), "exit");
 
-    builder.build_call(cb_func, &[regs.into()], "first_call");
+    builder.build_call(cb_func, &[reg_array.into()], "first_call");
     builder.build_unconditional_branch(&instruction_blocks[0]);
 
     // Write out the actual instructions
     for (i, line) in tape.iter().enumerate() {
         builder.position_at_end(&instruction_blocks[i]);
 
+        builder.build_store(reg[ip_reg], i64_type.const_int(i as u64, false));
         let a = match line.op.1 {
             Source::Immediate => i64_type.const_int(line.a as u64, false),
-            Source::Register  => *builder.build_load(get(line.a), "a")
+            Source::Register  => *builder.build_load(reg[line.a], "a")
                                          .as_int_value()
         };
         let b = match line.op.2 {
             Source::Immediate => i64_type.const_int(line.b as u64, false),
-            Source::Register  => *builder.build_load(get(line.b), "b")
+            Source::Register  => *builder.build_load(reg[line.b], "b")
                                          .as_int_value()
         };
 
@@ -190,25 +199,48 @@ fn main() -> Result<(), Box<std::error::Error>> {
                     builder.build_int_compare(IntPredicate::EQ, a, b, ""),
                     i64_type, ""),
         };
-        builder.build_store(get(line.c), value);
+        builder.build_store(reg[line.c], value);
 
         // Increment address register by 1
-        let ip = *builder.build_load(get(ip_reg), "ip").as_int_value();
-        let ip = builder.build_int_add(ip, i64_type.const_int(1, false), "");
-        builder.build_store(get(ip_reg), ip);
+        let ip = *builder.build_load(reg[ip_reg], "ip").as_int_value();
+        let ip = builder.build_int_add(ip, i64_type.const_int(1, false), "ip");
+        builder.build_store(reg[ip_reg], ip);
 
         // If this is an instruction that could change the instruction
-        // register, then we need to handle it carefully.
-        let next = if line.c == ip_reg {
-            &jump_block
+        // register, then we build a long list of conditional jumps (and
+        // hope that the compiler optimizes it to a jump table).
+        let jump_table_block = if line.c == ip_reg {
+            // Write out the jump table
+            let mut jump_blocks = VecDeque::new();
+            for j in 0..tape.len() {
+                jump_blocks.push_back(
+                    context.insert_basic_block_after(
+                        if j == 0 { &instruction_blocks[i] }
+                        else {  jump_blocks.back().unwrap() },
+                        &format!("i{}j{}", i, j)));
+            }
+            for j in 0..tape.len() {
+                builder.position_at_end(&jump_blocks[j]);
+                let eq = builder.build_int_compare(
+                    IntPredicate::EQ, ip, i64_type.const_int(j as u64, false),
+                    &format!("cmp_{}_{}", i, j));
+                builder.build_conditional_branch(eq,
+                    &instruction_blocks[j], jump_blocks.get(j + 1).unwrap_or(&exit_block));
+            }
+            builder.position_at_end(&instruction_blocks[i]);
+            Some(jump_blocks.pop_front().unwrap())
         } else {
-            instruction_blocks.get(i + 1).unwrap_or(&exit_block)
+            None
         };
 
-        // Run the callback, exiting if it returns true
+        // If there's an indirect jump, then head there after the optional
+        // callback (with a check to see if the callback requested an exit)
+        let next = jump_table_block.as_ref().unwrap_or(
+            instruction_blocks.get(i + 1).unwrap_or(
+            &exit_block));
         if line.breakpoint {
             let cb_result = builder
-                .build_call(cb_func, &[regs.into()], "cb_call")
+                .build_call(cb_func, &[reg_array.into()], "cb_call")
                 .try_as_basic_value()
                 .left()
                 .unwrap();
@@ -219,30 +251,9 @@ fn main() -> Result<(), Box<std::error::Error>> {
         }
     }
 
-    // Write out the jump table
-    builder.position_at_end(&jump_block);
-    let ip = *builder.build_load(get(ip_reg), "ip").as_int_value();
-    let mut jump_blocks = Vec::new();
-    for i in 0..tape.len() {
-        jump_blocks.push(
-            context.insert_basic_block_after(
-                if i == 0 { &jump_block }
-                else {  jump_blocks.last().unwrap() },
-                &format!("j{}", i)));
-    }
-    for i in 0..tape.len() {
-        builder.position_at_end(&jump_blocks[i]);
-        let eq = builder.build_int_compare(
-            IntPredicate::EQ, ip, i64_type.const_int(i as u64, false), "");
-        builder.build_conditional_branch(eq,
-            &instruction_blocks[i], jump_blocks.get(i + 1).unwrap_or(&exit_block));
-    }
-    builder.position_at_end(&jump_block);
-    builder.build_unconditional_branch(&jump_blocks[0]);
-
     // Install the block that lets us exit from the program
     builder.position_at_end(&exit_block);
-    builder.build_call(cb_func, &[regs.into()], "final_call");
+    builder.build_call(cb_func, &[reg_array.into()], "final_call");
     builder.build_return(None);
 
     module.print_to_stderr();
