@@ -1,6 +1,6 @@
 use std::io::{self, Read};
 use regex::Regex;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::cmp::min;
 
 // Bounds represent a region with the bounds
@@ -99,32 +99,74 @@ fn main() {
         print!("\n");
     }
 
-    let mut cliques = Vec::new();
-    for i in 0..bounds.len() {
-        cliques.push(vec![i]);
-    }
+    let target = (0..bounds.len()).collect::<Vec<_>>();
+    let mut best_score = 0;
+    let mut seen: HashSet<Vec<usize>> = HashSet::new();
+    let mut todo = VecDeque::new();
+    todo.push_back(target);
 
-    loop {
-        let mut new_cliques = Vec::new();
-        for clique in cliques.iter() {
-            for i in 0..bounds.len() {
-                if clique.iter().all(|c| intersects.contains(&(*c, i)) && *c != i) {
-                    let mut c = clique.clone();
-                    c.push(i);
-                    c.sort();
-                    c.dedup();
-                    new_cliques.push(c);
-                }
-            }
+    while let Some(next) = todo.pop_front() {
+        println!("Testing group of size {}", next.len());
+        if next.len() < best_score || seen.contains(&next) {
+            continue;
         }
-        new_cliques.sort();
-        new_cliques.dedup();
-        println!("{:?}", new_cliques);
-        if cliques == new_cliques {
+
+        let mut bad_points = next.iter().map(|a|
+            (next.iter().filter(|b| !intersects.contains(&(*a, **b))).count(),
+             a))
+            .filter(|(score, _)| *score > 0)
+            .collect::<Vec<_>>();
+        bad_points.sort();
+
+        if bad_points.len() == 0 {
+            println!("Success!\n");
+            best_score = next.len();
             break;
+        } else {
+            println!("Found {} bad points to try removing\n", bad_points.len());
         }
-        cliques = new_cliques;
+
+        for (_, t) in bad_points.iter().rev() {
+            let next = next.iter().filter(|c| c != t).cloned().collect();
+            todo.push_back(next);
+        }
     }
 
     // 129293600 is too high
+}
+
+fn run(target: &Vec<usize>, intersects: &HashSet<(usize, usize)>,
+       best_score: &mut usize,
+       seen: &mut HashSet<Vec<usize>>)
+{
+    if target.len() < *best_score {
+        return;
+    }
+    if seen.contains(target) {
+        return;
+    }
+    seen.insert(target.clone());
+    println!("Testing group of size {}", target.len());
+
+    let mut bad_points = target.iter().map(|a|
+        (target.iter().filter(|b| !intersects.contains(&(*a, **b))).count(),
+         a))
+        .filter(|(score, _)| *score > 0)
+        .collect::<Vec<_>>();
+    bad_points.sort();
+
+    if bad_points.len() == 0 {
+        println!("Success!\n");
+        *best_score = target.len();
+        return;
+    }
+
+    if target.len() == *best_score {
+        return;
+    }
+
+    for (_, t) in bad_points.iter().rev() {
+        let next = target.iter().filter(|c| c != t).cloned().collect();
+        run(&next, intersects, best_score, seen);
+    }
 }
