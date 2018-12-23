@@ -83,57 +83,48 @@ fn main() {
 
     ////////////////////////////////////////////////////////////////////////////
     let mut bounds = pts.iter()
-        .enumerate()
-        .map(|(i, (pt, r))| ([i].iter().cloned().collect(),
-                             Bounds::from_pt(pt, *r)))
-        .collect::<Vec<(Vec<usize>, Bounds)>>();
+        .map(|(pt, r)| Bounds::from_pt(pt, *r))
+        .collect::<Vec<_>>();
 
-    let mut seen = HashSet::new();
-    for max_rank in 0.. {
-        for (ca, _) in bounds.iter() {
-            print!("{:?}", ca);
-        }print!("\n");
-
-        let mut next = Vec::new();
-        for (i, (ca, ba)) in bounds.iter().enumerate() {
-            println!("{} / {}", i, bounds.len());
-            for (j, (cb, bb))  in bounds.iter().enumerate() {
-                if j >= i {
-                    break;
-                }
-                if ca.len() <= max_rank && cb.len() <= max_rank {
-                    continue;
-                }
-                let bc = ba.intersection(bb);
-                if bc.is_empty() {
-                    continue;
-                }
-
-                let mut cc = Vec::new();
-                for x in ca { cc.push(x.clone()); }
-                for x in cb { cc.push(x.clone()); }
-                cc.sort();
-                cc.dedup();
-
-                if cc.len() <= ca.len() || cc.len() <= cb.len() {
-                    continue;
-                }
-                if seen.contains(&cc) {
-                    continue;
-                }
-                seen.insert(cc.clone());
-                next.push((cc, bc));
+    let mut intersects = HashSet::new();
+    for (i, a) in bounds.iter().enumerate() {
+        for (j, b) in bounds.iter().enumerate() {
+            if (!a.intersection(&b).is_empty()) {
+                intersects.insert((i, j));
+                print!("X");
+            } else {
+                print!(".");
             }
         }
-        if next.len() == 0 {
-            break;
-        }
-        bounds = next;
+        print!("\n");
     }
 
-    let ba = Bounds::from_pt(&(0, 5, 0), 11);
-    let bb = Bounds::from_pt(&(6, 0, 0), 1);
-    let bc = ba.intersection(&bb);
+    let mut cliques = Vec::new();
+    for i in 0..bounds.len() {
+        cliques.push(vec![i]);
+    }
+
+    loop {
+        let mut new_cliques = Vec::new();
+        for clique in cliques.iter() {
+            for i in 0..bounds.len() {
+                if clique.iter().all(|c| intersects.contains(&(*c, i)) && *c != i) {
+                    let mut c = clique.clone();
+                    c.push(i);
+                    c.sort();
+                    c.dedup();
+                    new_cliques.push(c);
+                }
+            }
+        }
+        new_cliques.sort();
+        new_cliques.dedup();
+        println!("{:?}", new_cliques);
+        if cliques == new_cliques {
+            break;
+        }
+        cliques = new_cliques;
+    }
 
     // 129293600 is too high
 }
