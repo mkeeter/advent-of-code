@@ -55,6 +55,33 @@ impl Bounds {
         }
         Bounds(out)
     }
+
+    fn corners(&self) -> Vec<(i64, i64, i64)> {
+        vec![
+            ((self.0[0] - self.0[1] + self.0[2] - self.0[3]) / 4,
+             (self.0[0] + self.0[1] - self.0[2] - self.0[3]) / 4,
+             (self.0[0] + self.0[1] + self.0[2] + self.0[3]) / 4),
+
+            ((self.0[4] - self.0[5] + self.0[6] - self.0[7]) / 4,
+             (self.0[4] + self.0[5] - self.0[6] - self.0[7]) / 4,
+             (-self.0[4] - self.0[5] - self.0[6] - self.0[7]) / 4),
+
+            ((self.0[0] + self.0[2] + self.0[4] + self.0[6]) / 4,
+             (self.0[0] - self.0[2] + self.0[4] - self.0[6]) / 4,
+             (self.0[0] + self.0[5] - self.0[4] - self.0[6]) / 4),
+
+            ((-self.0[1] - self.0[3] - self.0[5] - self.0[7]) / 4,
+             (self.0[1] - self.0[3] + self.0[5] - self.0[7]) / 4,
+             (self.0[1] + self.0[3] - self.0[5] - self.0[7]) / 4),
+
+            ((self.0[0] - self.0[1] + self.0[4] - self.0[5]) / 4,
+             (self.0[0] + self.0[1] + self.0[4] + self.0[5]) / 4,
+             (self.0[0] + self.0[1] - self.0[4] - self.0[5]) / 4),
+
+            ((self.0[2] - self.0[3] + self.0[6] - self.0[7]) / 4,
+             (-self.0[2] - self.0[3] - self.0[6] - self.0[7]) / 4,
+             (self.0[2] + self.0[3] - self.0[6] - self.0[7]) / 4)]
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -86,87 +113,22 @@ fn main() {
         .map(|(pt, r)| Bounds::from_pt(pt, *r))
         .collect::<Vec<_>>();
 
-    let mut intersects = HashSet::new();
-    for (i, a) in bounds.iter().enumerate() {
-        for (j, b) in bounds.iter().enumerate() {
-            if (!a.intersection(&b).is_empty()) {
-                intersects.insert((i, j));
-                print!("X");
-            } else {
-                print!(".");
-            }
+    let ba = Bounds::from_pt(&(0, 0, 0), 3);
+    let bc = Bounds::from_pt(&(3, 0, 0), 3);
+    let int = ba.intersection(&bc);
+    for i in int.corners() {
+        if !ba.contains(&i) {
+            println!("OH NO: {:?}", &i);
         }
-        print!("\n");
+        if !bc.contains(&i) {
+            println!("BO NO: {:?}", &i);
+        }
+        if !int.contains(&i) {
+            println!("HO NO: {:?}", &i);
+        }
+        println!("----");
     }
 
-    let target = (0..bounds.len()).collect::<Vec<_>>();
-    let mut best_score = 0;
-    let mut seen: HashSet<Vec<usize>> = HashSet::new();
-    let mut todo = VecDeque::new();
-    todo.push_back(target);
-
-    while let Some(next) = todo.pop_front() {
-        println!("Testing group of size {}", next.len());
-        if next.len() < best_score || seen.contains(&next) {
-            continue;
-        }
-
-        let mut bad_points = next.iter().map(|a|
-            (next.iter().filter(|b| !intersects.contains(&(*a, **b))).count(),
-             a))
-            .filter(|(score, _)| *score > 0)
-            .collect::<Vec<_>>();
-        bad_points.sort();
-
-        if bad_points.len() == 0 {
-            println!("Success!\n");
-            best_score = next.len();
-            break;
-        } else {
-            println!("Found {} bad points to try removing\n", bad_points.len());
-        }
-
-        for (_, t) in bad_points.iter().rev() {
-            let next = next.iter().filter(|c| c != t).cloned().collect();
-            todo.push_back(next);
-        }
-    }
-
+    println!("{:?}", int.corners());
     // 129293600 is too high
-}
-
-fn run(target: &Vec<usize>, intersects: &HashSet<(usize, usize)>,
-       best_score: &mut usize,
-       seen: &mut HashSet<Vec<usize>>)
-{
-    if target.len() < *best_score {
-        return;
-    }
-    if seen.contains(target) {
-        return;
-    }
-    seen.insert(target.clone());
-    println!("Testing group of size {}", target.len());
-
-    let mut bad_points = target.iter().map(|a|
-        (target.iter().filter(|b| !intersects.contains(&(*a, **b))).count(),
-         a))
-        .filter(|(score, _)| *score > 0)
-        .collect::<Vec<_>>();
-    bad_points.sort();
-
-    if bad_points.len() == 0 {
-        println!("Success!\n");
-        *best_score = target.len();
-        return;
-    }
-
-    if target.len() == *best_score {
-        return;
-    }
-
-    for (_, t) in bad_points.iter().rev() {
-        let next = target.iter().filter(|c| c != t).cloned().collect();
-        run(&next, intersects, best_score, seen);
-    }
 }
