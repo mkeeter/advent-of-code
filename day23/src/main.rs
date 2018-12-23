@@ -3,6 +3,14 @@ use regex::Regex;
 use std::collections::{HashMap, HashSet};
 use std::cmp::min;
 
+// Bounds represent a region with the bounds
+//   x + y + z <= bounds[0]
+//  -x + y + z <= bounds[1]
+//   x - y + z <= bounds[2]
+//  -x - y + z <= bounds[3]
+//   x + y - z <= bounds[4]
+//  etc
+#[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq)]
 struct Bounds([i64; 8]);
 
 impl Bounds {
@@ -36,7 +44,7 @@ impl Bounds {
                      + z * Self::sign(i, 2) <= self.0[i])
     }
 
-    fn empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         (0..8).any(|i| self.0[i] < -self.0[Self::opposite(i)])
     }
 
@@ -48,6 +56,8 @@ impl Bounds {
         Bounds(out)
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 fn main() {
     let mut buffer = String::new();
@@ -71,60 +81,59 @@ fn main() {
         .count();
     println!("Part 1: {}", n);
 
-
     ////////////////////////////////////////////////////////////////////////////
+    let mut bounds = pts.iter()
+        .enumerate()
+        .map(|(i, (pt, r))| ([i].iter().cloned().collect(),
+                             Bounds::from_pt(pt, *r)))
+        .collect::<Vec<(Vec<usize>, Bounds)>>();
 
-    // Bounds represent a region with the bounds
-    //   x + y + z <= bounds[0]
-    //  -x + y + z <= bounds[1]
-    //   x - y + z <= bounds[2]
-    //  -x - y + z <= bounds[3]
-    //   x + y - z <= bounds[4]
-    //  etc
-    let bounds = pts.iter()
-        .map(|(pt, r)| Bounds::from_pt(pt, *r))
-        .collect::<Vec<Bounds>>();
+    let mut seen = HashSet::new();
+    for max_rank in 0.. {
+        for (ca, _) in bounds.iter() {
+            print!("{:?}", ca);
+        }print!("\n");
 
-    let ba = Bounds::from_pt(&(0, 0, 0), 10);
-    let bb = Bounds::from_pt(&(11, 0, 0), 10);
-    let bc = ba.intersection(&bb);
-    println!("{:?}", bc.empty());
+        let mut next = Vec::new();
+        for (i, (ca, ba)) in bounds.iter().enumerate() {
+            println!("{} / {}", i, bounds.len());
+            for (j, (cb, bb))  in bounds.iter().enumerate() {
+                if j >= i {
+                    break;
+                }
+                if ca.len() <= max_rank && cb.len() <= max_rank {
+                    continue;
+                }
+                let bc = ba.intersection(bb);
+                if bc.is_empty() {
+                    continue;
+                }
 
-    //assert!(best_pts.len() == 1);
-    let mut target = best_pts.iter().next().unwrap().clone();
+                let mut cc = Vec::new();
+                for x in ca { cc.push(x.clone()); }
+                for x in cb { cc.push(x.clone()); }
+                cc.sort();
+                cc.dedup();
 
-    println!("walking from {:?}", target);
-    let mut improved = true;
-    while improved {
-        improved = false;
-        let offset = |i| match i % 3 {
-            0 => -1,
-            1 =>  0,
-            2 =>  1,
-            _ => unreachable!(),
-        };
-
-        for i in 0..27 {
-            let next = (target.0 + offset(i),
-                        target.1 + offset(i/3),
-                        target.2 + offset(i/9));
-            if next.0.abs() + next.1.abs() + next.2.abs() >=
-               target.0.abs() + target.1.abs() + target.2.abs()
-            {
-                continue;
-            } else if pts.iter()
-                .filter(|((x, y, z), r)| (next.0 - x).abs() +
-                                         (next.1 - y).abs() +
-                                         (next.2 - z).abs() <= *r)
-                .count() == best_score
-            {
-                target = next;
-                improved = true;
-            }        }
-        if improved {
-            println!("{:?}", target);
+                if cc.len() <= ca.len() || cc.len() <= cb.len() {
+                    continue;
+                }
+                if seen.contains(&cc) {
+                    continue;
+                }
+                seen.insert(cc.clone());
+                next.push((cc, bc));
+            }
         }
+        if next.len() == 0 {
+            break;
+        }
+        bounds = next;
     }
-    println!("{:?}, {:?}", best_score, best_pts);
+
+    let ba = Bounds::from_pt(&(0, 5, 0), 11);
+    let bb = Bounds::from_pt(&(6, 0, 0), 1);
+    let bc = ba.intersection(&bb);
+
     // 129293600 is too high
 }
