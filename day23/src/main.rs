@@ -3,6 +3,8 @@ use regex::Regex;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::cmp::min;
 
+#[macro_use] extern crate itertools;
+
 // Bounds represent a region with the bounds
 //   x + y + z <= bounds[0]
 //  -x + y + z <= bounds[1]
@@ -58,19 +60,25 @@ impl Bounds {
 
     fn corners(&self) -> Vec<(i64, i64, i64)> {
         let mut out = Vec::new();
-        for axis in [1, 2, 4].iter() {
+        for axis in 0..3 {
             for offset in [false, true].iter() {
+                // Collect the four places that define this
+                // corner, and compute its coordinates.
                 let mut x = 0;
                 let mut y = 0;
                 let mut z = 0;
 
                 for i in 0..8 {
-                    if ((i & axis) != 0) == *offset {
+                    if ((i & (1 << axis)) != 0) == *offset {
                         x += self.0[i] * Self::sign(i, 0);
                         y += self.0[i] * Self::sign(i, 1);
                         z += self.0[i] * Self::sign(i, 2);
                     }
                 }
+
+                // Work around integer discrepencies by
+                // including multiple choices if a coordinate
+                // isn't an even division of 4.
                 let xs = if x % 4 == 0 { vec![x / 4] }
                          else { vec![x / 4, (x + 3) / 4] };
                 let ys = if y % 4 == 0 { vec![y / 4] }
@@ -78,13 +86,10 @@ impl Bounds {
                 let zs = if z % 4 == 0 { vec![z / 4] }
                          else { vec![z / 4, (z + 3) / 4] };
 
-                for x in xs.iter() {
-                    for y in ys.iter() {
-                        for z in zs.iter() {
-                            out.push((*x, *y, *z));
-                        }
-                    }
-                }
+                iproduct!(xs.iter(), ys.iter(), zs.iter())
+                    .filter(|(&x, &y, &z)| self.contains(&(x, y, z)))
+                    .map(|(&x, &y, &z)| out.push((x, y, z)))
+                    .for_each(drop);
             }
         }
         return out;
@@ -116,7 +121,7 @@ fn main() {
     println!("Part 1: {}", n);
 
     ////////////////////////////////////////////////////////////////////////////
-    let mut bounds = pts.iter()
+    let bounds = pts.iter()
         .map(|(pt, r)| Bounds::from_pt(pt, *r))
         .collect::<Vec<_>>();
 
@@ -146,7 +151,6 @@ fn main() {
                               (pt.1 - y).abs() +
                               (pt.2 - z).abs() <= *r)
             .count();
-
 
         let dist = x + y + z;
         if n > best_score {
