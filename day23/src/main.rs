@@ -1,6 +1,53 @@
 use std::io::{self, Read};
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
+use std::cmp::min;
+
+struct Bounds([i64; 8]);
+
+impl Bounds {
+    fn from_pt(pt: &(i64, i64, i64), r: i64) -> Bounds {
+        let (x, y, z) = pt;
+        let mut out = [0; 8];
+        for i in 0..8 {
+            out[i] = r + x * Self::sign(i, 0)
+                       + y * Self::sign(i, 1)
+                       + z * Self::sign(i, 2);
+        }
+        Bounds(out)
+    }
+
+    fn sign(i: usize, axis: usize) -> i64 {
+        if i & (1 << axis) != 0 {
+             1
+        } else {
+            -1
+        }
+    }
+
+    fn opposite(i: usize) -> usize {
+        (!i) & 0b111
+    }
+
+    fn contains(&self, pt: &(i64, i64, i64)) -> bool {
+        let (x, y, z) = pt;
+        (0..8).all(|i| x * Self::sign(i, 0)
+                     + y * Self::sign(i, 1)
+                     + z * Self::sign(i, 2) <= self.0[i])
+    }
+
+    fn empty(&self) -> bool {
+        (0..8).any(|i| self.0[i] < -self.0[Self::opposite(i)])
+    }
+
+    fn intersection(&self, other: &Bounds) -> Bounds {
+        let mut out = [0; 8];
+        for i in 0..8 {
+            out[i] = min(self.0[i], other.0[i]);
+        }
+        Bounds(out)
+    }
+}
 
 fn main() {
     let mut buffer = String::new();
@@ -24,62 +71,24 @@ fn main() {
         .count();
     println!("Part 1: {}", n);
 
-    let mut best_score = 0;
-    let mut best_pts = HashSet::new();
-    let mut check_score = |corner: (i64, i64, i64)| {
-        let score = pts.iter()
-            .filter(|(pt, r)| (corner.0 - pt.0).abs() +
-                              (corner.1 - pt.1).abs() +
-                              (corner.2 - pt.2).abs() <= *r)
-            .count();
-        if score > best_score {
-            best_score = score;
-            best_pts.clear();
-        }
-        if score >= best_score {
-            best_pts.insert(corner.clone());
-        }
-    };
 
-    for (i, ((x, y, z), r)) in pts.iter().enumerate() {
-        println!("{} / {}", i, pts.len());
-        let r = *r;
-        for corner in [(r, 0, 0), (-r, 0, 0),
-                       (0, r, 0), (0, -r, 0),
-                       (0, 0, r), (0, 0, -r)].iter()
-        {
-            let corner = (x + corner.0, y + corner.1, z + corner.2);
-            check_score(corner);
-        }
+    ////////////////////////////////////////////////////////////////////////////
 
-        for (start, end, delta) in [(( r, 0, 0), (0,  r, 0), (-1,  1, 0)),
-                                    (( r, 0, 0), (0, -r, 0), (-1, -1, 0)),
-                                    ((-r, 0, 0), (0,  r, 0), ( 1,  1, 0)),
-                                    ((-r, 0, 0), (0, -r, 0), ( 1, -1, 0)),
+    // Bounds represent a region with the bounds
+    //   x + y + z <= bounds[0]
+    //  -x + y + z <= bounds[1]
+    //   x - y + z <= bounds[2]
+    //  -x - y + z <= bounds[3]
+    //   x + y - z <= bounds[4]
+    //  etc
+    let bounds = pts.iter()
+        .map(|(pt, r)| Bounds::from_pt(pt, *r))
+        .collect::<Vec<Bounds>>();
 
-                                    ((0, 0,  r), (0,  r, 0), (0,  1, -1)),
-                                    ((0, 0,  r), (0, -r, 0), (0, -1, -1)),
-                                    ((0, 0, -r), (0,  r, 0), (0,  1,  1)),
-                                    ((0, 0, -r), (0, -r, 0), (0, -1,  1)),
-
-                                    ((0, 0,  r), ( r, 0, 0), ( 1, 0, -1)),
-                                    ((0, 0,  r), (-r, 0, 0), (-1, 0, -1)),
-                                    ((0, 0, -r), ( r, 0, 0), ( 1, 0,  1)),
-                                    ((0, 0, -r), (-r, 0, 0), (-1, 0,  1))]
-                                    .iter()
-        {
-            let mut pos = start.clone();
-            while pos != *end {
-                println!("{:?}, {:?}, {:?}", pos, end, delta);
-                let corner = (x + pos.0, y + pos.1, z + pos.2);
-                check_score(corner);
-
-                pos.0 += delta.0;
-                pos.1 += delta.1;
-                pos.2 += delta.2;
-            }
-        }
-    }
+    let ba = Bounds::from_pt(&(0, 0, 0), 10);
+    let bb = Bounds::from_pt(&(11, 0, 0), 10);
+    let bc = ba.intersection(&bb);
+    println!("{:?}", bc.empty());
 
     //assert!(best_pts.len() == 1);
     let mut target = best_pts.iter().next().unwrap().clone();
@@ -96,15 +105,12 @@ fn main() {
         };
 
         for i in 0..27 {
-            println!("{} {} {}", offset(i), offset(i/3), offset(i/9));
             let next = (target.0 + offset(i),
                         target.1 + offset(i/3),
                         target.2 + offset(i/9));
-            println!("Checking {:?}", next);
             if next.0.abs() + next.1.abs() + next.2.abs() >=
                target.0.abs() + target.1.abs() + target.2.abs()
             {
-                println!("  Not okay");
                 continue;
             } else if pts.iter()
                 .filter(|((x, y, z), r)| (next.0 - x).abs() +
@@ -114,27 +120,11 @@ fn main() {
             {
                 target = next;
                 improved = true;
-            } else {
-                println!("  Not valid");
-            }
-        }
+            }        }
         if improved {
             println!("{:?}", target);
         }
     }
     println!("{:?}, {:?}", best_score, best_pts);
-
-    for x in 42994500..42994515 {
-        for y in 37742124..37742135 {
-            for z in 48556960..48556970 {
-                println!("{} {} {}, {}", x, y, z,
-                        pts.iter().filter(|((xn, yn, zn), r)|
-                                          (x - xn).abs() +
-                                          (y - yn).abs() +
-                                          (z - zn).abs() <= *r)
-                        .count());
-            }
-        }
-    }
     // 129293600 is too high
 }
