@@ -116,10 +116,6 @@ fn run(armies: &Vec<Army>, boost: usize) -> Vec<Army> {
     }
 
     loop {
-        for a in armies.iter() {
-            println!("{:?}: {} units", a.team, a.units);
-        }
-        print!("\n");
         let mut order = (0..armies.len()).collect::<Vec<usize>>();
         order.sort_by_key(
             |&i| (armies[i].effective_power(), armies[i].initiative));
@@ -131,14 +127,13 @@ fn run(armies: &Vec<Army>, boost: usize) -> Vec<Army> {
             let target = armies.iter()
                 .enumerate()
                 .filter(|(j, b)| b.team != a.team && !targeted.contains(j))
-                .max_by_key(|(j, b)| (b.damage_from(a), b.effective_power(), b.initiative))
+                .max_by_key(|(_, b)| (b.damage_from(a), b.effective_power(), b.initiative))
                 .map(|j| j.0);
 
             if let Some(t) = target {
                 if armies[t].damage_from(a) > 0 {
                     attacks.insert(*i, t);
                     targeted.insert(t);
-                    println!("{:?} army {} attacking {}", a.team, i, t);
                 }
             }
         }
@@ -164,19 +159,15 @@ fn run(armies: &Vec<Army>, boost: usize) -> Vec<Army> {
             let kills = min(damage / target.hp, target.units);
             any_kills |= kills > 0;
 
-            print!("{} attacks {} with {} units, dealing {} and killing {}",
-                i, j, attacker.units, damage, kills);
-
             let target = &mut armies[*attacks.get(&i).unwrap()];
             target.units = target.units.saturating_sub(kills);
-            println!(" (leaving {})", target.units);
         }
         armies = armies.into_iter().filter(|a| a.units != 0).collect();
+
+        // Stalemate detection
         if !any_kills {
-            println!("Detected stalemate");
             break;
         }
-        println!("------");
     }
 
     armies
@@ -202,19 +193,14 @@ fn main() {
 
     let part1 = run(&armies, 0);
     let units: usize = part1.iter().map(|a| a.units).sum();
-    println!("{}", units);
+    println!("Part 1: {}", units);
 
-    println!("PART 2");
-
-    let part2 = run(&armies, 1570);
     for boost in 0.. {
-        println!("=========");
         let part2 = run(&armies, boost);
         if part2.iter().all(|a| a.team == Team::Immune) {
             let units: usize = part2.iter().map(|a| a.units).sum();
-            println!("{}", units);
+            println!("Part 2: {}", units);
             break;
-            // 8095 is too high
         }
     }
 }
