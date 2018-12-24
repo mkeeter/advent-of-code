@@ -83,7 +83,7 @@ named!(flavor<CompleteStr, Flavor>,
             value!(Flavor::Slashing, tag_s!("slashing")) |
             value!(Flavor::Fire, tag_s!("fire"))));
 
-named!(parse_line<CompleteStr, Army>,
+named_args!(parse_line(team: Team)<CompleteStr, Army>,
     do_parse!(count: usize_ >>
               tag_s!(" units each with ") >>
               hp: usize_ >>
@@ -96,7 +96,7 @@ named!(parse_line<CompleteStr, Army>,
               tag_s!(" damage at initiative ") >>
               initiative: usize_ >>
               (Army {
-                    team: Team::Immune,
+                    team: team,
                     units: count,
                     hp: hp,
                     damage: damage,
@@ -117,57 +117,46 @@ fn run(armies: &Vec<Army>, boost: usize) -> Vec<Army> {
 
     loop {
         let mut order = (0..armies.len()).collect::<Vec<usize>>();
+
+        // Target selection phase
         order.sort_by_key(
             |&i| (armies[i].effective_power(), armies[i].initiative));
-
         let mut attacks = HashMap::new();
         let mut targeted = HashSet::new();
         for i in order.iter().rev() {
             let a = &armies[*i];
-            let target = armies.iter()
+            armies.iter()
                 .enumerate()
                 .filter(|(j, b)| b.team != a.team && !targeted.contains(j))
-                .max_by_key(|(_, b)| (b.damage_from(a), b.effective_power(), b.initiative))
-                .map(|j| j.0);
-
-            if let Some(t) = target {
-                if armies[t].damage_from(a) > 0 {
-                    attacks.insert(*i, t);
-                    targeted.insert(t);
-                }
-            }
+                .map(|(j, b)| (j, b, b.damage_from(a)))
+                .filter(|(_, _, d)| *d > 0)
+                .max_by_key(|(_, b, d)| (*d, b.effective_power(), b.initiative))
+                .map(|(j, _, _)| {
+                    attacks.insert(*i, j);
+                    targeted.insert(j);
+                });
         }
 
-        if attacks.is_empty() {
-            break;
-        }
+        // Attack phase
+        order.sort_by_key(|&i| armies[i].initiative);
 
         let mut any_kills = false;
-        order.sort_by_key(|&i| armies[i].initiative);
-        for &i in order.iter().rev() {
+        for &i in order.iter().rev().filter(|i| attacks.contains_key(i)) {
+            let j = *attacks.get(&i).unwrap();
+
             let attacker = &armies[i];
-            if attacker.units == 0 {
-                continue;
-            }
-
-            let j = attacks.get(&i);
-            if j.is_none() { continue; }
-            let j = *j.unwrap();
-
             let target = &armies[j];
+
             let damage = target.damage_from(attacker);
             let kills = min(damage / target.hp, target.units);
             any_kills |= kills > 0;
 
-            let target = &mut armies[*attacks.get(&i).unwrap()];
-            target.units = target.units.saturating_sub(kills);
+            armies[j].units -= kills;
         }
-        armies = armies.into_iter().filter(|a| a.units != 0).collect();
-
-        // Stalemate detection
         if !any_kills {
             break;
         }
+        armies = armies.into_iter().filter(|a| a.units != 0).collect();
     }
 
     armies
@@ -185,9 +174,8 @@ fn main() {
         } else if line == "Infection:" {
             current_team = Some(Team::Infection);
         } else if line.len() > 0 {
-            let mut army = parse_line(CompleteStr(line)).ok().unwrap().1;
-            army.team = current_team.unwrap();
-            armies.push(army);
+            armies.push(parse_line(CompleteStr(line), current_team.unwrap())
+                        .ok().unwrap().1);
         }
     }
 
