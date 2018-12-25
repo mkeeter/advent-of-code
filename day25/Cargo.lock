@@ -1,0 +1,14 @@
+[[package]]
+name = "day25"
+version = "0.1.0"
+dependencies = [
+ "itertools 0.4.19 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "itertools"
+version = "0.4.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[metadata]
+"checksum itertools 0.4.19 (registry+https://github.com/rust-lang/crates.io-index)" = "c4a9b56eb56058f43dc66e58f40a214b2ccbc9f3df51861b63d51dec7b65bc3f"
