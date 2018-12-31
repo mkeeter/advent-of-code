@@ -273,8 +273,8 @@ fn build_safe_ir(context: &Context,
                     IntPredicate::EQ, value,
                     i64_type.const_int((i + 1) as u64, false),
                     &format!("cmp_{}_{}", i, i + 1));
-                builder.build_conditional_branch(eq, get(i + 1, &jb),
-                                                     get(i + 2, &jb));
+                builder.build_conditional_branch(eq, get(i + 2, &jb),
+                                                     get(i + 1, &jb));
             }
             builder.position_at_end(&instruction_blocks[i].block);
             Some(jb)
