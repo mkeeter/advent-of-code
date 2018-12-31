@@ -9,9 +9,11 @@ use inkwell::context::Context;
 use inkwell::execution_engine::JitFunction;
 use inkwell::targets::{InitializationConfig, Target};
 use inkwell::IntPredicate;
-use inkwell::values::FunctionValue;
-use inkwell::types::IntType;
+use inkwell::values::{FunctionValue, PointerValue};
+use inkwell::types::{IntType, PointerType};
+use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
+use inkwell::module::Module;
 
 #[derive(Debug, Eq, PartialEq)]
 struct Registers([usize; 6]);
@@ -90,21 +92,25 @@ unsafe extern "C" fn callback(reg: *const i64) -> bool {
     }
 }
 
-fn build_unsafe_ir(context: &Context,
-                   builder: &Builder,
-                   function: &FunctionValue,
-                   i64_type: IntType,
-                   cb_func: FunctionValue,
-                   tape: &Vec<Instruction>,
-                   ip_reg: usize)
+fn build_setup_block(context: &Context,
+                     module: &Module,
+                     builder: &Builder,
+                     i64_type: IntType) ->
+    (BasicBlock, PointerValue, Vec<PointerValue>)
 {
+    println!("Creating function block");
+
+    // Here is our JITted function, which takes no arguments and returns void
+    let void_type = context.void_type();
+    let fn_type = void_type.fn_type(&[], false);
+    let function = module.add_function("jit", fn_type, None);
+
     // The setup block initializes our registers to all zeros
-    let setup_block = context.append_basic_block(function, "setup");
+    println!("  Initializing register array");
+    let setup_block = context.append_basic_block(&function, "setup");
     builder.position_at_end(&setup_block);
     let reg_array = builder.build_alloca(i64_type.array_type(6), "reg_array");
 
-    println!("Creating function block");
-    println!("  Initializing register array");
     // Build an array of the register addresses, for store + load operations
     let reg = {
         let mut reg = Vec::new();
@@ -122,6 +128,20 @@ fn build_unsafe_ir(context: &Context,
         }
         reg
     };
+
+    (setup_block, reg_array, reg)
+}
+
+fn build_unsafe_ir(context: &Context,
+                   module: &Module,
+                   builder: &Builder,
+                   i64_type: IntType,
+
+                   cb_func: FunctionValue,
+                   tape: &Vec<Instruction>,
+                   ip_reg: usize)
+{
+    let (setup_block, reg_array, reg) = build_setup_block(context, module, builder, i64_type);
 
     // Each instruction gets one i block, plus an optional j block
     println!("  Creating instruction blocks");
@@ -297,6 +317,38 @@ fn main() -> Result<(), Box<std::error::Error>> {
     println!("  Found {} instructions with {} breakpoints", tape.len(),
              tape.iter().filter(|i| i.breakpoint).count());
 
+    let mut unsafe_landing_zones = HashSet::new();
+    let mut jump_targets = HashSet::new();
+
+    for (i, line) in tape.iter().enumerate() {
+        if line.c == ip_reg {
+            if line.op.0 == Set && line.op.1 == Immediate {
+                println!("Found jump from {} to {}", i, line.a + 1);
+                jump_targets.insert(line.a + 1);
+            } else if line.op.0 == Add && line.op.2 == Immediate {
+                println!("Found jump from {} to {}", i, i + line.a + 1);
+                jump_targets.insert(i + line.a + 1);
+            } else if line.op.0 == Add && line.op.2 == Register && i > 0 &&
+                (tape[i - 1].op.0 == Eq || tape[i - 1].op.0 == Gt) &&
+                ((line.b == ip_reg && line.a == tape[i - 1].c) ||
+                 (line.a == ip_reg && line.b == tape[i - 1].c))
+            {
+                println!("Found jump from {} to {} or {}", i, i + 1, i + 2);
+                jump_targets.insert(i + 1);
+                jump_targets.insert(i + 2);
+                unsafe_landing_zones.insert(i);
+            } else {
+                println!("Found unconstrained jump");
+                for i in 0..tape.len() {
+                    jump_targets.insert(i);
+                }
+            }
+        }
+    }
+    println!("{:?}\n{:?}\n", unsafe_landing_zones, jump_targets);
+    let proved_safe =
+        unsafe_landing_zones.intersection(&jump_targets).count() == 0;
+
     println!("Building JIT engine");
     Target::initialize_native(&InitializationConfig::default())?;
 
@@ -306,21 +358,24 @@ fn main() -> Result<(), Box<std::error::Error>> {
     let execution_engine = module.create_jit_execution_engine(
         OptimizationLevel::Aggressive)?;
 
-    //  Install our global callback into the system
     let i64_type = context.i64_type();
+
+    //  Install our global callback into the system
     let i1_type = context.custom_width_int_type(1);
-    let reg_type = i64_type.array_type(6);
     let cb_type = i1_type.fn_type(
-        &[reg_type.ptr_type(AddressSpace::Generic).into()], false);
+        &[i64_type.array_type(6).ptr_type(AddressSpace::Generic).into()], false);
     let cb_func = module.add_function("cb", cb_type, None);
     execution_engine.add_global_mapping(&cb_func, callback as usize);
 
-    // Here is our JITted function, which takes no arguments and returns void
-    let void_type = context.void_type();
-    let fn_type = void_type.fn_type(&[], false);
-    let function = module.add_function("jit", fn_type, None);
-
-    build_unsafe_ir(&context, &builder, &function, i64_type, cb_func, &tape, ip_reg);
+    if !proved_safe {
+        println!("Cannot prove program safe; generating inefficient IR");
+        build_unsafe_ir(&context, &module, &builder, i64_type,
+                        cb_func, &tape, ip_reg);
+    } else {
+        println!("Proved program safe; generating efficient IR");
+        build_unsafe_ir(&context, &module, &builder, i64_type,
+                        cb_func, &tape, ip_reg);
+    }
     //module.print_to_stderr();
 
     println!("Compiling...");
