@@ -9,6 +9,9 @@ use inkwell::context::Context;
 use inkwell::execution_engine::JitFunction;
 use inkwell::targets::{InitializationConfig, Target};
 use inkwell::IntPredicate;
+use inkwell::values::FunctionValue;
+use inkwell::types::IntType;
+use inkwell::builder::Builder;
 
 #[derive(Debug, Eq, PartialEq)]
 struct Registers([usize; 6]);
@@ -87,57 +90,16 @@ unsafe extern "C" fn callback(reg: *const i64) -> bool {
     }
 }
 
-fn main() -> Result<(), Box<std::error::Error>> {
-    let mut buffer = String::new();
-    io::stdin().read_to_string(&mut buffer).unwrap();
-
-    println!("Parsing instructions...");
-    let mut ip_reg = 0;
-    let tape = buffer
-        .lines()
-        .filter_map(|line| {
-            let words = line.split(' ').collect::<Vec<_>>();
-            if words[0] == "#ip" {
-                ip_reg = str::parse::<usize>(words[1]).unwrap();
-                None
-            } else {
-                let op = str_to_opcode(words[0]);
-                let a = str::parse::<usize>(words[1]).unwrap();
-                let b = str::parse::<usize>(words[2]).unwrap();
-                let c = str::parse::<usize>(words[3]).unwrap();
-                let bp = *words.get(4).unwrap_or(&"") == "#break";
-                Some(Instruction { op: op, a: a, b: b, c: c, breakpoint: bp})
-            }
-        })
-        .collect::<Vec<Instruction>>();
-    println!("  Found {} instructions with {} breakpoints", tape.len(),
-             tape.iter().filter(|i| i.breakpoint).count());
-
-    println!("Building JIT engine");
-    Target::initialize_native(&InitializationConfig::default())?;
-
-    let context = Context::create();
-    let module = context.create_module("cb");
-    let builder = context.create_builder();
-    let execution_engine = module.create_jit_execution_engine(
-        OptimizationLevel::Aggressive)?;
-
-    //  Install our global callback into the system
-    let i64_type = context.i64_type();
-    let i1_type = context.custom_width_int_type(1);
-    let reg_type = i64_type.array_type(6);
-    let cb_type = i1_type.fn_type(
-        &[reg_type.ptr_type(AddressSpace::Generic).into()], false);
-    let cb_func = module.add_function("cb", cb_type, None);
-    execution_engine.add_global_mapping(&cb_func, callback as usize);
-
-    // Here is our JITted function, which takes no arguments and returns void
-    let void_type = context.void_type();
-    let fn_type = void_type.fn_type(&[], false);
-    let function = module.add_function("jit", fn_type, None);
-
+fn build_unsafe_ir(context: &Context,
+                   builder: &Builder,
+                   function: &FunctionValue,
+                   i64_type: IntType,
+                   cb_func: FunctionValue,
+                   tape: &Vec<Instruction>,
+                   ip_reg: usize)
+{
     // The setup block initializes our registers to all zeros
-    let setup_block = context.append_basic_block(&function, "setup");
+    let setup_block = context.append_basic_block(function, "setup");
     builder.position_at_end(&setup_block);
     let reg_array = builder.build_alloca(i64_type.array_type(6), "reg_array");
 
@@ -307,6 +269,58 @@ fn main() -> Result<(), Box<std::error::Error>> {
     builder.build_call(cb_func, &[reg_array.into()], "final_call");
     builder.build_return(None);
 
+}
+
+fn main() -> Result<(), Box<std::error::Error>> {
+    let mut buffer = String::new();
+    io::stdin().read_to_string(&mut buffer).unwrap();
+
+    println!("Parsing instructions...");
+    let mut ip_reg = 0;
+    let tape = buffer
+        .lines()
+        .filter_map(|line| {
+            let words = line.split(' ').collect::<Vec<_>>();
+            if words[0] == "#ip" {
+                ip_reg = str::parse::<usize>(words[1]).unwrap();
+                None
+            } else {
+                let op = str_to_opcode(words[0]);
+                let a = str::parse::<usize>(words[1]).unwrap();
+                let b = str::parse::<usize>(words[2]).unwrap();
+                let c = str::parse::<usize>(words[3]).unwrap();
+                let bp = *words.get(4).unwrap_or(&"") == "#break";
+                Some(Instruction { op: op, a: a, b: b, c: c, breakpoint: bp})
+            }
+        })
+        .collect::<Vec<Instruction>>();
+    println!("  Found {} instructions with {} breakpoints", tape.len(),
+             tape.iter().filter(|i| i.breakpoint).count());
+
+    println!("Building JIT engine");
+    Target::initialize_native(&InitializationConfig::default())?;
+
+    let context = Context::create();
+    let module = context.create_module("cb");
+    let builder = context.create_builder();
+    let execution_engine = module.create_jit_execution_engine(
+        OptimizationLevel::Aggressive)?;
+
+    //  Install our global callback into the system
+    let i64_type = context.i64_type();
+    let i1_type = context.custom_width_int_type(1);
+    let reg_type = i64_type.array_type(6);
+    let cb_type = i1_type.fn_type(
+        &[reg_type.ptr_type(AddressSpace::Generic).into()], false);
+    let cb_func = module.add_function("cb", cb_type, None);
+    execution_engine.add_global_mapping(&cb_func, callback as usize);
+
+    // Here is our JITted function, which takes no arguments and returns void
+    let void_type = context.void_type();
+    let fn_type = void_type.fn_type(&[], false);
+    let function = module.add_function("jit", fn_type, None);
+
+    build_unsafe_ir(&context, &builder, &function, i64_type, cb_func, &tape, ip_reg);
     //module.print_to_stderr();
 
     println!("Compiling...");
