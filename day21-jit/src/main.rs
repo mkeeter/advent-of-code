@@ -1,7 +1,7 @@
 extern crate inkwell;
 
 use std::io::{self, Read};
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque, HashMap};
 
 use inkwell::OptimizationLevel;
 use inkwell::AddressSpace;
@@ -9,7 +9,7 @@ use inkwell::context::Context;
 use inkwell::execution_engine::JitFunction;
 use inkwell::targets::{InitializationConfig, Target};
 use inkwell::IntPredicate;
-use inkwell::values::{FunctionValue, PointerValue};
+use inkwell::values::{FunctionValue, PointerValue, PhiValue, IntValue};
 use inkwell::types::{IntType, PointerType};
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
@@ -132,6 +132,184 @@ fn build_setup_block(context: &Context,
     (setup_block, reg_array, reg)
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
+// IR generator for cases when all of the jumps are safe
+fn build_safe_ir(context: &Context,
+                 module: &Module,
+                 builder: &Builder,
+                 i64_type: IntType,
+
+                 cb_func: FunctionValue,
+                 tape: &Vec<Instruction>,
+                 ip_reg: usize)
+{
+    let (setup_block, reg_array, reg) = build_setup_block(context, module, builder, i64_type);
+
+    struct Block {
+        phi: Vec<PhiValue>,
+        input: Vec<IntValue>,
+        output: Vec<IntValue>,
+        block: BasicBlock,
+    };
+
+    // Each instruction gets one i block, plus an optional j block
+    println!("  Creating instruction blocks");
+    let mut instruction_blocks: Vec<Block> = Vec::new();
+    for i in 0..tape.len() {
+        let b = context.insert_basic_block_after(
+                if i == 0 { &setup_block }
+                else {  &instruction_blocks.last().unwrap().block },
+                &format!("i{}", i));
+        builder.position_at_end(&b);
+
+        let mut block = Block {
+            phi: Vec::new(),
+            input: Vec::new(),
+            output: Vec::new(),
+            block: b
+        };
+        for j in 0..6 {
+            if j == ip_reg {
+                block.input.push(i64_type.const_int(i as u64, false));
+            } else {
+                let phi = builder.build_phi(i64_type, &format!("r{}_{}", j, i));
+                if i == 0 {
+                    phi.add_incoming(&[(&i64_type.const_int(0, false), &setup_block)]);
+                }
+                block.phi.push(phi);
+                block.input.push(phi.as_basic_value().into_int_value());
+            }
+        }
+        block.output = block.input.clone();
+        instruction_blocks.push(block);
+    }
+
+    // Finally, the exit block is at the end of our instructions
+    let exit_block = context.insert_basic_block_after(
+        &instruction_blocks.last().unwrap().block, "exit");
+    builder.position_at_end(&exit_block);
+    let mut exit_phi = Vec::new();
+    for j in 0..6 {
+        if j != ip_reg {
+            let phi = builder.build_phi(i64_type, &format!("r{}_exit", j));
+            if instruction_blocks.len() == 0 {
+                phi.add_incoming(&[(&i64_type.const_int(0, false),
+                                    &setup_block)]);
+            }
+            exit_phi.push(phi);
+        }
+    }
+
+    builder.position_at_end(&setup_block);
+    builder.build_call(cb_func, &[reg_array.into()], "first_call");
+    builder.build_unconditional_branch(
+        instruction_blocks.get(0).map(|b| &b.block).unwrap_or(&exit_block));
+
+    println!("  Writing instruction");
+    for (i, line) in tape.iter().enumerate() {
+        builder.position_at_end(&instruction_blocks[i].block);
+
+        let a = match line.op.1 {
+            Source::Immediate => i64_type.const_int(line.a as u64, false),
+            Source::Register  => instruction_blocks[i].input[line.a],
+        };
+        let b = match line.op.2 {
+            Source::Immediate => i64_type.const_int(line.b as u64, false),
+            Source::Register  => instruction_blocks[i].input[line.b],
+        };
+
+        let name = format!("r{}_{}_", line.c, i);
+        let value = match line.op.0 {
+            Add => builder.build_int_add(a, b, &name),
+            Mul => builder.build_int_mul(a, b, &name),
+            And => builder.build_and(a, b, &name),
+            Or => builder.build_or(a, b, &name),
+            Set => a,
+            Gt => builder.build_int_z_extend(
+                    builder.build_int_compare(IntPredicate::UGT, a, b, ""),
+                    i64_type, &name),
+            Eq => builder.build_int_z_extend(
+                    builder.build_int_compare(IntPredicate::EQ, a, b, ""),
+                    i64_type, &name),
+        };
+        instruction_blocks[i].output[line.c] = value;
+
+        let get = |t: usize, prev: &BasicBlock| -> &BasicBlock {
+            let (phi, block) = instruction_blocks.get(t)
+                .map(|b| (&b.phi, &b.block))
+                .unwrap_or((&exit_phi, &exit_block));
+
+                let mut k = 0;
+                for j in 0..6 {
+                    if j != ip_reg {
+                        phi[k].add_incoming(&[(&instruction_blocks[i].output[j], prev)]);
+                        k += 1;
+                    }
+                }
+                block
+        };
+
+        // Build an optional jump block if this is a jumpy instruction
+        let jump_block = if line.c == ip_reg {
+            let jb = context.insert_basic_block_after(
+                &instruction_blocks[i].block,
+                &format!("i{}_jmp", i));
+            builder.position_at_end(&jb);
+
+            // If this is a fixed jump (from seti), then only add that target.
+            if line.op.0 == Set && line.op.1 == Immediate {
+                println!("    Found fixed absolute jump at {}", i);
+                builder.build_unconditional_branch(get(line.a + 1, &jb));
+            // If this is a jump with a fixed offset, then only add it
+            } else if line.op.0 == Add && line.op.2 == Immediate {
+                println!("    Found fixed relative jump at {}", i);
+                builder.build_unconditional_branch(get(i + line.b + 1, &jb));
+            // Otherwise, it must be jumping either 1 or 2 forward
+            // (because otherwise we'd be calling the unsafe IR builder)
+            } else if line.op.0 == Add {
+                println!("    Found one-or-two jump at {}", i);
+                let eq = builder.build_int_compare(
+                    IntPredicate::EQ, value,
+                    i64_type.const_int((i + 1) as u64, false),
+                    &format!("cmp_{}_{}", i, i + 1));
+                builder.build_conditional_branch(eq, get(i + 1, &jb),
+                                                     get(i + 2, &jb));
+            }
+            builder.position_at_end(&instruction_blocks[i].block);
+            Some(jb)
+        } else {
+            None
+        };
+
+        // If there's an indirect jump, then head there after the optional
+        // callback (with a check to see if the callback requested an exit)
+        let next = jump_block.as_ref()
+            .unwrap_or_else(|| get(i + 1, &instruction_blocks[i].block));
+        if line.breakpoint {
+            let cb_result = builder
+                .build_call(cb_func, &[reg_array.into()], "cb_call")
+                .try_as_basic_value()
+                .left()
+                .unwrap();
+            builder.build_conditional_branch(
+                *cb_result.as_int_value(),
+                get(instruction_blocks.len(), &instruction_blocks[i].block),
+                next);
+        } else {
+            builder.build_unconditional_branch(next);
+        }
+    }
+
+    println!("  Building exit block");
+    builder.position_at_end(&exit_block);
+    builder.build_call(cb_func, &[reg_array.into()], "final_call");
+    builder.build_return(None);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+// IR generator for cases where jumps can't be proven safe
 fn build_unsafe_ir(context: &Context,
                    module: &Module,
                    builder: &Builder,
@@ -210,9 +388,9 @@ fn build_unsafe_ir(context: &Context,
                 println!("    Found fixed absolute jump at {}", i);
                 target_list.push(line.a + 1);
             // If this is a jump with a fixed offset, then only add it
-            } else if line.op.0 == Add && line.op.1 == Immediate {
+            } else if line.op.0 == Add && line.op.2 == Immediate {
                 println!("    Found fixed relative jump at {}", i);
-                target_list.push(i + line.a + 1);
+                target_list.push(i + line.b + 1);
             // Otherwise, prioritize the next two slots
             } else if line.op.0 == Add {
                 println!("    Found basic jump at {}", i);
@@ -318,34 +496,36 @@ fn main() -> Result<(), Box<std::error::Error>> {
              tape.iter().filter(|i| i.breakpoint).count());
 
     let mut unsafe_landing_zones = HashSet::new();
-    let mut jump_targets = HashSet::new();
+    let mut jumps = HashMap::new();
 
     for (i, line) in tape.iter().enumerate() {
         if line.c == ip_reg {
+            let t: &mut HashSet<_> = jumps.entry(i).or_insert(HashSet::new());
             if line.op.0 == Set && line.op.1 == Immediate {
                 println!("Found jump from {} to {}", i, line.a + 1);
-                jump_targets.insert(line.a + 1);
+                t.insert(line.a + 1);
             } else if line.op.0 == Add && line.op.2 == Immediate {
                 println!("Found jump from {} to {}", i, i + line.a + 1);
-                jump_targets.insert(i + line.a + 1);
+                t.insert(i + line.a + 1);
             } else if line.op.0 == Add && line.op.2 == Register && i > 0 &&
                 (tape[i - 1].op.0 == Eq || tape[i - 1].op.0 == Gt) &&
                 ((line.b == ip_reg && line.a == tape[i - 1].c) ||
                  (line.a == ip_reg && line.b == tape[i - 1].c))
             {
                 println!("Found jump from {} to {} or {}", i, i + 1, i + 2);
-                jump_targets.insert(i + 1);
-                jump_targets.insert(i + 2);
+                t.insert(i + 1);
+                t.insert(i + 2);
                 unsafe_landing_zones.insert(i);
             } else {
                 println!("Found unconstrained jump");
-                for i in 0..tape.len() {
-                    jump_targets.insert(i);
+                for j in 0..tape.len() {
+                    t.insert(j);
                 }
             }
         }
     }
-    println!("{:?}\n{:?}\n", unsafe_landing_zones, jump_targets);
+    println!("{:?}\n{:?}\n", unsafe_landing_zones, jumps);
+    let jump_targets = jumps.values().flat_map(|i| i).cloned().collect();
     let proved_safe =
         unsafe_landing_zones.intersection(&jump_targets).count() == 0;
 
@@ -373,10 +553,10 @@ fn main() -> Result<(), Box<std::error::Error>> {
                         cb_func, &tape, ip_reg);
     } else {
         println!("Proved program safe; generating efficient IR");
-        build_unsafe_ir(&context, &module, &builder, i64_type,
-                        cb_func, &tape, ip_reg);
+        build_safe_ir(&context, &module, &builder, i64_type,
+                      cb_func, &tape, ip_reg);
     }
-    //module.print_to_stderr();
+    module.print_to_stderr();
 
     println!("Compiling...");
     type RunFunction = unsafe extern "C" fn();
