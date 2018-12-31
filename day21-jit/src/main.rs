@@ -193,7 +193,7 @@ fn build_safe_ir(context: &Context,
     for j in 0..6 {
         if j != ip_reg {
             let phi = builder.build_phi(i64_type, &format!("r{}_exit", j));
-            if instruction_blocks.len() == 0 {
+            if tape.len() == 0 {
                 phi.add_incoming(&[(&i64_type.const_int(0, false),
                                     &setup_block)]);
             }
@@ -287,6 +287,10 @@ fn build_safe_ir(context: &Context,
         let next = jump_block.as_ref()
             .unwrap_or_else(|| get(i + 1, &instruction_blocks[i].block));
         if line.breakpoint {
+            for j in 0..6 {
+                builder.build_store(reg[j], instruction_blocks[i].output[j]);
+            }
+
             let cb_result = builder
                 .build_call(cb_func, &[reg_array.into()], "cb_call")
                 .try_as_basic_value()
@@ -294,7 +298,7 @@ fn build_safe_ir(context: &Context,
                 .unwrap();
             builder.build_conditional_branch(
                 *cb_result.as_int_value(),
-                get(instruction_blocks.len(), &instruction_blocks[i].block),
+                get(tape.len(), &instruction_blocks[i].block),
                 next);
         } else {
             builder.build_unconditional_branch(next);
@@ -303,6 +307,18 @@ fn build_safe_ir(context: &Context,
 
     println!("  Building exit block");
     builder.position_at_end(&exit_block);
+
+    let mut k = 0;
+    for j in 0..6 {
+        if j == ip_reg {
+            builder.build_store(reg[j],
+                                i64_type.const_int(tape.len() as u64, false));
+        } else {
+            builder.build_store(reg[j],
+                                exit_phi[k].as_basic_value().into_int_value());
+            k += 1;
+        }
+    }
     builder.build_call(cb_func, &[reg_array.into()], "final_call");
     builder.build_return(None);
 }
