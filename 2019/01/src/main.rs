@@ -4,11 +4,7 @@ use std::str::FromStr;
 use std::iter::successors;
 
 fn fuel(mass: &i32) -> Option<i32> {
-    if *mass >= 6 {
-        Some(*mass / 3 - 2)
-    } else {
-        None
-    }
+    Some(*mass / 3 - 2).filter(|m| *m > 0)
 }
 
 fn total_fuel(mass: &i32) -> i32 {
