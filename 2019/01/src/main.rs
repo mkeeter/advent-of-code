@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     let masses = std::io::stdin().lock().lines()
         .map(|line| i32::from_str(&line.unwrap()))
         .map(|res| res.expect("Could not parse int"))
-        .collect::<Vec<i32>>();
+        .collect::<Vec<_>>();
 
     println!("Part 1: {}", masses.iter().filter_map(fuel).sum::<i32>());
     println!("Part 2: {}", masses.iter().map(total_fuel).sum::<i32>());
