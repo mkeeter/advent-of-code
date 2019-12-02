@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     'outer: for noun in 0..100 {
         for verb in 0..100 {
-            if run(noun, verb, mem.clone()) == 19690720 {
+            if run(noun, verb, mem.clone()) == 1969_07_20 {
                 println!("Part 2: {}", 100 * noun + verb);
                 break 'outer;
             }
