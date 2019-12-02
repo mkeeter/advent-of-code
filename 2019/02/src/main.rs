@@ -23,16 +23,16 @@ fn run(noun: usize, verb: usize, mut mem: Vec<usize>) -> usize {
             _ => panic!("Invalid opcode"),
         }
     }
-    return mem[0];
+    mem[0]
 }
 fn main() -> Result<(), Box<dyn std::error::Error>>{
     let mem = fs::read_to_string("input")
         .expect("Something went wrong reading the file")
         .trim()
-        .split(",")
+        .split(',')
         .map(|i| usize::from_str(i))
         .map(|r| r.expect("Could not parse int"))
-        .collect::<Vec<usize>>();
+        .collect::<Vec<_>>();
 
     println!("Part 1: {}", run(12, 2, mem.clone()));
 
