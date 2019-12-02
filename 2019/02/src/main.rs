@@ -1,4 +1,4 @@
-use std::fs;
+use std::io::Read;
 use std::str::FromStr;
 
 fn run(noun: usize, verb: usize, mut mem: Vec<usize>) -> usize {
@@ -26,9 +26,9 @@ fn run(noun: usize, verb: usize, mut mem: Vec<usize>) -> usize {
     mem[0]
 }
 fn main() -> Result<(), Box<dyn std::error::Error>>{
-    let mem = fs::read_to_string("input")
-        .expect("Something went wrong reading the file")
-        .trim()
+    let mut buffer = String::new();
+    std::io::stdin().read_to_string(&mut buffer)?;
+    let mem = buffer.trim()
         .split(',')
         .map(|i| usize::from_str(i))
         .map(|r| r.expect("Could not parse int"))

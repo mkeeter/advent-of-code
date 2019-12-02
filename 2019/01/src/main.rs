@@ -1,5 +1,4 @@
-use std::io::{BufReader, BufRead};
-use std::fs::File;
+use std::io::BufRead;
 use std::str::FromStr;
 use std::iter::successors;
 
@@ -12,10 +11,7 @@ fn total_fuel(mass: &i32) -> i32 {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>>{
-    let f = File::open("input").expect("file not found");
-    let f = BufReader::new(f);
-
-    let masses = f.lines()
+    let masses = std::io::stdin().lock().lines()
         .map(|line| i32::from_str(&line.unwrap()))
         .map(|res| res.expect("Could not parse int"))
         .collect::<Vec<i32>>();
