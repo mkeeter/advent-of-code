@@ -1,41 +1,28 @@
 use std::io::Read;
 use std::str::FromStr;
+use std::iter::successors;
 
-fn check1(i: &u32) -> bool {
-    let mut prev = i % 10;
-    let mut num = i / 10;
+fn check(i: u32) -> (bool, bool) {
+    let mut prev = 10;
+    let mut has_any_double = false;
     let mut has_double = false;
-    for _ in 0..5 {
-        let next = num % 10;
-        if next > prev {
-            return false;
-        } else if next == prev {
-            has_double = true;
-        }
-        prev = next;
-        num /= 10;
-    }
-    has_double
-}
-
-fn check2(i: &u32) -> bool {
-    let mut prev = i % 10;
-    let mut num = i / 10;
     let mut count = 0;
-    for _ in 0..5 {
-        let next = num % 10;
-        if next == prev {
+    let itr = successors(Some(i), |&i| if i > 0 { Some(i/10) }
+                                       else { None });
+    for d in itr {
+        let next = d % 10;
+        if next > prev {
+            return (false, false);
+        } else if next == prev {
             count += 1;
         } else {
-            if count == 1 {
-                return true;
-            }
+            has_double      |= count == 1;
+            has_any_double  |= count  > 0;
             count = 0;
         }
         prev = next;
-        num /= 10;
     }
-    count == 1
+    (has_any_double || count > 0, has_double || count == 1)
 }
 
 fn main() {
@@ -49,6 +36,6 @@ fn main() {
 
     let min = data[0];
     let max = data[1];
-    println!("Part 1: {}", (min..=max).filter(check1).count());
-    println!("Part 2: {}", (min..=max).filter(check1).filter(check2).count());
+    println!("Part 1: {}", (min..=max).filter(|i| check(*i).0).count());
+    println!("Part 2: {}", (min..=max).filter(|i| check(*i).1).count());
 }
