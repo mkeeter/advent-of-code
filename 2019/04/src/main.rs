@@ -8,9 +8,8 @@ fn check(i: u32) -> (bool, bool) {
     let mut has_double = false;
     let mut count = 0;
     let itr = successors(Some(i), |&i| if i > 0 { Some(i/10) }
-                                       else { None });
-    for d in itr {
-        let next = d % 10;
+                                       else     { None });
+    for next in itr.map(|d| d % 10) {
         if next > prev {
             return (false, false);
         } else if next == prev {
