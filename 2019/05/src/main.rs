@@ -1,11 +1,12 @@
 use std::io::Read;
 use std::str::FromStr;
 
-fn imm(opcode: i32, index: u32) -> bool {
-    let m = (opcode / 10_i32.pow(2 + index)) % 10;
+fn param(mem: &Vec<i32>, ip: usize, index: u32) -> i32 {
+    let m = (mem[ip] / 10_i32.pow(index + 2)) % 10;
+    let arg = 1 + ip + index as usize;
     match m {
-        0 => false,
-        1 => true,
+        0 => mem[mem[arg] as usize],
+        1 => mem[arg],
         _ => panic!(),
     }
 }
@@ -14,22 +15,13 @@ fn run(mut mem: Vec<i32>, input: i32) -> Vec<i32> {
     let mut ip = 0;
     let mut output = Vec::new();
     loop {
-        let opcode = mem[ip];
-        match opcode % 100 {
+        let opcode = mem[ip] % 100;
+        match opcode {
             1 | 2 => {
-                println!("{:?}", &mem[ip..ip+4]);
-                let lhs = if imm(opcode, 0) {
-                    mem[ip + 1]
-                } else {
-                    mem[mem[ip + 1] as usize]
-                };
-                let rhs = if imm(opcode, 1) {
-                    mem[ip + 2]
-                } else {
-                    mem[mem[ip + 2] as usize]
-                };
+                let lhs = param(&mem, ip, 0);
+                let rhs = param(&mem, ip, 1);
                 let out = mem[ip + 3] as usize;
-                mem[out] = match opcode % 100 {
+                mem[out] = match opcode {
                     1 => lhs + rhs,
                     2 => lhs * rhs,
                     _ => unreachable!(),
@@ -37,21 +29,12 @@ fn run(mut mem: Vec<i32>, input: i32) -> Vec<i32> {
                 ip += 4;
             }
             3 => {
-                println!("{:?}", &mem[ip..ip+2]);
-                let out = mem[ip + 1] as usize;
-                mem[out] = input;
+                let out = mem[ip + 1];
+                mem[out as usize] = input;
                 ip += 2;
             }
             4 => {
-                println!("{:?}", &mem[ip..ip+2]);
-                if imm(opcode, 0) {
-                    println!("immediate\n");
-                    output.push(mem[ip + 1]);
-                } else {
-                    println!("position\n");
-                    output.push(mem[mem[ip + 1] as usize]);
-                }
-                println!("Output: {:?}", output);
+                output.push(param(&mem, ip, 0));
                 ip += 2;
             }
             99 => break,
