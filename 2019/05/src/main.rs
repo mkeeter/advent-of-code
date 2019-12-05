@@ -1,21 +1,21 @@
 use std::io::Read;
 use std::str::FromStr;
 
-const OP_ADD:    i32 = 1;
-const OP_MUL:    i32 = 2;
-const OP_INPUT:  i32 = 3;
-const OP_OUTPUT: i32 = 4;
-const OP_JIT:    i32 = 5;
-const OP_JIF:    i32 = 6;
-const OP_LT:     i32 = 7;
-const OP_EQ:     i32 = 8;
-const OP_BREAK:  i32 = 99;
+const OP_ADD:    i64 = 1;
+const OP_MUL:    i64 = 2;
+const OP_INPUT:  i64 = 3;
+const OP_OUTPUT: i64 = 4;
+const OP_JIT:    i64 = 5;
+const OP_JIF:    i64 = 6;
+const OP_LT:     i64 = 7;
+const OP_EQ:     i64 = 8;
+const OP_BREAK:  i64 = 99;
 
-const MODE_POSITION:  i32 = 0;
-const MODE_IMMEDIATE: i32 = 1;
+const MODE_POSITION:  i64 = 0;
+const MODE_IMMEDIATE: i64 = 1;
 
-fn param(mem: &Vec<i32>, ip: usize, index: u32) -> i32 {
-    let m = (mem[ip] / 10_i32.pow(index + 1)) % 10;
+fn param(mem: &Vec<i64>, ip: usize, index: u32) -> i64 {
+    let m = (mem[ip] / 10_i64.pow(index + 1)) % 10;
     let arg = ip + index as usize;
     match m {
         MODE_POSITION  => mem[mem[arg] as usize],
@@ -24,7 +24,7 @@ fn param(mem: &Vec<i32>, ip: usize, index: u32) -> i32 {
     }
 }
 
-fn run(mut mem: Vec<i32>, input: i32) -> Vec<i32> {
+fn run(mut mem: Vec<i64>, input: i64) -> Vec<i64> {
     let mut ip = 0;
     let mut output = Vec::new();
     loop {
@@ -94,7 +94,7 @@ fn main() {
     std::io::stdin().read_to_string(&mut buffer).unwrap();
     let mem = buffer.trim()
         .split(',')
-        .map(|i| i32::from_str(i))
+        .map(|i| i64::from_str(i))
         .map(|r| r.expect("Could not parse int"))
         .collect::<Vec<_>>();
 
