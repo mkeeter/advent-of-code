@@ -15,8 +15,8 @@ const MODE_POSITION:  i32 = 0;
 const MODE_IMMEDIATE: i32 = 1;
 
 fn param(mem: &Vec<i32>, ip: usize, index: u32) -> i32 {
-    let m = (mem[ip] / 10_i32.pow(index + 2)) % 10;
-    let arg = 1 + ip + index as usize;
+    let m = (mem[ip] / 10_i32.pow(index + 1)) % 10;
+    let arg = ip + index as usize;
     match m {
         MODE_POSITION  => mem[mem[arg] as usize],
         MODE_IMMEDIATE => mem[arg],
@@ -31,15 +31,15 @@ fn run(mut mem: Vec<i32>, input: i32) -> Vec<i32> {
         let opcode = mem[ip] % 100;
         match opcode {
             OP_ADD => {
-                let lhs = param(&mem, ip, 0);
-                let rhs = param(&mem, ip, 1);
+                let lhs = param(&mem, ip, 1);
+                let rhs = param(&mem, ip, 2);
                 let out = mem[ip + 3] as usize;
                 mem[out] = lhs + rhs;
                 ip += 4;
             }
             OP_SUB => {
-                let lhs = param(&mem, ip, 0);
-                let rhs = param(&mem, ip, 1);
+                let lhs = param(&mem, ip, 1);
+                let rhs = param(&mem, ip, 2);
                 let out = mem[ip + 3] as usize;
                 mem[out] = lhs * rhs;
                 ip += 4;
@@ -50,35 +50,35 @@ fn run(mut mem: Vec<i32>, input: i32) -> Vec<i32> {
                 ip += 2;
             }
             OP_OUTPUT => {
-                output.push(param(&mem, ip, 0));
+                output.push(param(&mem, ip, 1));
                 ip += 2;
             }
             OP_JIT => {
-                let p = param(&mem, ip, 0);
+                let p = param(&mem, ip, 1);
                 if p != 0 {
-                    ip = param(&mem, ip, 1) as usize;
+                    ip = param(&mem, ip, 2) as usize;
                 } else {
                     ip += 3;
                 }
             }
             OP_JIF => {
-                let p = param(&mem, ip, 0);
+                let p = param(&mem, ip, 1);
                 if p == 0 {
-                    ip = param(&mem, ip, 1) as usize;
+                    ip = param(&mem, ip, 2) as usize;
                 } else {
                     ip += 3;
                 }
             }
             OP_LT => {
-                let lhs = param(&mem, ip, 0);
-                let rhs = param(&mem, ip, 1);
+                let lhs = param(&mem, ip, 1);
+                let rhs = param(&mem, ip, 2);
                 let out = mem[ip + 3] as usize;
                 mem[out] = if lhs < rhs { 1 } else { 0 };
                 ip += 4;
             }
             OP_EQ => {
-                let lhs = param(&mem, ip, 0);
-                let rhs = param(&mem, ip, 1);
+                let lhs = param(&mem, ip, 1);
+                let rhs = param(&mem, ip, 2);
                 let out = mem[ip + 3] as usize;
                 mem[out] = if lhs == rhs { 1 } else { 0 };
                 ip += 4;
