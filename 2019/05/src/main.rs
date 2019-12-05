@@ -1,6 +1,12 @@
 use std::io::Read;
 use std::str::FromStr;
 
+const OP_ADD: i32 = 1;
+const OP_SUB: i32 = 2;
+const OP_INPUT: i32 = 3;
+const OP_OUTPUT: i32 = 4;
+const OP_BREAK: i32 = 99;
+
 fn param(mem: &Vec<i32>, ip: usize, index: u32) -> i32 {
     let m = (mem[ip] / 10_i32.pow(index + 2)) % 10;
     let arg = 1 + ip + index as usize;
@@ -17,27 +23,30 @@ fn run(mut mem: Vec<i32>, input: i32) -> Vec<i32> {
     loop {
         let opcode = mem[ip] % 100;
         match opcode {
-            1 | 2 => {
+            OP_ADD => {
                 let lhs = param(&mem, ip, 0);
                 let rhs = param(&mem, ip, 1);
                 let out = mem[ip + 3] as usize;
-                mem[out] = match opcode {
-                    1 => lhs + rhs,
-                    2 => lhs * rhs,
-                    _ => unreachable!(),
-                };
+                mem[out] = lhs + rhs;
                 ip += 4;
             }
-            3 => {
+            OP_SUB => {
+                let lhs = param(&mem, ip, 0);
+                let rhs = param(&mem, ip, 1);
+                let out = mem[ip + 3] as usize;
+                mem[out] = lhs * rhs;
+                ip += 4;
+            }
+            OP_INPUT => {
                 let out = mem[ip + 1];
                 mem[out as usize] = input;
                 ip += 2;
             }
-            4 => {
+            OP_OUTPUT => {
                 output.push(param(&mem, ip, 0));
                 ip += 2;
             }
-            99 => break,
+            OP_BREAK => break,
             _ => panic!("Invalid opcode {}", opcode),
         }
     }
