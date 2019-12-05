@@ -2,7 +2,7 @@ use std::io::Read;
 use std::str::FromStr;
 
 const OP_ADD:    i32 = 1;
-const OP_SUB:    i32 = 2;
+const OP_MUL:    i32 = 2;
 const OP_INPUT:  i32 = 3;
 const OP_OUTPUT: i32 = 4;
 const OP_JIT:    i32 = 5;
@@ -37,7 +37,7 @@ fn run(mut mem: Vec<i32>, input: i32) -> Vec<i32> {
                 mem[out] = lhs + rhs;
                 ip += 4;
             }
-            OP_SUB => {
+            OP_MUL => {
                 let lhs = param(&mem, ip, 1);
                 let rhs = param(&mem, ip, 2);
                 let out = mem[ip + 3] as usize;
