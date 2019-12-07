@@ -149,18 +149,12 @@ fn main() {
     println!("Part 1: {}", best);
 
     ////////////////////////////////////////////////////////////////////////////
-    let mut phases = Vec::new();
-    let mut p = [5,6,7,8,9];
-    permutohedron::heap_recursive(&mut p, |ps| {
-        phases.push(ps.iter().cloned().collect::<Vec<_>>())
-    });
-
     let best = phases.iter()
         .map(|ps| {
             // Build a fresh set of VMs and queues
             let mut vms = vec![Vm::new(&mem); 5];
             for (i, vm) in vms.iter_mut().enumerate() {
-                vm.input.push_front(ps[i] as i64);
+                vm.input.push_front(ps[i] + 5 as i64);
             }
             vms[0].input.push_front(0);
 
