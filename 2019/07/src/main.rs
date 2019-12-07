@@ -23,8 +23,8 @@ struct Vm {
 }
 
 impl Vm {
-    fn new(mem: &Vec<i64>) -> Vm {
-        Vm { mem: mem.clone(), ip: 0, input: VecDeque::new() }
+    fn new(mem: &[i64]) -> Vm {
+        Vm { mem: mem.to_vec(), ip: 0, input: VecDeque::new() }
     }
 
     fn done(&self) -> bool {
@@ -117,14 +117,15 @@ fn main() {
         .map(|r| r.expect("Could not parse int"))
         .collect::<Vec<_>>();
 
-    ////////////////////////////////////////////////////////////////////////////
-    // Part 1
+    // Calculating all permutations of phases
     let mut phases = Vec::new();
     let mut p = [0,1,2,3,4];
     permutohedron::heap_recursive(&mut p, |ps| {
-        phases.push(ps.iter().cloned().collect::<Vec<_>>())
+        phases.push(ps.to_vec())
     });
 
+    ////////////////////////////////////////////////////////////////////////////
+    // Part 1
     let best = phases.iter()
         .map(|ps| {
             // Build a fresh set of VMs and queues
