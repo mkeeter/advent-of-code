@@ -19,9 +19,14 @@ const MODE_IMMEDIATE: i64 = 1;
 struct Vm {
     mem: Vec<i64>,
     ip: usize,
+    input: VecDeque<i64>,
 }
 
 impl Vm {
+    fn new(mem: &Vec<i64>) -> Vm {
+        Vm { mem: mem.clone(), ip: 0, input: VecDeque::new() }
+    }
+
     fn done(&self) -> bool {
         self.mem[self.ip] == OP_BREAK
     }
@@ -36,9 +41,7 @@ impl Vm {
         }
     }
 
-    fn step(&mut self,
-            input: &mut VecDeque<i64>,
-            output: &mut VecDeque<i64>)
+    fn step(&mut self) -> Option<i64>
     {
         let opcode = self.mem[self.ip] % 100;
         match opcode {
@@ -57,15 +60,16 @@ impl Vm {
                 self.ip += 4;
             }
             OP_INPUT => {
-                if let Some(input) = input.pop_back() {
+                if let Some(i) = self.input.pop_back() {
                     let out = self.mem[self.ip + 1] as usize;
-                    self.mem[out] = input;
+                    self.mem[out] = i;
                     self.ip += 2;
                 }
             }
             OP_OUTPUT => {
-                output.push_front(self.param(1));
+                let out = self.param(1);
                 self.ip += 2;
+                return Some(out);
             }
             OP_JIT => {
                 let p = self.param(1);
@@ -99,7 +103,8 @@ impl Vm {
             }
             OP_BREAK => (),
             _ => panic!("Invalid opcode {}", opcode),
-        }
+        };
+        None
     }
 }
 
@@ -112,60 +117,66 @@ fn main() {
         .map(|r| r.expect("Could not parse int"))
         .collect::<Vec<_>>();
 
-    let mut phases = [0,1,2,3,4];
-    let mut best = 0;
-    permutohedron::heap_recursive(&mut phases, |ps| {
-        // Build a fresh set of VMs and queues
-        let mut vms = vec![Vm { mem: mem.clone(), ip: 0 }; 5];
-        let mut queues = vec![VecDeque::new(); 6];
-        for (i, q) in queues.iter_mut().enumerate().take(5) {
-            q.push_front(ps[i] as i64);
-        }
-        queues[0].push_front(0);
-
-        while queues[5].len() == 0 {
-            for i in 0..5 {
-                let (qa, qb) = queues.split_at_mut(i + 1);
-                vms[i].step(&mut qa[i], &mut qb[0]);
-            }
-        }
-        let out = queues[5].pop_back().unwrap();
-        if out > best {
-            best = out;
-        }
+    ////////////////////////////////////////////////////////////////////////////
+    // Part 1
+    let mut phases = Vec::new();
+    let mut p = [0,1,2,3,4];
+    permutohedron::heap_recursive(&mut p, |ps| {
+        phases.push(ps.iter().cloned().collect::<Vec<_>>())
     });
-    println!("Part 1: {}", best);
 
-    let mut phases = [0,1,2,3,4];
-    let mut best = 0;
-    permutohedron::heap_recursive(&mut phases, |ps| {
-        // Build a fresh set of VMs and queues
-        let mut vms = vec![Vm { mem: mem.clone(), ip: 0 }; 5];
-        let mut queues = vec![VecDeque::new(); 5];
-        for (i, q) in queues.iter_mut().enumerate().take(5) {
-            q.push_front(ps[i] + 5 as i64);
-        }
-        queues[0].push_front(0);
+    let best = phases.iter()
+        .map(|ps| {
+            // Build a fresh set of VMs and queues
+            let mut vms = vec![Vm::new(&mem); 5];
+            for (i, vm) in vms.iter_mut().enumerate() {
+                vm.input.push_front(ps[i] as i64);
+            }
+            vms[0].input.push_front(0);
 
-        let mut last = 0;
-        while vms.iter().any(|vm| !vm.done()) {
-            for i in 0..5 {
-                if i == 4 {
-                    let (qa, qb) = queues.split_at_mut(i);
-                    vms[i].step(&mut qb[0], &mut qa[0]);
-                } else {
-                    let (qa, qb) = queues.split_at_mut(i + 1);
-                    vms[i].step(&mut qa[i], &mut qb[0]);
+            loop {
+                for i in 0..vms.len() {
+                    if let Some(out) = vms[i].step() {
+                        if let Some(vm) = vms.get_mut(i + 1) {
+                            vm.input.push_front(out);
+                        } else {
+                            return out;
+                        }
+                    }
                 }
             }
-            // Peek at the output queue of the last amplifier
-            if let Some(o) = queues[0].back() {
-                last = *o;
-            }
-        }
-        if last > best {
-            best = last;
-        }
+        }).max().unwrap();
+    println!("Part 1: {}", best);
+
+    ////////////////////////////////////////////////////////////////////////////
+    let mut phases = Vec::new();
+    let mut p = [5,6,7,8,9];
+    permutohedron::heap_recursive(&mut p, |ps| {
+        phases.push(ps.iter().cloned().collect::<Vec<_>>())
     });
+
+    let best = phases.iter()
+        .map(|ps| {
+            // Build a fresh set of VMs and queues
+            let mut vms = vec![Vm::new(&mem); 5];
+            for (i, vm) in vms.iter_mut().enumerate() {
+                vm.input.push_front(ps[i] as i64);
+            }
+            vms[0].input.push_front(0);
+
+            let mut last = 0;
+            while vms.iter().any(|vm| !vm.done()) {
+                for i in 0..vms.len() {
+                    if let Some(out) = vms[i].step() {
+                        vms[(i + 1) % 5].input.push_front(out);
+                    }
+                }
+                // Peek at the output queue of the last amplifier
+                if let Some(o) = vms[0].input.back() {
+                    last = *o;
+                }
+            }
+            last
+        }).max().unwrap();
     println!("Part 2: {}", best);
 }
