@@ -1,6 +1,7 @@
 use std::io::Read;
 use std::str::FromStr;
 use std::collections::VecDeque;
+use itertools::Itertools;
 
 const OP_ADD:    i64 = 1;
 const OP_MUL:    i64 = 2;
@@ -117,16 +118,9 @@ fn main() {
         .map(|r| r.expect("Could not parse int"))
         .collect::<Vec<_>>();
 
-    // Calculating all permutations of phases
-    let mut phases = Vec::new();
-    let mut p = [0,1,2,3,4];
-    permutohedron::heap_recursive(&mut p, |ps| {
-        phases.push(ps.to_vec())
-    });
-
     ////////////////////////////////////////////////////////////////////////////
     // Part 1
-    let best = phases.iter()
+    let best = (0..5).permutations(5)
         .map(|ps| {
             // Build a fresh set of VMs and queues
             let mut vms = vec![Vm::new(&mem); 5];
@@ -150,12 +144,12 @@ fn main() {
     println!("Part 1: {}", best);
 
     ////////////////////////////////////////////////////////////////////////////
-    let best = phases.iter()
+    let best = (5..10).permutations(5)
         .map(|ps| {
             // Build a fresh set of VMs and queues
             let mut vms = vec![Vm::new(&mem); 5];
             for (i, vm) in vms.iter_mut().enumerate() {
-                vm.input.push_front(ps[i] + 5 as i64);
+                vm.input.push_front(ps[i] as i64);
             }
             vms[0].input.push_front(0);
 
