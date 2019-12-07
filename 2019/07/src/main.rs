@@ -47,17 +47,13 @@ impl Vm {
         let opcode = self.mem[self.ip] % 100;
         match opcode {
             OP_ADD => {
-                let lhs = self.param(1);
-                let rhs = self.param(2);
                 let out = self.mem[self.ip + 3] as usize;
-                self.mem[out] = lhs + rhs;
+                self.mem[out] = self.param(1) + self.param(2);
                 self.ip += 4;
             }
             OP_MUL => {
-                let lhs = self.param(1);
-                let rhs = self.param(2);
                 let out = self.mem[self.ip + 3] as usize;
-                self.mem[out] = lhs * rhs;
+                self.mem[out] = self.param(1) * self.param(2);
                 self.ip += 4;
             }
             OP_INPUT => {
@@ -73,33 +69,27 @@ impl Vm {
                 return Some(out);
             }
             OP_JIT => {
-                let p = self.param(1);
-                if p != 0 {
+                if self.param(1) != 0 {
                     self.ip = self.param(2) as usize;
                 } else {
                     self.ip += 3;
                 }
             }
             OP_JIF => {
-                let p = self.param(1);
-                if p == 0 {
+                if self.param(1) == 0 {
                     self.ip = self.param(2) as usize;
                 } else {
                     self.ip += 3;
                 }
             }
             OP_LT => {
-                let lhs = self.param(1);
-                let rhs = self.param(2);
                 let out = self.mem[self.ip + 3] as usize;
-                self.mem[out] = if lhs < rhs { 1 } else { 0 };
+                self.mem[out] = (self.param(1) < self.param(2)) as i64;
                 self.ip += 4;
             }
             OP_EQ => {
-                let lhs = self.param(1);
-                let rhs = self.param(2);
                 let out = self.mem[self.ip + 3] as usize;
-                self.mem[out] = if lhs == rhs { 1 } else { 0 };
+                self.mem[out] = (self.param(1) == self.param(2)) as i64;
                 self.ip += 4;
             }
             OP_BREAK => (),
