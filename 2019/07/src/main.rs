@@ -135,4 +135,37 @@ fn main() {
         }
     });
     println!("Part 1: {}", best);
+
+    let mut phases = [0,1,2,3,4];
+    let mut best = 0;
+    permutohedron::heap_recursive(&mut phases, |ps| {
+        // Build a fresh set of VMs and queues
+        let mut vms = vec![Vm { mem: mem.clone(), ip: 0 }; 5];
+        let mut queues = vec![VecDeque::new(); 5];
+        for (i, q) in queues.iter_mut().enumerate().take(5) {
+            q.push_front(ps[i] + 5 as i64);
+        }
+        queues[0].push_front(0);
+
+        let mut last = 0;
+        while vms.iter().any(|vm| !vm.done()) {
+            for i in 0..5 {
+                if i == 4 {
+                    let (qa, qb) = queues.split_at_mut(i);
+                    vms[i].step(&mut qb[0], &mut qa[0]);
+                } else {
+                    let (qa, qb) = queues.split_at_mut(i + 1);
+                    vms[i].step(&mut qa[i], &mut qb[0]);
+                }
+            }
+            // Peek at the output queue of the last amplifier
+            if let Some(o) = queues[0].back() {
+                last = *o;
+            }
+        }
+        if last > best {
+            best = last;
+        }
+    });
+    println!("Part 2: {}", best);
 }
