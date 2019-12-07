@@ -15,6 +15,7 @@ const OP_BREAK:  i64 = 99;
 const MODE_POSITION:  i64 = 0;
 const MODE_IMMEDIATE: i64 = 1;
 
+#[derive(Clone)]
 struct Vm {
     mem: Vec<i64>,
     ip: usize,
@@ -115,18 +116,12 @@ fn main() {
     let mut best = 0;
     permutohedron::heap_recursive(&mut phases, |ps| {
         // Build a fresh set of VMs and queues
-        let mut vms = (0..5).into_iter()
-            .map(|_| Vm { mem: mem.clone(), ip: 0 })
-            .collect::<Vec<_>>();
-        let mut queues = (0..5).into_iter()
-            .map(|i| {
-                let mut q = VecDeque::new();
-                q.push_front(ps[i]);
-                q
-            })
-            .collect::<Vec<_>>();
+        let mut vms = vec![Vm { mem: mem.clone(), ip: 0 }; 5];
+        let mut queues = vec![VecDeque::new(); 6];
+        for (i, q) in queues.iter_mut().enumerate().take(5) {
+            q.push_front(ps[i] as i64);
+        }
         queues[0].push_front(0);
-        queues.push(VecDeque::new());
 
         while queues[5].len() == 0 {
             for i in 0..5 {
