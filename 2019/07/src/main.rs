@@ -27,8 +27,8 @@ impl Vm {
         Vm { mem: mem.to_vec(), ip: 0, input: VecDeque::new() }
     }
 
-    fn done(&self) -> bool {
-        self.mem[self.ip] == OP_BREAK
+    fn running(&self) -> bool {
+        self.mem[self.ip] != OP_BREAK
     }
 
     fn param(&self, index: u32) -> i64 {
@@ -159,19 +159,15 @@ fn main() {
             }
             vms[0].input.push_front(0);
 
-            let mut last = 0;
-            while vms.iter().any(|vm| !vm.done()) {
+            while vms.iter().any(Vm::running) {
                 for i in 0..vms.len() {
                     if let Some(out) = vms[i].step() {
                         vms[(i + 1) % 5].input.push_front(out);
                     }
                 }
-                // Peek at the output queue of the last amplifier
-                if let Some(o) = vms[0].input.back() {
-                    last = *o;
-                }
             }
-            last
+            assert!(vms[0].input.len() == 1);
+            *vms[0].input.back().unwrap()
         }).max().unwrap();
     println!("Part 2: {}", best);
 }
