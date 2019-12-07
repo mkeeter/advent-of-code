@@ -20,16 +20,11 @@ struct Vm {
     ip: usize,
 }
 
-#[derive(Debug, PartialEq)]
-enum VmResult {
-    Okay,
-    UsedInput,
-    NeedsInput,
-    Output(i64),
-    Done,
-}
-
 impl Vm {
+    fn done(&self) -> bool {
+        self.mem[self.ip] == OP_BREAK
+    }
+
     fn param(&self, index: u32) -> i64 {
         let m = (self.mem[self.ip] / 10_i64.pow(index + 1)) % 10;
         let arg = self.ip + index as usize;
@@ -40,7 +35,10 @@ impl Vm {
         }
     }
 
-    fn step(&mut self, input: Option<&i64>) -> VmResult {
+    fn step(&mut self,
+            input: &mut VecDeque<i64>,
+            output: &mut VecDeque<i64>)
+    {
         let opcode = self.mem[self.ip] % 100;
         match opcode {
             OP_ADD => {
@@ -49,7 +47,6 @@ impl Vm {
                 let out = self.mem[self.ip + 3] as usize;
                 self.mem[out] = lhs + rhs;
                 self.ip += 4;
-                VmResult::Okay
             }
             OP_MUL => {
                 let lhs = self.param(1);
@@ -57,22 +54,17 @@ impl Vm {
                 let out = self.mem[self.ip + 3] as usize;
                 self.mem[out] = lhs * rhs;
                 self.ip += 4;
-                VmResult::Okay
             }
             OP_INPUT => {
-                if let Some(input) = input {
+                if let Some(input) = input.pop_back() {
                     let out = self.mem[self.ip + 1] as usize;
-                    self.mem[out] = *input;
+                    self.mem[out] = input;
                     self.ip += 2;
-                    VmResult::UsedInput
-                } else {
-                    VmResult::NeedsInput
                 }
             }
             OP_OUTPUT => {
-                let out = self.param(1);
+                output.push_front(self.param(1));
                 self.ip += 2;
-                VmResult::Output(out)
             }
             OP_JIT => {
                 let p = self.param(1);
@@ -81,7 +73,6 @@ impl Vm {
                 } else {
                     self.ip += 3;
                 }
-                VmResult::Okay
             }
             OP_JIF => {
                 let p = self.param(1);
@@ -90,7 +81,6 @@ impl Vm {
                 } else {
                     self.ip += 3;
                 }
-                VmResult::Okay
             }
             OP_LT => {
                 let lhs = self.param(1);
@@ -98,7 +88,6 @@ impl Vm {
                 let out = self.mem[self.ip + 3] as usize;
                 self.mem[out] = if lhs < rhs { 1 } else { 0 };
                 self.ip += 4;
-                VmResult::Okay
             }
             OP_EQ => {
                 let lhs = self.param(1);
@@ -106,9 +95,8 @@ impl Vm {
                 let out = self.mem[self.ip + 3] as usize;
                 self.mem[out] = if lhs == rhs { 1 } else { 0 };
                 self.ip += 4;
-                VmResult::Okay
             }
-            OP_BREAK => VmResult::Done,
+            OP_BREAK => (),
             _ => panic!("Invalid opcode {}", opcode),
         }
     }
@@ -126,6 +114,7 @@ fn main() {
     let mut phases = [0,1,2,3,4];
     let mut best = 0;
     permutohedron::heap_recursive(&mut phases, |ps| {
+        // Build a fresh set of VMs and queues
         let mut vms = (0..5).into_iter()
             .map(|_| Vm { mem: mem.clone(), ip: 0 })
             .collect::<Vec<_>>();
@@ -137,26 +126,17 @@ fn main() {
             })
             .collect::<Vec<_>>();
         queues[0].push_front(0);
-        loop {
-            let mut all_done = true;
+        queues.push(VecDeque::new());
+
+        while queues[5].len() == 0 {
             for i in 0..5 {
-                let result = vms[i].step(queues[i].back());
-                all_done &= result == VmResult::Done;
-                match result {
-                    VmResult::UsedInput => { queues[i].pop_back(); () }
-                    VmResult::Output(o) => if i == 4 {
-                        if o > best {
-                            best = o;
-                        }
-                    } else {
-                        queues[i + 1].push_front(o);
-                    },
-                    _ => (),
-                }
+                let (qa, qb) = queues.split_at_mut(i + 1);
+                vms[i].step(&mut qa[i], &mut qb[0]);
             }
-            if all_done {
-                break;
-            }
+        }
+        let out = queues[5].pop_back().unwrap();
+        if out > best {
+            best = out;
         }
     });
     println!("Part 1: {}", best);
