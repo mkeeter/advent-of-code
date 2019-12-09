@@ -43,7 +43,7 @@ impl Vm {
         match m {
             MODE_POSITION  => &mut self.mem[pos as usize],
             MODE_IMMEDIATE => &mut self.mem[arg],
-            MODE_RELATIVE => &mut self.mem[(pos + self.base) as usize],
+            MODE_RELATIVE  => &mut self.mem[(pos + self.base) as usize],
             _ => panic!(),
         }
     }
