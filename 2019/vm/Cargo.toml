@@ -1,11 +1,11 @@
 [package]
-name = "day07"
+name = "vm"
 version = "0.1.0"
 authors = ["Matt Keeter <matt.j.keeter@gmail.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
-itertools = "0.8.2"
-vm = { path = "../vm" }
+[dev-dependencies]
+quickcheck = "0.8"
+quickcheck_macros = "0.8"

@@ -5,6 +5,7 @@ name = "day07"
 version = "0.1.0"
 dependencies = [
  "itertools 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "vm 0.1.0",
 ]
 
 [[package]]
@@ -19,6 +20,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "either 1.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "vm"
+version = "0.1.0"
 
 [metadata]
 "checksum either 1.5.3 (registry+https://github.com/rust-lang/crates.io-index)" = "bb1f6b1ce1c140482ea30ddd3335fc0024ac7ee112895426e0a629a6c20adfe3"
