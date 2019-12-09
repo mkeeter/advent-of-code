@@ -287,5 +287,21 @@ mod tests {
         let mut v = Vm::new(&[104,1125899906842624,99]);
         assert_eq!(v.run(), vec![1125899906842624]);
     }
+
+    // Fibonacci sequence generator
+    #[test]
+    fn fib() {
+        let mut v = Vm::new(&[
+            3,3,
+            1106,-1,24,
+            104,1,
+            1101,1,0,6,
+            1001,8,0,9,
+            1001,6,0,8,
+            1001,3,-1,3,
+            1105,99,2]);
+        v.input(10);
+        assert_eq!(v.run(), vec![1,1,2,3,5,8,13,21,34,55]);
+    }
 }
 
