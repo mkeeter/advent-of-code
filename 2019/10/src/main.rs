@@ -63,11 +63,8 @@ fn main() {
             .into_iter()
             .map(|((dx, dy), (_distance, pos))|
                  ((dx as f32).atan2(-dy as f32), *pos))
-            .map(|(angle, pos)| if angle < 0f32 {
-                (angle + 2f32 * PI, pos)
-            } else {
-                (angle, pos)
-            })
+            .map(|(angle, pos)|
+                ((angle + 2f32 * PI) % (2f32 * PI), pos) )
             .collect::<Vec<_>>();
         targets.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
 
