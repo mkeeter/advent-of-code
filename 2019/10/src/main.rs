@@ -33,14 +33,10 @@ fn main() {
     let mut best = 0;
     let mut pos = (0, 0);
     for a in asteroids.iter() {
-        let mut seen = HashSet::new();
-        for b in asteroids.iter() {
-            if a != b {
-                let delta = (b.0 - a.0, b.1 - a.1);
-                let angle = reduce(delta);
-                seen.insert(angle);
-            }
-        }
+        let seen = asteroids.iter()
+            .filter(|&b| a != b)
+            .map(|b| { reduce((b.0 - a.0, b.1 - a.1)) })
+            .collect::<HashSet<_>>();
         if seen.len() > best {
             pos = *a;
             best = seen.len();
