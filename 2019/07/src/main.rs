@@ -1,5 +1,4 @@
 use std::io::Read;
-use std::str::FromStr;
 use itertools::Itertools;
 use vm::Vm;
 
