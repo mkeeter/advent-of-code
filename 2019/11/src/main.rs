@@ -2,6 +2,18 @@ use std::io::Read;
 use std::collections::HashMap;
 use vm::Vm;
 
+fn run_until(vm: &mut Vm, color: bool) -> Option<i64> {
+    while vm.running() {
+        if vm.blocked() {
+            vm.input(color as i64);
+        }
+        if let Some(i) = vm.step() {
+            return Some(i);
+        }
+    }
+    None
+}
+
 fn paint(input: &str, s: bool) -> HashMap<(i32, i32), bool> {
     let mut vm = Vm::from_str(&input);
 
@@ -10,38 +22,23 @@ fn paint(input: &str, s: bool) -> HashMap<(i32, i32), bool> {
 
     let mut pos = (0, 0);
     let mut dir = (0, 1);
-    while vm.running() {
-        // Color
-        loop {
-            if !vm.running() {
-                break;
-            } else if vm.blocked() {
-                vm.input(panels.get(&pos).cloned().unwrap_or(false) as i64);
-            }
-            if let Some(color) = vm.step() {
-                panels.insert(pos, color != 0);
-                break;
-            }
-        }
-
-        // Rotation
-        loop {
-            if !vm.running() {
-                break;
-            } else if vm.blocked() {
-                vm.input(panels.get(&pos).cloned().unwrap_or(false) as i64);
-            }
-            if let Some(rot) = vm.step() {
+    loop {
+        match run_until(&mut vm, *panels.get(&pos).unwrap_or(&false)) {
+            None => break,
+            Some(color) => panels.insert(pos, color != 0),
+        };
+        match run_until(&mut vm, *panels.get(&pos).unwrap_or(&false)) {
+            None => break,
+            Some(rot) => {
                 if rot == 0 {
-                    dir = (-dir.1, dir.0);
+                    dir = (-dir.1,  dir.0);
                 } else {
-                    dir = (dir.1, -dir.0);
+                    dir = ( dir.1, -dir.0);
                 }
-                break;
-            }
+                pos.0 += dir.0;
+                pos.1 += dir.1;
+            },
         }
-        pos.0 += dir.0;
-        pos.1 += dir.1;
     }
     panels
 }
