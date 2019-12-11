@@ -4,7 +4,7 @@ use vm::Vm;
 
 fn run_until(vm: &mut Vm, color: bool) -> Option<i64> {
     while vm.running() {
-        if vm.blocked() {
+        if vm.needs_input() {
             vm.input(color as i64);
         }
         if let Some(i) = vm.step() {

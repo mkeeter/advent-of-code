@@ -49,7 +49,7 @@ impl Vm {
         self.mem[self.ip] != OP_BREAK
     }
 
-    pub fn blocked(&self) -> bool {
+    pub fn needs_input(&self) -> bool {
         self.mem[self.ip] % 100 == OP_INPUT && self.input.len() == 0
     }
 
@@ -134,7 +134,7 @@ impl Vm {
     pub fn run(&mut self) -> Vec<i64> {
         let mut out = Vec::new();
         while self.running() {
-            assert!(!self.blocked());
+            assert!(!self.needs_input());
             if let Some(i) = self.step() {
                 out.push(i);
             }
