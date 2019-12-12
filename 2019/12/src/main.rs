@@ -1,8 +1,10 @@
 use std::io::BufRead;
 use std::str::FromStr;
 use std::collections::HashSet;
-use num::Integer;
 use std::cmp::Ordering;
+
+use num::Integer;
+use smallvec::SmallVec;
 
 #[derive(Clone, Hash, PartialEq, Eq)]
 struct State {
@@ -10,7 +12,7 @@ struct State {
     vel: i32,
 }
 struct Axis {
-    state: Vec<State>,
+    state: SmallVec<[State; 4]>,
 }
 
 impl Axis {
