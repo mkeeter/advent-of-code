@@ -11,42 +11,32 @@ struct State {
     pos: i32,
     vel: i32,
 }
-struct Axis {
-    state: SmallVec<[State; 4]>,
-}
+struct Axis(SmallVec<[State; 4]>);
 
 impl Axis {
     fn from_array(input: &[Vec<i32>], i: usize) -> Axis {
-        Axis { state: input.iter()
+        Axis(input.iter()
             .map(|p| State { pos: p[i], vel: 0 })
-            .collect() }
-    }
-
-    fn pos(&self, i: usize) -> i32 {
-        self.state[i].pos
-    }
-
-    fn vel(&self, i: usize) -> i32 {
-        self.state[i].vel
+            .collect())
     }
 
     fn step(&mut self) {
-        for i in 0..self.state.len() {
+        for i in 0..self.0.len() {
             for j in 0..i {
-                match self.pos(i).cmp(&self.pos(j)) {
+                match self.0[i].pos.cmp(&self.0[j].pos) {
                     Ordering::Less => {
-                        self.state[i].vel += 1;
-                        self.state[j].vel -= 1;
+                        self.0[i].vel += 1;
+                        self.0[j].vel -= 1;
                     },
                     Ordering::Greater => {
-                        self.state[i].vel -= 1;
-                        self.state[j].vel += 1;
+                        self.0[i].vel -= 1;
+                        self.0[j].vel += 1;
                     },
                     _ => (),
                 }
             }
         }
-        for a in self.state.iter_mut() {
+        for a in self.0.iter_mut() {
             a.pos += a.vel;
         }
     }
@@ -59,11 +49,11 @@ impl Axis {
 
     fn cycle(&mut self) -> usize {
         let mut seen = HashSet::new();
-        seen.insert(self.state.clone());
+        seen.insert(self.0.clone());
 
         for n in 0.. {
             self.step();
-            let state = self.state.clone();
+            let state = self.0.clone();
             if seen.contains(&state) {
                 return n + 1;
             } else {
@@ -91,8 +81,8 @@ fn main() {
         a.run(1000);
     }
     let energy: i32 = (0..input.len())
-        .map(|i| axes.iter().map(|a| a.pos(i).abs()).sum::<i32>() *
-                 axes.iter().map(|a| a.vel(i).abs()).sum::<i32>())
+        .map(|i| axes.iter().map(|a| a.0[i].pos.abs()).sum::<i32>() *
+                 axes.iter().map(|a| a.0[i].vel.abs()).sum::<i32>())
         .sum();
     println!("Part 1: {}", energy);
     println!("Part 2: {}", axes.iter_mut().fold(1, |acc, a| acc.lcm(&a.cycle())));
