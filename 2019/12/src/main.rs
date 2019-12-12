@@ -1,6 +1,7 @@
 use std::io::BufRead;
 use std::str::FromStr;
 use std::collections::HashSet;
+use num::Integer;
 
 fn run(mut pos: Vec<[i32; 3]>, mut vel: Vec<[i32; 3]>, n: usize) -> i32 {
     for _ in 0..n {
@@ -79,13 +80,12 @@ fn main() {
                         .map(|(p, v)| (p[k], v[k]))
                         .collect::<Vec<(i32, i32)>>();
             if seen.contains(&key) {
-                println!("Got {} repeat at  {}", k, n + 1);
-                cycle[k] = n + 1;
+                cycle[k] = n + 1 as usize;
                 break;
             } else {
                 seen.insert(key);
             }
         }
     }
-    println!("Plug those into an LCM calculator :P");
+    println!("Part 2: {}", cycle[0].lcm(&cycle[1]).lcm(&cycle[2]));
 }
