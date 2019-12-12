@@ -49,16 +49,13 @@ impl Axis {
 
     fn cycle(&mut self) -> usize {
         let mut seen = HashSet::new();
-        seen.insert(self.0.clone());
 
         for n in 0.. {
-            self.step();
-            let state = self.0.clone();
-            if seen.contains(&state) {
-                return n + 1;
-            } else {
-                seen.insert(state);
+            if seen.contains(&self.0) {
+                return n;
             }
+            seen.insert(self.0.clone());
+            self.step();
         }
         unreachable!();
     }
