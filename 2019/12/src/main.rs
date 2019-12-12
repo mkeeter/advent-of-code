@@ -2,36 +2,74 @@ use std::io::BufRead;
 use std::str::FromStr;
 use std::collections::HashSet;
 use num::Integer;
+use std::cmp::Ordering;
 
-fn run(mut pos: Vec<[i32; 3]>, mut vel: Vec<[i32; 3]>, n: usize) -> i32 {
-    for _ in 0..n {
-        for i in 0..pos.len() {
+#[derive(Clone, Hash, PartialEq, Eq)]
+struct State {
+    pos: i32,
+    vel: i32,
+}
+struct Axis {
+    state: Vec<State>,
+}
+
+impl Axis {
+    fn from_array(input: &[Vec<i32>], i: usize) -> Axis {
+        Axis { state: input.iter()
+            .map(|p| State { pos: p[i], vel: 0 })
+            .collect() }
+    }
+
+    fn pos(&self, i: usize) -> i32 {
+        self.state[i].pos
+    }
+
+    fn vel(&self, i: usize) -> i32 {
+        self.state[i].vel
+    }
+
+    fn step(&mut self) {
+        for i in 0..self.state.len() {
             for j in 0..i {
-                if i == j {
-                    continue;
-                }
-                for k in 0..3 {
-                    if pos[i][k] < pos[j][k] {
-                        vel[i][k] += 1;
-                        vel[j][k] -= 1;
-                    } else if pos[i][k] > pos[j][k] {
-                        vel[i][k] -= 1;
-                        vel[j][k] += 1;
-                    }
+                match self.pos(i).cmp(&self.pos(j)) {
+                    Ordering::Less => {
+                        self.state[i].vel += 1;
+                        self.state[j].vel -= 1;
+                    },
+                    Ordering::Greater => {
+                        self.state[i].vel -= 1;
+                        self.state[j].vel += 1;
+                    },
+                    _ => (),
                 }
             }
         }
-        for i in 0..pos.len() {
-            for k in 0..3 {
-                pos[i][k] += vel[i][k];
-            }
+        for a in self.state.iter_mut() {
+            a.pos += a.vel;
         }
     }
-    pos.iter()
-        .zip(vel.iter())
-        .map(|(p, v)| p.iter().map(|i| i.abs()).sum::<i32>() *
-                      v.iter().map(|i| i.abs()).sum::<i32>())
-        .sum()
+
+    fn run(&mut self, n: usize) {
+        for _ in 0..n {
+            self.step();
+        }
+    }
+
+    fn cycle(&mut self) -> usize {
+        let mut seen = HashSet::new();
+        seen.insert(self.state.clone());
+
+        for n in 0.. {
+            self.step();
+            let state = self.state.clone();
+            if seen.contains(&state) {
+                return n + 1;
+            } else {
+                seen.insert(state);
+            }
+        }
+        unreachable!();
+    }
 }
 
 fn main() {
@@ -43,49 +81,17 @@ fn main() {
                  .collect::<Vec<i32>>())
         .collect::<Vec<Vec<i32>>>();
 
-    let mut pos = input.iter()
-        .map(|p| [p[0], p[1], p[2]])
-        .collect::<Vec<_>>();
-    let mut vel = vec![[0, 0, 0]; pos.len()];
-    println!("Part 1: {}", run(pos.clone(), vel.clone(), 1000));
+    let mut axes = [Axis::from_array(&input, 0),
+                    Axis::from_array(&input, 1),
+                    Axis::from_array(&input, 2)];
 
-    let mut cycle = [0, 0, 0];
-    for k in 0..3 {
-        let mut seen = HashSet::new();
-        seen.insert(pos.iter()
-                    .zip(vel.iter())
-                    .map(|(p, v)| (p[k], v[k]))
-                    .collect::<Vec<(i32, i32)>>());
-        // Loop searching for a repeat on this axis
-        for n in 0.. {
-            for i in 0..pos.len() {
-                for j in 0..i {
-                    if i == j {
-                        continue;
-                    }
-                    if pos[i][k] < pos[j][k] {
-                        vel[i][k] += 1;
-                        vel[j][k] -= 1;
-                    } else if pos[i][k] > pos[j][k] {
-                        vel[i][k] -= 1;
-                        vel[j][k] += 1;
-                    }
-                }
-            }
-            for i in 0..pos.len() {
-                pos[i][k] += vel[i][k];
-            }
-            let key = pos.iter()
-                        .zip(vel.iter())
-                        .map(|(p, v)| (p[k], v[k]))
-                        .collect::<Vec<(i32, i32)>>();
-            if seen.contains(&key) {
-                cycle[k] = n + 1 as usize;
-                break;
-            } else {
-                seen.insert(key);
-            }
-        }
+    for a in axes.iter_mut() {
+        a.run(1000);
     }
-    println!("Part 2: {}", cycle[0].lcm(&cycle[1]).lcm(&cycle[2]));
+    let energy: i32 = (0..input.len())
+        .map(|i| axes.iter().map(|a| a.pos(i).abs()).sum::<i32>() *
+                 axes.iter().map(|a| a.vel(i).abs()).sum::<i32>())
+        .sum();
+    println!("Part 1: {}", energy);
+    println!("Part 2: {}", axes.iter_mut().fold(1, |acc, a| acc.lcm(&a.cycle())));
 }
