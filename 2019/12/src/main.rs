@@ -1,6 +1,6 @@
 use std::io::BufRead;
 use std::str::FromStr;
-use std::collections::{HashSet, HashMap};
+use std::collections::HashSet;
 
 fn run(mut pos: Vec<[i32; 3]>, mut vel: Vec<[i32; 3]>, n: usize) -> i32 {
     for _ in 0..n {
@@ -46,7 +46,7 @@ fn main() {
         .map(|p| [p[0], p[1], p[2]])
         .collect::<Vec<_>>();
     let mut vel = vec![[0, 0, 0]; pos.len()];
-    println!("Part 1: {}", run(pos.clone(), vel.clone(), 100));
+    println!("Part 1: {}", run(pos.clone(), vel.clone(), 1000));
 
     let mut cycle = [0, 0, 0];
     for k in 0..3 {
