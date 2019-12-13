@@ -64,11 +64,11 @@ fn main() {
             let redraw = tiles.get(&(x, y)) != Some(&c);
             tiles.insert((x, y), c);
 
-            if c == 4 {
-                ball_x = x;
-            } else if c == 3 {
-                paddle_x = x;
-            }
+            match c {
+                3 => paddle_x = x,
+                4 => ball_x = x,
+                _ => (),
+            };
 
             input = match ball_x.cmp(&paddle_x) {
                 Ordering::Less => -1,
