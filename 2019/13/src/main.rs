@@ -1,6 +1,8 @@
-use std::io::{Read, Write};
-use vm::Vm;
+use std::io::Read;
 use std::collections::HashMap;
+use std::cmp::Ordering;
+
+use vm::Vm;
 
 fn run_until(vm: &mut Vm) -> Option<i64> {
     while vm.running() {
@@ -10,15 +12,6 @@ fn run_until(vm: &mut Vm) -> Option<i64> {
         }
     }
     None
-}
-
-fn get_pixel(vm: &mut Vm) -> Option<(i64, i64, i64)> {
-    if let Some(x) = run_until(vm) {
-        Some((x, run_until(vm).unwrap(),
-                 run_until(vm).unwrap()))
-    } else {
-        None
-    }
 }
 
 fn run_until_with(vm: &mut Vm, input: i64) -> Option<i64> {
@@ -42,6 +35,28 @@ fn get_pixel_with(vm: &mut Vm, input: i64) -> Option<(i64, i64, i64)> {
     }
 }
 
+fn draw(tiles: &HashMap<(i64, i64), i64>) {
+    let xmin = tiles.keys().map(|p| p.0).min().unwrap();
+    let xmax = tiles.keys().map(|p| p.0).max().unwrap();
+    let ymin = tiles.keys().map(|p| p.1).min().unwrap();
+    let ymax = tiles.keys().map(|p| p.1).max().unwrap();
+
+    for y in ymin..=ymax {
+        for x in xmin..=xmax {
+            let c = match tiles.get(&(x, y)).unwrap_or(&0) {
+                0 => ' ',
+                1 => '█',
+                2 => '▒',
+                3 => '▔',
+                4 => '●',
+                _ => unreachable!(),
+            };
+            print!("{}", c);
+        }
+        print!("\n");
+    }
+}
+
 fn main() {
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).unwrap();
@@ -58,11 +73,6 @@ fn main() {
             break;
         }
     }
-    // Save game bounds forl ater
-    let xmin = tiles.keys().map(|p| p.0).min().unwrap();
-    let xmax = tiles.keys().map(|p| p.0).max().unwrap();
-    let ymin = tiles.keys().map(|p| p.1).min().unwrap();
-    let ymax = tiles.keys().map(|p| p.1).max().unwrap();
     println!("Part 1: {}", tiles.values().filter(|v| **v == 2).count());
 
     let mut vm = Vm::from_str(&input);
@@ -72,43 +82,21 @@ fn main() {
     let mut ball_x = 0;
     let mut paddle_x = 0;
     let mut input = 0;
-    while tiles.values().filter(|v| **v == 2).count() > 0 {
+    while tiles.values().any(|v| *v == 2) {
         while let Some((x, y, c)) = get_pixel_with(&mut vm, input) {
             let redraw = tiles.get(&(x, y)) != Some(&c);
             tiles.insert((x, y), c);
 
             if c == 4 {
                 ball_x = x;
-            } else if c == 3 && x != paddle_x {
+            } else if c == 3 {
                 paddle_x = x;
             }
-            if ball_x < paddle_x {
-                input = -1;
-            } else if ball_x > paddle_x {
-                input =  1;
-            } else {
-                input = 0;
-            }
 
-            if redraw {
-                print!("{}[2J", 27 as char);
-                std::io::stdout().flush();
-                for y in ymin..=ymax {
-                    for x in xmin..=xmax {
-                        let c = match tiles.get(&(x, y)).unwrap_or(&0) {
-                            0 => ' ',
-                            1 => '█',
-                            2 => '▒',
-                            3 => '▔',
-                            4 => '●',
-                            _ => unreachable!(),
-                        };
-                        print!("{}", c);
-                    }
-                    print!("\n");
-                }
-                std::io::stdout().flush();
-                std::thread::sleep(std::time::Duration::from_millis(10));
+            input = match ball_x.cmp(&paddle_x) {
+                Ordering::Less => -1,
+                Ordering::Greater =>  1,
+                Ordering::Equal => 0,
             }
         }
     }
