@@ -4,32 +4,10 @@ use std::cmp::Ordering;
 
 use vm::Vm;
 
-fn run_until(vm: &mut Vm) -> Option<i64> {
-    while vm.running() {
-        assert!(!vm.needs_input());
-        if let Some(i) = vm.step() {
-            return Some(i);
-        }
-    }
-    None
-}
-
-fn run_until_with(vm: &mut Vm, input: i64) -> Option<i64> {
-    while vm.running() {
-        if vm.needs_input() {
-            vm.input(input);
-        }
-        if let Some(i) = vm.step() {
-            return Some(i);
-        }
-    }
-    None
-}
-
 fn get_pixel_with(vm: &mut Vm, input: i64) -> Option<(i64, i64, i64)> {
-    if let Some(x) = run_until_with(vm, input) {
-        Some((x, run_until_with(vm, input).unwrap(),
-                 run_until_with(vm, input).unwrap()))
+    if let Some(x) = vm.run_until_with(input) {
+        Some((x, vm.run_until_with(input).unwrap(),
+                 vm.run_until_with(input).unwrap()))
     } else {
         None
     }
@@ -64,9 +42,9 @@ fn main() {
 
     let mut tiles = HashMap::new();
     while vm.running() {
-        let x = run_until(&mut vm);
-        let y = run_until(&mut vm);
-        let c = run_until(&mut vm);
+        let x = vm.run_until();
+        let y = vm.run_until();
+        let c = vm.run_until();
         if vm.running() {
             tiles.insert((x.unwrap(), y.unwrap()), c.unwrap());
         } else {

@@ -2,18 +2,6 @@ use std::io::Read;
 use std::collections::HashMap;
 use vm::Vm;
 
-fn run_until(vm: &mut Vm, color: bool) -> Option<i64> {
-    while vm.running() {
-        if vm.needs_input() {
-            vm.input(color as i64);
-        }
-        if let Some(i) = vm.step() {
-            return Some(i);
-        }
-    }
-    None
-}
-
 fn paint(input: &str, s: bool) -> HashMap<(i32, i32), bool> {
     let mut vm = Vm::from_str(&input);
 
@@ -23,11 +11,11 @@ fn paint(input: &str, s: bool) -> HashMap<(i32, i32), bool> {
     let mut pos = (0, 0);
     let mut dir = (0, 1);
     loop {
-        match run_until(&mut vm, *panels.get(&pos).unwrap_or(&false)) {
+        match vm.run_until_with(*panels.get(&pos).unwrap_or(&false) as i64) {
             None => break,
             Some(color) => panels.insert(pos, color != 0),
         };
-        match run_until(&mut vm, *panels.get(&pos).unwrap_or(&false)) {
+        match vm.run_until_with(*panels.get(&pos).unwrap_or(&false) as i64) {
             None => break,
             Some(rot) => {
                 if rot == 0 {

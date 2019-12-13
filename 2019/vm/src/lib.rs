@@ -142,6 +142,28 @@ impl Vm {
         out
     }
 
+    pub fn run_until(&mut self) -> Option<i64> {
+        while self.running() {
+            assert!(!self.needs_input());
+            if let Some(i) = self.step() {
+                return Some(i);
+            }
+        }
+        None
+    }
+
+    pub fn run_until_with(&mut self, input: i64) -> Option<i64> {
+        while self.running() {
+            if self.needs_input() {
+                self.input(input);
+            }
+            if let Some(i) = self.step() {
+                return Some(i);
+            }
+        }
+        None
+    }
+
     pub fn peek(&self, i: usize) -> i64 {
         self.mem[i]
     }
