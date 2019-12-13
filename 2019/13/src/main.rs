@@ -21,15 +21,14 @@ fn draw(tiles: &HashMap<(i64, i64), i64>) {
 
     for y in ymin..=ymax {
         for x in xmin..=xmax {
-            let c = match tiles.get(&(x, y)).unwrap_or(&0) {
+            println!("{}", match tiles.get(&(x, y)).unwrap_or(&0) {
                 0 => ' ',
                 1 => '█',
                 2 => '▒',
                 3 => '▔',
                 4 => '●',
                 _ => unreachable!(),
-            };
-            print!("{}", c);
+            });
         }
         print!("\n");
     }
@@ -75,6 +74,10 @@ fn main() {
                 Ordering::Less => -1,
                 Ordering::Greater =>  1,
                 Ordering::Equal => 0,
+            };
+
+            if redraw && false {
+                draw(&tiles);
             }
         }
     }
