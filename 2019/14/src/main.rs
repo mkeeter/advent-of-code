@@ -29,8 +29,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut sums : HashMap<&str, Vec<(usize, i32)>> = HashMap::new();
     for (i, inputs) in eqns.iter().enumerate() {
-        for mol in inputs {
-            sums.entry(&mol.1).or_insert(Vec::new()).push((i, mol.0))
+        for (count, name) in inputs {
+            sums.entry(&name).or_insert(Vec::new()).push((i, *count))
         }
     }
 
