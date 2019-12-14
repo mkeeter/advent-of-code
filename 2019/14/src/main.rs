@@ -14,12 +14,11 @@ fn parse(s: &str) -> Vec<(i32, String)>
         .collect::<Vec<String>>();
 
     let mut mols = words.chunks(2)
-        .map(|c| (-i32::from_str(&c[0]).unwrap(), c[1].clone()))
+        .map(|c| (i32::from_str(&c[0]).unwrap(), c[1].clone()))
         .collect::<Vec<(i32, String)>>();
 
     // The output is the only positive value
-    let last = mols.len() - 1;
-    mols[last].0 *= -1;
+    mols.iter_mut().rev().skip(1).for_each(|m| m.0 *= -1);
     mols
 }
 
@@ -50,9 +49,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
 
         if k == &"ORE" {
-            write!(&mut constraints, " + ore_in ")?
+            write!(&mut constraints, "+ ore_in ")?
         } else if k == &"FUEL" {
-            write!(&mut constraints, " - fuel_out ")?
+            write!(&mut constraints, "- fuel_out ")?
         }
         writeln!(&mut constraints, ">= 0")?;
     }
@@ -66,8 +65,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         writeln!(&mut integers, "  eqn{}", i)?;
     }
 
-    // Part 1
-    let mut subprocess = Command::new("glpsol")
+    let solver = || Command::new("glpsol")
             .arg("--lp")
             .arg("/dev/stdin")
             .arg("--output")
@@ -76,8 +74,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             .stdout(Stdio::piped())
             .spawn()
             .expect("Failed to spawn solver");
+
+    // Part 1
+    let mut subprocess = solver();
     let pipe = subprocess.stdin.as_mut().expect("Failed to open stdin");
-    writeln!(pipe, "Minimize in: ore_in\n")?;
+    writeln!(pipe, "Minimize\n  objective: ore_in\n")?;
     writeln!(pipe, "{}", constraints)?;
     writeln!(pipe, "  fuel_out >= 1\n")?;
     writeln!(pipe, "{}\n", integers)?;
@@ -93,17 +94,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 ////////////////////////////////////////////////////////////////////////////////
 
     // Part 2
-    let mut subprocess = Command::new("glpsol")
-            .arg("--lp")
-            .arg("/dev/stdin")
-            .arg("--output")
-            .arg("/dev/stdout")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .spawn()
-            .expect("Failed to spawn solver");
+    let mut subprocess = solver();
     let pipe = subprocess.stdin.as_mut().expect("Failed to open stdin");
-    writeln!(pipe, "Maximize out: fuel_out\n")?;
+    writeln!(pipe, "Maximize\n  objective: fuel_out\n")?;
     writeln!(pipe, "{}", constraints)?;
     writeln!(pipe, "  ore_in = 1000000000000\n")?;
     writeln!(pipe, "{}\n", integers)?;
