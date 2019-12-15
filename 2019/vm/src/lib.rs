@@ -40,9 +40,7 @@ impl Vm {
     }
 
     pub fn new(mem: &[i64]) -> Self {
-        let mut mem = mem.to_vec();
-        mem.resize(1024_usize.pow(2), 0);
-        Self { mem: mem, ip: 0, input: VecDeque::new(), base: 0 }
+        Self { mem: mem.to_vec(), ip: 0, input: VecDeque::new(), base: 0 }
     }
 
     pub fn running(&self) -> bool {
@@ -53,14 +51,21 @@ impl Vm {
         self.mem[self.ip] % 100 == OP_INPUT && self.input.len() == 0
     }
 
+    fn get(&mut self, index: usize) -> &mut i64 {
+        if index >= self.mem.len() {
+            self.mem.resize(index + 1, 0);
+        }
+        &mut self.mem[index]
+    }
+
     fn param(&mut self, index: u32) -> &mut i64 {
         let m = (self.mem[self.ip] / 10_i64.pow(index + 1)) % 10;
         let arg = self.ip + index as usize;
         let pos = self.mem[arg];
         match m {
-            MODE_POSITION  => &mut self.mem[pos as usize],
+            MODE_POSITION  => self.get(pos as usize),
             MODE_IMMEDIATE => &mut self.mem[arg],
-            MODE_RELATIVE  => &mut self.mem[(pos + self.base) as usize],
+            MODE_RELATIVE  => self.get((pos + self.base) as usize),
             _ => panic!(),
         }
     }
