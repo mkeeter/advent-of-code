@@ -21,7 +21,7 @@ fn optimize(commands: Vec<String>, c: char) -> (Vec<String>, Vec<String>) {
                 continue;
             }
 
-            let mut score = 0;
+            let mut score = k - 1;
             for j in (i + k)..(commands.len() - k) {
                 if commands[i..i+k] == commands[j..j+k] {
                     score += k - 1;
