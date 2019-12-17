@@ -2,14 +2,13 @@ use std::io::Read;
 use std::collections::HashMap;
 use vm::Vm;
 
-fn optimize(commands: Vec<String>, c: i32) -> Option<(Vec<String>, Vec<Vec<String>>)> {
+fn optimize(commands: Vec<String>, c: i32) -> Option<Vec<Vec<String>>> {
     if c == 0 {
         let len = commands.iter()
             .map(|i| i.len() + 1)
             .sum::<usize>() - 1;
-        if len <= 20
-        {
-            return Some((commands, Vec::new()))
+        if len <= 20 {
+            return Some(vec![commands])
         } else {
             return None;
         }
@@ -34,9 +33,10 @@ fn optimize(commands: Vec<String>, c: i32) -> Option<(Vec<String>, Vec<Vec<Strin
             // Build a reduced command tape that uses these commands
             let mut new_commands = Vec::new();
             let mut j = 0;
+            let sub = ('A' as u8 + (c - 1) as u8) as char;
             while j < commands.len() {
                 if j + k <= commands.len() && s == &commands[j..(j+k)] {
-                    new_commands.push((('A' as u8 + (c - 1) as u8) as char).to_string());
+                    new_commands.push(sub.to_string());
                     j += k;
                 } else {
                     new_commands.push(commands[j].clone());
@@ -44,10 +44,10 @@ fn optimize(commands: Vec<String>, c: i32) -> Option<(Vec<String>, Vec<Vec<Strin
                 }
             }
 
-            if let Some((cs, vs)) = optimize(new_commands, c - 1) {
+            if let Some(vs) = optimize(new_commands, c - 1) {
                 let mut vs = vs.clone();
                 vs.push(s.to_vec());
-                return Some((cs, vs));
+                return Some(vs);
             }
         }
     }
@@ -81,12 +81,16 @@ fn main() {
         }
     }
 
+    let tile = |pos: &(i32, i32)| -> char {
+        *tiles.get(pos).unwrap_or(&'.')
+    };
+
     let alignment = tiles.iter()
-        .filter(|(_k, v)| **v == '#')
-        .filter(|((x, y), _v)| *tiles.get(&(x + 1, *y)).unwrap_or(&'.') == '#')
-        .filter(|((x, y), _v)| *tiles.get(&(x - 1, *y)).unwrap_or(&'.') == '#')
-        .filter(|((x, y), _v)| *tiles.get(&(*x, y + 1)).unwrap_or(&'.') == '#')
-        .filter(|((x, y), _v)| *tiles.get(&(*x, y - 1)).unwrap_or(&'.') == '#')
+        .filter(|((x, y), v)| **v == '#' &&
+                              tile(&(x + 1, *y)) == '#' &&
+                              tile(&(x - 1, *y)) == '#' &&
+                              tile(&(*x, y + 1)) == '#' &&
+                              tile(&(*x, y - 1)) == '#')
         .map(|((x, y), _v)| x * y)
         .sum::<i32>();
 
@@ -106,11 +110,7 @@ fn main() {
         _ => panic!("Invalid bot character {}", bot.1),
     };
 
-    let tile = |pos: &(i32, i32)| -> char {
-        *tiles.get(pos).unwrap_or(&'.')
-    };
-
-    // Figure out how to walk through the mze
+    // Figure out how to walk through the maze
     let mut commands = Vec::new();
     let mut distance = 0;
     loop {
@@ -141,37 +141,27 @@ fn main() {
     let mut vm = Vm::from_str(&input);
     vm.poke(0, 2);
 
-    let (a, bs) = optimize(commands, 3).unwrap();
-    println!("{:?}, {:?}", a, bs);
-    for cmd in std::iter::once(a).chain(bs) {
+    let cmds = optimize(commands, 3).unwrap();
+    for cmd in cmds {
         for (i,word) in cmd.iter().enumerate() {
             for c in word.chars() {
-                print!("{}", c);
                 vm.input(c as i64);
             }
             if i == cmd.len() - 1 {
-                print!("\n");
                 vm.input('\n' as i64);
             } else {
-                print!(",");
                 vm.input(',' as i64);
             }
         }
     }
-    vm.input('y' as i64);
+    vm.input('n' as i64);
     vm.input('\n' as i64);
 
-    let mut last = 0;
-    let mut i = 0;
-    while i < 10000 { // Solve the halting problem
-        if let Some(o) = vm.step() {
-            let c = o as u8 as char;
-            print!("{}", c);
-            last = o;
-            i = 0;
+    while let Some(o) = vm.run_until() {
+        if o > 255 {
+            println!("Part 2: {}", o);
         } else {
-            i += 1;
+            print!("{}", o as u8 as char);
         }
     }
-    println!("Part 2: {}", last);
 }
