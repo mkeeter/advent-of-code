@@ -131,6 +131,9 @@ dependencies = [
 [[package]]
 name = "day18"
 version = "0.1.0"
+dependencies = [
+ "smallvec 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "either"

@@ -1,113 +1,110 @@
 use std::io::BufRead;
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashSet, HashMap, VecDeque};
+use smallvec::{SmallVec, smallvec};
+
+////////////////////////////////////////////////////////////////////////////////
 
 type Map = HashMap<(i32, i32), char>;
+type Bots = SmallVec<[(i32, i32); 4]>;
 
-// Finds all available keys from the given position,
-// return a map of their position to distance
-fn available(x: i32, y: i32, keys: u32, map: &Map) -> HashMap<(i32, i32, u32), u32>
-{
-    let mut todo = vec![(x, y)];
-    let mut next: Vec<(i32, i32)> = Vec::new();
+#[derive(Clone, Hash, Eq, PartialEq)]
+struct State {
+    bots: Bots,
+    keys: u32,
+}
 
-    let mut step = 0;
-    let mut found = HashMap::new();
+type Cache = HashMap<State, u32>;
+
+struct Edge {
+    target_x: i32,
+    target_y: i32,
+    required_keys: u32,
+    new_key: u32,
+    steps: u32,
+}
+type Edges = HashMap<(i32, i32), Vec<Edge>>;
+
+////////////////////////////////////////////////////////////////////////////////
+
+fn explore(x: i32, y: i32, map: &Map) -> Vec<Edge> {
+    let mut todo = VecDeque::new();
+    todo.push_back((x, y, 0, 0));
+
+    let mut found = Vec::new();
     let mut seen = HashSet::new();
-    while todo.len() > 0 {
-        next.clear();
-        for (tx, ty) in todo.iter() {
-            if seen.contains(&(*tx, *ty)) {
-                continue;
-            }
-            seen.insert((*tx, *ty));
+    while let Some((tx, ty, keys, step)) = todo.pop_front() {
+        if seen.contains(&(tx, ty)) {
+            continue;
+        }
+        seen.insert((tx, ty));
 
-            let c = *map.get(&(*tx, *ty)).unwrap_or(&'#');
+        let c = *map.get(&(tx, ty)).unwrap_or(&'#');
+        let mut door = 0;
 
-            // Found a key :D
-            if char::is_lowercase(c) {
-                let key = 1 << ((c as u8) - ('a' as u8)) as u32;
-                if keys & key == 0 {
-                    found.insert((*tx, *ty, keys | key), step);
-                    continue;
-                }
-            // Found a wall :(
-            } else if c == '#' {
-                continue;
-            // Found a door :/
-            } else if char::is_uppercase(c) {
-                let door = 1 << ((c as u8) - ('A' as u8)) as u32;
-                // We can't open the door :(
-                if keys & door == 0 {
-                    continue;
-                }
-            }
-            for (dx, dy) in [(0, 1), (0, -1), (1, 0), (-1, 0)].iter() {
-                next.push((tx + dx, ty + dy));
-            }
+        // Found a key :D
+        if char::is_lowercase(c) && (tx != x || ty != y) {
+            let key = 1 << ((c as u8) - b'a') as u32;
+            found.push( Edge {
+                target_x: tx,
+                target_y: ty,
+                required_keys: keys,
+                new_key: key,
+                steps: step });
+
+        // Found a wall :(
+        } else if c == '#' {
+            continue;
+
+        // Found a door :)
+        } else if char::is_uppercase(c) {
+            door = 1 << ((c as u8) - b'A') as u32;
         }
 
-        std::mem::swap(&mut todo, &mut next);
-        step += 1;
+        // Take new steps
+        for (dx, dy) in &[(0, 1), (0, -1), (1, 0), (-1, 0)] {
+            todo.push_back((tx + dx, ty + dy, keys | door, step + 1));
+        }
     }
     found
 }
 
-fn solve(x: i32, y: i32, keys: u32, target: u32,
-         map: &Map, cache: &mut HashMap<(i32, i32, u32), u32>) -> u32
+fn solve(state: State, target: u32, edges: &Edges, cache: &mut Cache) -> u32
 {
-    if keys == target {
-        cache.insert((x, y, keys), 0);
+    if state.keys == target {
         return 0;
-    }
-
-    if let Some(c) = cache.get(&(x, y, keys)) {
+    } else if let Some(c) = cache.get(&state) {
         return *c;
     }
 
-    let r = available(x, y, keys, map)
-        .iter()
-        .map(|((px, py, keys), dist)|
-             dist + solve(*px, *py, *keys, target, map, cache))
+    let r = state.bots.iter()
+        .enumerate()
+        .flat_map(|(i, b)| edges.get(&(b.0, b.1))
+            .unwrap()
+            .iter()
+            .map(move |e| (i, e)))
+        .filter(|(_i, e)|
+            (e.required_keys & state.keys) == e.required_keys &&
+            (e.new_key & state.keys) == 0)
+        .map(|(i, e)| {
+             let mut next = state.clone();
+             next.bots[i].0 = e.target_x;
+             next.bots[i].1 = e.target_y;
+             next.keys |= e.new_key;
+             e.steps + solve(next, target, edges, cache) })
         .min()
         .unwrap();
-    cache.insert((x, y, keys), r);
+
+    cache.insert(state, r);
     r
 }
 
-////////////////////////////////////////////////////////////////////////////////
-
-#[derive(Clone, Copy, Eq, Hash, PartialEq)]
-struct Bots {
-    x: [i32; 4],
-    y: [i32; 4],
-}
-
-fn solve_many(bots: Bots, keys: u32, target: u32,
-              map: &Map, cache: &mut HashMap<(Bots, u32), u32>) -> u32
-{
-    if keys == target {
-        cache.insert((bots, keys), 0);
-        return 0;
-    }
-
-    if let Some(c) = cache.get(&(bots, keys)) {
-        return *c;
-    }
-
-    let r = (0..4)
-        .filter_map(|i| available(bots.x[i], bots.y[i], keys, map)
-            .iter()
-            .map(|((px, py, keys), dist)| {
-                 let mut next = bots.clone();
-                 next.x[i] = *px;
-                 next.y[i] = *py;
-                 dist + solve_many(next, *keys, target, map, cache) })
-            .min())
-        .min()
-        .unwrap();
-
-    cache.insert((bots, keys), r);
-    return r;
+fn build_graph(bots: &Bots, tiles: &Map) -> Edges {
+    tiles.iter()
+        .filter(|(_k, v)| char::is_lowercase(**v))
+        .map(|(k, _v)| k)
+        .chain(bots.iter())
+        .map(|p| (*p, explore(p.0, p.1, &tiles)))
+        .collect::<Edges>()
 }
 
 fn main() {
@@ -119,7 +116,7 @@ fn main() {
         for (x, c) in line.unwrap().chars().enumerate() {
             tiles.insert((x as i32, y as i32), c);
             if char::is_lowercase(c) {
-                let key = 1 << ((c as u8) - ('a' as u8)) as u32;
+                let key = 1 << ((c as u8) - b'a') as u32;
                 target |= key;
             } else if c == '@' {
                 start = (x as i32, y as i32);
@@ -127,19 +124,30 @@ fn main() {
         }
     }
 
-    let mut cache = HashMap::new();
-    println!("Part 1: {}", solve(start.0, start.1, 0, target, &tiles, &mut cache));
+    ////////////////////////////////////////////////////////////////////////////
+    // Part 1
+    let mut cache = Cache::new();
+    let bots = smallvec![(start.0, start.1)];
+    let edges = build_graph(&bots, &tiles);
+    let state = State { bots: bots, keys: 0 };
+    println!("Part 1: {}", solve(state, target, &edges, &mut cache));
 
-    let mut cache = HashMap::new();
+    ////////////////////////////////////////////////////////////////////////////
+    // Part 2
+    let mut cache = Cache::new();
     let mut tiles = tiles;
-    let bots = Bots {
-        x: [start.0 + 1, start.0 + 1, start.0 - 1, start.0 - 1],
-        y: [start.1 + 1, start.1 - 1, start.1 + 1, start.1 - 1],
-    };
-    tiles.insert(start, '#');
-    tiles.insert((start.0 + 1, start.1), '#');
-    tiles.insert((start.0 - 1, start.1), '#');
-    tiles.insert((start.0, start.1 + 1), '#');
-    tiles.insert((start.0, start.1 - 1), '#');
-    println!("Part 2: {}", solve_many(bots, 0, target, &tiles, &mut cache));
+
+    // Modify the map to add a cross pattern at the bot's original location
+    for (dx, dy) in &[(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)] {
+        tiles.insert((start.0 + dx, start.1 + dy), '#');
+    }
+
+    // We're now running four bots simultaneously
+    let bots = [(1, 1), (1, -1), (-1, 1), (-1, -1)].iter()
+        .map(|(dx, dy)| (start.0 + dx, start.1 + dy))
+        .collect();
+
+    let edges = build_graph(&bots, &tiles);
+    let state = State { bots: bots, keys: 0 };
+    println!("Part 2: {}", solve(state, target, &edges, &mut cache));
 }
