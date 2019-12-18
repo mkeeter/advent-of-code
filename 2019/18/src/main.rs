@@ -2,7 +2,6 @@ use std::io::BufRead;
 use std::collections::{HashSet, HashMap};
 
 type Map = HashMap<(i32, i32), char>;
-type Cache = HashMap<(i32, i32, u32), u32>;
 
 // Finds all available keys from the given position,
 // return a map of their position to distance
@@ -54,7 +53,7 @@ fn available(x: i32, y: i32, keys: u32, map: &Map) -> HashMap<(i32, i32, u32), u
 }
 
 fn solve(x: i32, y: i32, keys: u32, target: u32,
-         map: &Map, cache: &mut Cache) -> u32
+         map: &Map, cache: &mut HashMap<(i32, i32, u32), u32>) -> u32
 {
     if keys == target {
         cache.insert((x, y, keys), 0);
@@ -75,6 +74,46 @@ fn solve(x: i32, y: i32, keys: u32, target: u32,
     r
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
+struct Bots {
+    x: [i32; 4],
+    y: [i32; 4],
+}
+
+fn solve_many(bots: Bots, keys: u32, target: u32,
+              map: &Map, cache: &mut HashMap<(Bots, u32), u32>) -> u32
+{
+    if keys == target {
+        cache.insert((bots, keys), 0);
+        return 0;
+    }
+
+    if let Some(c) = cache.get(&(bots, keys)) {
+        return *c;
+    }
+
+    let mut best = std::u32::MAX;
+    for i in 0..4 {
+        if let Some(r) = available(bots.x[i], bots.y[i], keys, map)
+            .iter()
+            .map(|((px, py, keys), dist)| {
+                 let mut next = bots.clone();
+                 next.x[i] = *px;
+                 next.y[i] = *py;
+                 dist + solve_many(next, *keys, target, map, cache) })
+            .min()
+        {
+            if r < best {
+                best = r;
+            }
+        }
+    }
+    cache.insert((bots, keys), best);
+    return best;
+}
+
 fn main() {
     let mut tiles: Map = HashMap::new();
 
@@ -92,9 +131,19 @@ fn main() {
         }
     }
 
-    let mut cache = Cache::new();
-    available(start.0, start.1, 0, &tiles);
-    println!("{:?}", solve(start.0, start.1, 0, target, &tiles, &mut cache));
+    let mut cache = HashMap::new();
+    println!("Part 1: {}", solve(start.0, start.1, 0, target, &tiles, &mut cache));
 
-    // 4864 is too high
+    let mut cache = HashMap::new();
+    let mut tiles = tiles;
+    let bots = Bots {
+        x: [start.0 + 1, start.0 + 1, start.0 - 1, start.0 - 1],
+        y: [start.1 + 1, start.1 - 1, start.1 + 1, start.1 - 1],
+    };
+    tiles.insert(start, '#');
+    tiles.insert((start.0 + 1, start.1), '#');
+    tiles.insert((start.0 - 1, start.1), '#');
+    tiles.insert((start.0, start.1 + 1), '#');
+    tiles.insert((start.0, start.1 - 1), '#');
+    println!("Part 2: {}", solve_many(bots, 0, target, &tiles, &mut cache));
 }
