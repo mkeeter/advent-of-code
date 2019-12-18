@@ -1,57 +1,78 @@
 use std::io::BufRead;
-use std::collections::HashMap;
+use std::collections::{HashSet, HashMap};
 
 type Map = HashMap<(i32, i32), char>;
-type Cache = HashMap<(i32, i32, u32), Option<u32>>;
+type Cache = HashMap<(i32, i32, u32), u32>;
 
-fn step(x: i32, y: i32, keys: u32, target: u32,
-         map: &Map, cache: &mut Cache) -> Option<u32>
+// Finds all available keys from the given position,
+// return a map of their position to distance
+fn available(x: i32, y: i32, keys: u32, map: &Map) -> HashMap<(i32, i32, u32), u32>
 {
-    [(0, 1), (0, -1), (1, 0), (-1, 0)].iter()
-        .filter_map(|(dx, dy)| solve(x + dx, y + dy, keys, target, map, cache))
-        .map(|i| i + 1)
-        .min()
+    let mut todo = vec![(x, y)];
+    let mut next: Vec<(i32, i32)> = Vec::new();
+
+    let mut step = 0;
+    let mut found = HashMap::new();
+    let mut seen = HashSet::new();
+    while todo.len() > 0 {
+        next.clear();
+        for (tx, ty) in todo.iter() {
+            if seen.contains(&(*tx, *ty)) {
+                continue;
+            }
+            seen.insert((*tx, *ty));
+
+            let c = *map.get(&(*tx, *ty)).unwrap_or(&'#');
+
+            // Found a key :D
+            if char::is_lowercase(c) {
+                let key = 1 << ((c as u8) - ('a' as u8)) as u32;
+                if keys & key == 0 {
+                    found.insert((*tx, *ty, keys | key), step);
+                    continue;
+                }
+            // Found a wall :(
+            } else if c == '#' {
+                continue;
+            // Found a door :/
+            } else if char::is_uppercase(c) {
+                let door = 1 << ((c as u8) - ('A' as u8)) as u32;
+                // We can't open the door :(
+                if keys & door == 0 {
+                    continue;
+                }
+            }
+            for (dx, dy) in [(0, 1), (0, -1), (1, 0), (-1, 0)].iter() {
+                next.push((tx + dx, ty + dy));
+            }
+        }
+
+        std::mem::swap(&mut todo, &mut next);
+        step += 1;
+    }
+    found
 }
 
 fn solve(x: i32, y: i32, keys: u32, target: u32,
-         map: &Map, cache: &mut Cache) -> Option<u32>
+         map: &Map, cache: &mut Cache) -> u32
 {
     if keys == target {
-        println!("Success!");
-        cache.insert((x, y, keys), Some(0));
-        return Some(0)
+        cache.insert((x, y, keys), 0);
+        return 0;
     }
 
     if let Some(c) = cache.get(&(x, y, keys)) {
         return *c;
     }
 
-    let c = *map.get(&(x, y)).unwrap_or(&'#');
-    cache.insert((x, y, keys), None);
-    let result = if c == '#' {
-        None
-    } else if char::is_lowercase(c) {
-        let key = 1 << ((c as u8) - ('a' as u8)) as u32;
-        if (keys & key) == 0 {
-            solve(x, y, keys | key, target, map, cache)
-        } else {
-            step(x, y, keys, target, map, cache)
-        }
-    } else if char::is_uppercase(c) {
-        let door = 1 << ((c as u8) - ('A' as u8)) as u32;
-        if (keys & door) == 0 {
-            None
-        } else {
-            step(x, y, keys, target, map, cache)
-        }
-    } else {
-        println!("{} {} {}", x, y, keys);
-        assert!(c == '.' || c == '@');
-        step(x, y, keys, target, map, cache)
-    };
-
-    cache.insert((x, y, keys), result);
-    result
+    let r = available(x, y, keys, map)
+        .iter()
+        .map(|((px, py, keys), dist)|
+             dist + solve(*px, *py, *keys, target, map, cache))
+        .min()
+        .unwrap();
+    cache.insert((x, y, keys), r);
+    r
 }
 
 fn main() {
@@ -72,9 +93,8 @@ fn main() {
     }
 
     let mut cache = Cache::new();
+    available(start.0, start.1, 0, &tiles);
     println!("{:?}", solve(start.0, start.1, 0, target, &tiles, &mut cache));
-    println!("Hello, world!");
-    println!("{}", target);
 
     // 4864 is too high
 }
