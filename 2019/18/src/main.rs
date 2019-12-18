@@ -94,24 +94,20 @@ fn solve_many(bots: Bots, keys: u32, target: u32,
         return *c;
     }
 
-    let mut best = std::u32::MAX;
-    for i in 0..4 {
-        if let Some(r) = available(bots.x[i], bots.y[i], keys, map)
+    let r = (0..4)
+        .filter_map(|i| available(bots.x[i], bots.y[i], keys, map)
             .iter()
             .map(|((px, py, keys), dist)| {
                  let mut next = bots.clone();
                  next.x[i] = *px;
                  next.y[i] = *py;
                  dist + solve_many(next, *keys, target, map, cache) })
-            .min()
-        {
-            if r < best {
-                best = r;
-            }
-        }
-    }
-    cache.insert((bots, keys), best);
-    return best;
+            .min())
+        .min()
+        .unwrap();
+
+    cache.insert((bots, keys), r);
+    return r;
 }
 
 fn main() {
