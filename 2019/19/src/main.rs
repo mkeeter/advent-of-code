@@ -42,7 +42,7 @@ fn main() {
         length = xmax - xmin;
 
         if length >= 100 {
-            buf.push_back((y, xmin, xmax));
+            buf.push_back((xmin, xmax));
             if buf.len() > 100 {
                 buf.pop_front();
             }
@@ -52,13 +52,13 @@ fn main() {
 
         // Check for a 100x100 square within this region
         if buf.len() == 100 {
-            let span_start = buf.back().unwrap().1;
+            let span_start = buf.back().unwrap().0;
             let span_end = span_start + 100;
-            if buf.iter().all(|&(_y, xmin, xmax)|
+            if buf.iter().all(|&(xmin, xmax)|
                 span_start <= xmax && span_start >= xmin &&
                 span_end <= xmax && span_start >= xmin)
             {
-                let corner = (span_start, buf.front().unwrap().0);
+                let corner = (span_start, y - 100 + 1);
                 println!("Part 2: {}", corner.0 * 10000 + corner.1);
                 break;
             }
