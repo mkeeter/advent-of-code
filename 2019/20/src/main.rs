@@ -99,7 +99,7 @@ fn main() {
             if let Some(w) = links.get(&(x, y)) {
                 todo.push_back((w.0, w.1, steps, level + recurse(x, y)));
             }
-        } else if c != '#' {
+        } else if c != '#' && level >= 0 {
             // Take new steps
             for (dx, dy) in &[(0, 1), (0, -1), (1, 0), (-1, 0)] {
                 todo.push_back((x + dx, y + dy, steps + 1, level));
