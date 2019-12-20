@@ -17,8 +17,8 @@ fn main() {
                   .iter()
                   .map(move |d| (*k, *d)))
         .filter_map(|((x, y), (dx, dy))| {
-            let a = get(x + 1 * dx, y + 1 * dy);
-            let b = get(x + 2 * dx, y + 2 * dy);
+            let a = get(x +   dx, y +   dy);
+            let b = get(x + 2*dx, y + 2*dy);
             if char::is_uppercase(a) && char::is_uppercase(b) {
                 let key = if dx < 0 || dy < 0 {
                     [b, a]
