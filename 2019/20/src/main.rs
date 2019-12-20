@@ -31,7 +31,7 @@ fn main() {
             }
         })
         .collect::<Vec<_>>();
-    portals.sort();
+    portals.sort_unstable();
 
     let enter = portals[0].1;
     let exit = portals.pop().unwrap().1;
@@ -69,10 +69,10 @@ fn main() {
 
     // Helper function to check portal direction
     let recurse = {
-        let xmin = portals.iter().map(|p| (p.2).0).min().unwrap();
-        let ymin = portals.iter().map(|p| (p.2).1).min().unwrap();
-        let xmax = portals.iter().map(|p| (p.2).0).max().unwrap();
-        let ymax = portals.iter().map(|p| (p.2).1).max().unwrap();
+        let xmin = links.keys().map(|p| p.0).min().unwrap();
+        let ymin = links.keys().map(|p| p.1).min().unwrap();
+        let xmax = links.keys().map(|p| p.0).max().unwrap();
+        let ymax = links.keys().map(|p| p.1).max().unwrap();
         move |x: i32, y: i32| {
             if x == xmin || x == xmax || y == ymin || y == ymax {
                 -1
