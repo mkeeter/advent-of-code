@@ -66,4 +66,44 @@ fn main() {
             }
         }
     }
+
+    // Helper function to check portal direction
+    let recurse = {
+        let xmin = portals.iter().map(|p| (p.2).0).min().unwrap();
+        let ymin = portals.iter().map(|p| (p.2).1).min().unwrap();
+        let xmax = portals.iter().map(|p| (p.2).0).max().unwrap();
+        let ymax = portals.iter().map(|p| (p.2).1).max().unwrap();
+        move |x: i32, y: i32| {
+            if x == xmin || x == xmax || y == ymin || y == ymax {
+                -1
+            } else {
+                1
+            }
+        }
+    };
+
+    let mut seen = HashSet::new();
+    let mut todo = VecDeque::new();
+    todo.push_back((enter.0, enter.1, 0, 0));
+    while let Some((x, y, steps, level)) = todo.pop_front() {
+        if (x, y) == exit && level == 0 {
+            println!("Part 1: {}", steps);
+            break;
+        }
+        if seen.contains(&(x, y, level)) {
+            continue;
+        }
+        seen.insert((x, y, level));
+        let c = get(x, y);
+        if char::is_uppercase(c) {
+            if let Some(w) = links.get(&(x, y)) {
+                todo.push_back((w.0, w.1, steps, level + recurse(x, y)));
+            }
+        } else if c != '#' {
+            // Take new steps
+            for (dx, dy) in &[(0, 1), (0, -1), (1, 0), (-1, 0)] {
+                todo.push_back((x + dx, y + dy, steps + 1, level));
+            }
+        }
+    }
 }
