@@ -87,7 +87,7 @@ fn main() {
     todo.push_back((enter.0, enter.1, 0, 0));
     while let Some((x, y, steps, level)) = todo.pop_front() {
         if (x, y) == exit && level == 0 {
-            println!("Part 1: {}", steps);
+            println!("Part 2: {}", steps);
             break;
         }
         if seen.contains(&(x, y, level)) {
