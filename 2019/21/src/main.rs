@@ -5,98 +5,59 @@ use vm::Vm;
 
 type Scan = u16;
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 struct Plan {
     active: u16,
-    floors: u16
-};
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-enum Lit {
-    Val(char),
-    Not(char),
+    value: u16
 }
 
-// OR of ANDs
-#[derive(Clone, Debug)]
-struct Dnf(Vec<HashSet<Lit>>);
+fn plan(jumps: &[Vec<Scan>], dead: &HashSet<Scan>, scan: usize) -> Option<Plan> {
+    if jumps.len() == 0 {
+        return Some(Plan { active: 0, value: 0 });
+    }
+    // Plan without this jump as a constraint
+    let n = plan(&jumps[1..], dead, scan).unwrap();
 
-// AND of ORs
-#[derive(Clone, Debug)]
-struct Cnf(Vec<HashSet<Lit>>);
+    // Then try every possible version of this jump
+    'outer: for i in jumps[0].iter() {
+        // Make a new plan which jumps at the given point
+        let p = Plan{ active: (1 << scan) - 1, value: *i };
 
-impl Dnf {
-    fn to_cnf(&self) -> Cnf {
-        let mut out = self.0[0].iter().map(|i| {
-                let mut h = HashSet::new();
-                h.insert(*i);
-                h
-            })
-            .collect::<Vec<HashSet<Lit>>>();
-        for i in self.0[1..].iter() {
-            let mut next = Vec::new();
-            for o in out.iter() {
-                for c in i.iter() {
-                    let mut q = o.clone();
-                    q.insert(*c);
-                    next.push(q);
-                }
+        // Turn off conflicting values
+        let conflicting = p.active & n.active & (p.value ^ n.value);
+        let active = (p.active | n.active) ^ conflicting;
+
+        // Combine values with the recursed solution
+        let value = ((p.value & p.active) | (n.value & n.active)) & active;
+
+        if *i == 8 {
+            println!("Trouble spot: {:b} {:b}", active, value);
+        }
+
+        // If this plan kills anyone, then keep searching
+        if dead.iter().any(|d| (d & active) == value) {
+            continue;
+        }
+        if *i == 8 {
+            println!("plan doesn't kill anyone?");
+        }
+
+        // The plan has to still work
+        for j in jumps.iter() {
+            if !j.iter().any(|d| (d & active) == value) {
+                continue 'outer;
             }
-            out = next;
         }
-        // Any clause with both X and !X must be true
-        let mut out = out.into_iter().filter(|c| !c.iter()
-            .any(|k| match k {
-                Lit::Val(i) => c.contains(&Lit::Not(*i)),
-                Lit::Not(i) => c.contains(&Lit::Val(*i)),
-            }))
-            .collect::<Vec<HashSet<Lit>>>();
+        if *i == 8 {
+            println!("plan doesn't not work?");
+        }
 
-        out = out.iter().enumerate()
-            .filter(|(i, p)| !out.iter()
-                    .enumerate()
-                    .any(|(j, s)| j != *i && p.is_subset(s)))
-            .map(|(i, p)| p.clone())
-            .collect::<Vec<HashSet<Lit>>>();
-        Cnf(out)
+        println!("Returning plan from {:?}: {:b} {:b}", jumps, active, value);
+
+        // Otherwise, we've found a good plan!
+        return Some(Plan { active: active, value: value});
     }
-}
-
-fn plan(jumps: &[Vec<Scan>]) -> String {
-    println!("Planning!");
-    let mut out = Vec::new();
-    for j in jumps {
-        let mut dnf = Dnf(Vec::new());
-        for k in j.iter() {
-            let w = k.iter()
-                .enumerate()
-                .map(|(i, b)| {
-                    let k = (i as u8 + 'A' as u8) as char;
-                    if *b {
-                        Lit::Val(k)
-                    } else {
-                        Lit::Not(k)
-                    }
-                })
-                .collect::<HashSet<_>>();
-            dnf.0.push(w);
-        }
-        for c in dnf.to_cnf().0 {
-            out.push(c);
-        }
-        println!("  cnf: {:?}", dnf.to_cnf());
-    }
-    out = out.iter().enumerate()
-        .filter(|(i, p)| !out.iter()
-                .enumerate()
-                .any(|(j, s)| j != *i && s.is_subset(p)))
-        .map(|(i, p)| p.clone())
-        .collect::<Vec<HashSet<Lit>>>();
-    println!("Final CNF: {:?}", out);
-
-    // Still hard-coded for now
-    //"NOT C J\nNOT B T\nOR T J\nNOT A T\nOR T J\nAND D J\n".to_owned()
-    //"NOT C J\nNOT B T\nOR T J\nNOT A T\nOR T J\nAND D J\n".to_owned()
-    "WALK\n".to_owned()
+    None
 }
 
 fn run(mut vm: Vm, plan: &str, speed: &str) -> Result<i64, Vec<char>> {
@@ -130,11 +91,37 @@ fn solve(input: &str, range: usize, speed: &str) -> i64 {
     let mut jumps: Vec<Vec<Scan>> = Vec::new();
     let mut dead: HashSet<Scan> = HashSet::new();
 
-    loop {
-        let p = plan(&jumps);
+    for i in 0..10 {
+        let p: Plan = plan(&jumps, &dead, range).unwrap();
+        println!("Got plan value: {:b}: active: {:b}", p.value, p.active);
+
+        let mut started = false;
+        let mut s = String::new();
+        for i in 0..range {
+            let c = ('A' as u8 + i as u8) as char;
+            if p.active & (1 << i) != 0 {
+                if p.value & (1 << i) != 0 {
+                    if !started {
+                        s += &format!("OR {} J\n", c);
+                    } else {
+                        s += &format!("AND {} J\n", c);
+                    }
+                } else {
+                    if !started {
+                        s += &format!("NOT {} J\n", c);
+                    } else {
+                        s += &format!("NOT {} T\n", c);
+                        s += &format!("AND T J\n");
+                    }
+                }
+                started = true;
+            }
+        }
+        s += "WALK\n";
+        println!("Executing plan\n{}", s);
 
         let vm = Vm::from_str(input);
-        let r = run(vm, &p, speed);
+        let r = run(vm, &s, speed);
 
         if r.is_ok() {
             return r.unwrap();
@@ -162,7 +149,8 @@ fn solve(input: &str, range: usize, speed: &str) -> i64 {
                 fall[i] = 'x';
                 let pattern = (i+1..i+range + 1)
                     .map(|j| fall[j] != '.')
-                    .collect::<Scan>();
+                    .enumerate()
+                    .fold(0, |acc, (i, b)| if b { acc | (1 << i) } else { acc });
                 dead.insert(pattern);
             }
         }
@@ -190,7 +178,8 @@ fn solve(input: &str, range: usize, speed: &str) -> i64 {
                 }
                 let pattern = (i+1..min(i+range+1, fall.len()))
                     .map(|j| fall[j] != '.')
-                    .collect::<Scan>();
+                    .enumerate()
+                    .fold(0, |acc, (i, b)| if b { acc | (1 << i) } else { acc });
                 println!("Pushing {} {:?} to {:?}", i, pattern, jumps.last_mut());
                 jumps.last_mut().unwrap().push(pattern);
             }
@@ -211,21 +200,126 @@ fn solve(input: &str, range: usize, speed: &str) -> i64 {
         }
         println!("We may not jump in the following cases:");
         for d in dead.iter() {
-            println!("    {:?}", dead);
+            println!("    {:?}", d);
         }
-
-        println!("Got plan {:?}", plan(&jumps));
-        break;
     }
     0
 }
 
+fn solve_z3(range: u64) {
+    use z3::ast::Ast;
+
+    let in_bits = 4;
+    let op_bits = 2;
+    assert!((1 << in_bits) >= range + 2);
+
+    let cfg = z3::Config::new();
+    let ctx = z3::Context::new(&cfg);
+    let solver = z3::Solver::new(&ctx);
+
+    use z3::ast::{BV, Bool};
+    let sensors = (0..range)
+        .map(|i| Bool::new_const(&ctx,
+            format!("{}", ('A' as u8 + i as u8) as char)))
+        .collect::<Vec<_>>();
+
+    let mut t_prev = z3::ast::Bool::from_bool(&ctx, false);
+    let mut j_prev = z3::ast::Bool::from_bool(&ctx, false);
+
+    let instructions = 1;
+    let ops = (0..instructions)
+        .map(|i| BV::new_const(&ctx, format!("op_{}", i), op_bits))
+        .collect::<Vec<_>>();
+    let in_srcs = (0..instructions)
+        .map(|i| BV::new_const(&ctx, format!("in_src_{}", i), in_bits))
+        .collect::<Vec<_>>();
+    let out_dests = (0..instructions)
+        .map(|i| Bool::new_const(&ctx, format!("out_dest_{}", i)))
+        .collect::<Vec<_>>();
+
+    for i in 0..instructions {
+
+        let op = &ops[i];
+        let in_src = &in_srcs[i];
+        let out_dest = &out_dests[i];
+
+        let lhs_val = z3::ast::Bool::new_const(&ctx, format!("lhs_{}", i));
+        let rhs_val = z3::ast::Bool::new_const(&ctx, format!("rhs_{}", i));
+        let out_val = z3::ast::Bool::new_const(&ctx, format!("out_{}", i));
+
+        let t = z3::ast::Bool::new_const(&ctx, format!("T_{}", i));
+        let j = z3::ast::Bool::new_const(&ctx, format!("J_{}", i));
+
+        // Assign LHS based on many input registers
+        let mut v = in_src._eq(&BV::from_u64(&ctx, range as u64, in_bits)).ite(&t_prev, &j_prev);
+        for j in (0..range).rev() {
+            v = in_src._eq(&BV::from_u64(&ctx, j as u64, in_bits)).ite(&sensors[j as usize], &v);
+        }
+        solver.assert(&lhs_val._eq(&v));
+        solver.assert(&in_src.bvult(&BV::from_u64(&ctx, range as u64 + 2, in_bits)));
+
+        // Assign RHS based on one of the two output registers
+        solver.assert(&rhs_val._eq(&out_dest.ite(&t_prev, &j_prev)));
+
+        // Calculate output
+        solver.assert(&out_val._eq(
+                /* AND opcode = 0 */
+                &op._eq(&BV::from_u64(&ctx, 0, op_bits)).ite(&lhs_val.and(&[&rhs_val]),
+                /* NOT opcode = 1 */
+                &op._eq(&BV::from_u64(&ctx, 1, op_bits)).ite(&lhs_val.not(),
+                /* OR opcode = 2 */
+                &lhs_val.or(&[&rhs_val])))));
+        solver.assert(&op._eq(&BV::from_u64(&ctx, 3, op_bits)).not());
+
+        // Assign output to either the T or J register
+        solver.assert(&t._eq(&out_dest.ite(&out_val, &t_prev)));
+        solver.assert(&j._eq(&out_dest.not().ite(&out_val, &j_prev)));
+
+        t_prev  = t;
+        j_prev = j;
+    }
+    solver.assert(&j_prev);
+    solver.assert(&sensors[0].implies(&j_prev));
+    println!("{}, {:?}", solver, solver.check());
+    println!("{}", solver.get_model());
+
+    let model = solver.get_model();
+
+    for i in 0..instructions {
+        let op = model.eval(&ops[i]).unwrap();
+        let in_src = model.eval(&in_srcs[i]).unwrap();
+        let out_dest = model.eval(&out_dests[i]).unwrap();
+        print!("{:#02}:", i);
+        print!("{} ", match op.as_u64().unwrap() {
+            0 => "AND",
+            1 => "NOT",
+            2 => "OR ",
+            _ => unreachable!(),
+        });
+        print!("{} ", if in_src.as_u64().unwrap() == range {
+            'V'
+        } else if in_src.as_u64().unwrap() == range + 1 {
+            'J'
+        } else {
+            ('A' as u8 + in_src.as_u64().unwrap() as u8) as char
+        });
+        print!("{}", if out_dest.as_bool().unwrap() {
+            'V'
+        } else {
+            'J'
+        });
+        print!("\n");
+    }
+}
+
 fn main() {
+    solve_z3(9);
+
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).unwrap();
 
-    println!("Part 1: {}", solve(&input, 4, "WALK"));
-    solve(&input, 9, "RUN");
+    //println!("Part 1: {}", solve(&input, 4, "WALK"));
+    //solve(&input, 9, "RUN");
 
 
     /*
