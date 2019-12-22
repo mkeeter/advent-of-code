@@ -4,8 +4,9 @@ use std::collections::VecDeque;
 
 #[derive(Debug)]
 enum Action {
-    Cut(i32),
-    DealIncrement(i32),
+    CutPos(usize),
+    CutNeg(usize),
+    DealIncrement(usize),
     DealStack(),
 }
 
@@ -15,13 +16,37 @@ impl Action {
             .filter_map(|i| i32::from_str(i).ok())
             .collect::<Vec<i32>>();
         if s.starts_with("cut") {
-            Action::Cut(i[0])
+            if i[0] < 0 {
+                Action::CutNeg(-i[0] as usize)
+            } else {
+                Action::CutPos(i[0] as usize)
+            }
         } else if s.starts_with("deal with increment") {
-            Action::DealIncrement(i[0])
+            Action::DealIncrement(i[0] as usize)
         } else if s == "deal into new stack" {
             Action::DealStack()
         } else {
             panic!("Invalid line: {}", s);
+        }
+    }
+
+    fn index(&self, c: usize, deck_size: usize) -> usize {
+        match self {
+            Action::CutPos(i) => {
+                (c + i) % deck_size
+            },
+            Action::CutNeg(i) => {
+                (c + deck_size - i) % deck_size
+            }
+            Action::DealIncrement(i) => {
+                (0..).filter(|j| (c + (j * deck_size)) % *i == 0)
+                    .map(|j| (c + (j * deck_size)) / *i)
+                    .nth(0)
+                    .unwrap()
+            }
+            Action::DealStack() => {
+                deck_size - c - 1
+            }
         }
     }
 }
@@ -33,35 +58,25 @@ fn main() {
         .collect::<Vec<Action>>();
 
     let deck_size = 10007;
-    let mut cards = (0..deck_size).collect::<VecDeque<usize>>();
-    for a in actions {
-        match a {
-            Action::Cut(i) => {
-                if i > 0 {
-                    cards.rotate_left(i as usize);
-                } else {
-                    cards.rotate_right(-i as usize);
-                }
-            },
-            Action::DealIncrement(i) => {
-                let mut tmp = vec![0; deck_size];
-                for j in 0..deck_size {
-                    tmp[(j * i as usize) % deck_size] = cards[j];
-                }
-                cards = tmp.into_iter().collect();
-            },
-            Action::DealStack() => {
-                // Reverse the deck order
-                for j in 0..cards.len() / 2 {
-                    cards.swap(j, cards.len() - j - 1)
-                }
-            },
+    let mut cards = (0..deck_size).collect::<Vec<usize>>();
+    let mut next = cards.clone();
+    for a in actions.iter() {
+        for i in 0..deck_size {
+            next[i] = cards[a.index(i, deck_size)];
         }
+        std::mem::swap(&mut next, &mut cards);
     }
     for i in 0..deck_size {
         if cards[i] == 2019 {
             println!("Part 1: {}", i);
             break;
         }
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+
+    let deck_size: usize = 119315717514047;
+    let mut c: usize = 2020;
+    for a in actions.iter() {
     }
 }
