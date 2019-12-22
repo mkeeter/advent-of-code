@@ -30,7 +30,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut sums : HashMap<&str, Vec<(usize, i32)>> = HashMap::new();
     for (i, inputs) in eqns.iter().enumerate() {
         for (count, name) in inputs {
-            sums.entry(&name).or_insert_with(Vec::new).push((i, *count))
+            sums.entry(&name).or_default().push((i, *count))
         }
     }
 
