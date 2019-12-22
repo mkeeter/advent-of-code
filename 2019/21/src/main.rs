@@ -1,12 +1,10 @@
-use std::collections::HashSet;
 use std::cmp::min;
+use std::collections::HashSet;
 use std::io::Read;
 use vm::Vm;
 
 use z3::ast::Ast;
 use z3::ast::{BV, Bool};
-
-type Scan = u16;
 
 fn test(mut vm: Vm, plan: &str, speed: &str) -> Result<i64, Vec<char>> {
     for c in plan.chars() {
@@ -36,114 +34,15 @@ fn test(mut vm: Vm, plan: &str, speed: &str) -> Result<i64, Vec<char>> {
 }
 
 fn solve(input: &str, range: u64, speed: &str) -> i64 {
-    let mut jumps: Vec<Vec<Scan>> = Vec::new();
-    let mut dead: HashSet<Scan> = HashSet::new();
+    let mut danger_zones: Vec<Vec<char>> = Vec::new();
 
-    for i in 0..10 {
-        let tape = solve_z3(range, &jumps, &dead);
+    loop {
+        let tape = solve_z3(range, &danger_zones);
         println!("Running test");
         let vm = Vm::from_str(input);
-        let r = test(vm, &tape, speed);
-
-        if r.is_ok() {
-            return r.unwrap();
-        }
-
-        let mut fall = r.err().unwrap();
-
-        // Assign numbers to contiguous blocks of floor
-        let mut in_gap = false;
-        let mut index = 1;
-        for i in 0..fall.len() {
-            if fall[i] == '#' {
-                if in_gap {
-                    in_gap = false;
-                    index += 1;
-                }
-                fall[i] = ('0' as u8 + index) as char;
-            } else {
-                in_gap = true;
-            }
-        }
-        // Mark with x any block where a jump will kill you
-        for i in 0..fall.len() {
-            if *fall.get(i + 4).unwrap_or(&'#') == '.' {
-                fall[i] = 'x';
-                let pattern = (i+1..(i + 1 + range as usize))
-                    .map(|j| fall[j] != '.')
-                    .enumerate()
-                    .fold(0, |acc, (i, b)| if b { acc | (1 << i) } else { acc });
-                dead.insert(pattern);
-            }
-        }
-        // Mark with an x any block where a jump will set you up for
-        // death, because you'll be on x blocks until falling off the level
-        for i in 0..(fall.len() - 4) {
-            let mut any_safe = false;
-            for j in (i + 4)..fall.len() {
-                if fall[j] == '.' {
-                    break;
-                } else if fall[j] != 'x' {
-                    any_safe = true;
-                    break;
-                }
-            }
-            if !any_safe {
-                fall[i] = 'x';
-                let pattern = (i+1..(i + 1 + range as usize))
-                    .map(|j| fall[j] != '.')
-                    .enumerate()
-                    .fold(0, |acc, (i, b)| if b { acc | (1 << i) } else { acc });
-                dead.insert(pattern);
-            }
-        }
-        for c in fall.iter() {
-            print!("{}", c);
-        }
-        print!("\n");
-        // Leave numbers only where jumps will change chunks
-        for i in 0..fall.len() {
-            let c = fall[i];
-            let d = *fall.get(i + 4).unwrap_or(&c);
-            if c == d {
-                fall[i] = '#';
-            }
-        }
-
-        // Unpack into valid binary patterns
-        let mut prev = 0;
-        for (i, c) in fall.iter().enumerate() {
-            if char::is_numeric(*c) {
-                let j = *c as u8 - '0' as u8;
-                if j != prev {
-                    jumps.push(Vec::new());
-                    prev = j;
-                }
-                let pattern = (i+1..min(i + 1 + range as usize, fall.len()))
-                    .map(|j| fall[j] != '.')
-                    .enumerate()
-                    .fold(0, |acc, (i, b)| if b { acc | (1 << i) } else { acc });
-                println!("Pushing {} {:?} to {:?}", i, pattern, jumps.last_mut());
-                jumps.last_mut().unwrap().push(pattern);
-            }
-        }
-        // Filter out any jumps that will kill you
-        jumps = jumps.into_iter()
-            .map(|p| p.into_iter()
-                 .filter(|q| !dead.contains(&*q))
-                 .collect())
-            .collect::<Vec<Vec<Scan>>>();
-
-        println!("We must jump in the following cases:");
-        for j in jumps.iter() {
-            println!("   Case:");
-            for c in j.iter() {
-                println!("        {:?}", c);
-            }
-        }
-        println!("We may not jump in the following cases:");
-        for d in dead.iter() {
-            println!("    {:?}", d);
+        match test(vm, &tape, speed) {
+            Ok(i) => return i,
+            Err(r) => danger_zones.push(r),
         }
     }
     0
@@ -216,8 +115,7 @@ fn build_model<'a>(instructions: usize,
 }
 
 fn solve_z3(range: u64,
-            jumps: &Vec<Vec<Scan>>,
-            dead: &HashSet<Scan>) -> String
+            danger_zones: &Vec<Vec<char>>) -> String
 {
     let in_bits = 4;
     let op_bits = 2;
@@ -227,7 +125,7 @@ fn solve_z3(range: u64,
     let ctx = z3::Context::new(&cfg);
     let solver = z3::Solver::new(&ctx);
 
-    let instructions = 2;
+    let instructions = 15;
     let ops = (0..instructions)
         .map(|i| BV::new_const(&ctx, format!("op_{}", i), op_bits))
         .collect::<Vec<_>>();
@@ -238,29 +136,45 @@ fn solve_z3(range: u64,
         .map(|i| Bool::new_const(&ctx, format!("out_dest_{}", i)))
         .collect::<Vec<_>>();
 
+    // input registers are <= range + 1
+    // (range is T, range + 1 is J)
     for in_src in in_srcs.iter() {
-        solver.assert(&in_src.bvult(&BV::from_u64(&ctx, range as u64 + 2, in_bits)));
+        solver.assert(&in_src.bvult(
+                &BV::from_u64(&ctx, range as u64 + 2, in_bits)));
     }
+    // Opcodes are < 3
     for op in ops.iter() {
         solver.assert(&op._eq(&BV::from_u64(&ctx, 3, op_bits)).not());
     }
 
-    for hole in jumps.iter() {
-        let options = hole.iter()
-            .map(|j| build_model(
-                    instructions, range, in_bits, op_bits, *j,
-                    &ctx, &ops, &in_srcs, &out_dests, &solver))
-            .collect::<Vec<_>>();
-        let opts = options[1..].iter().collect::<Vec<&_>>();
-        solver.assert(&options[0].or(&opts));
-    }
-    for d in dead.iter() {
-        let m = build_model(
-                instructions, range, in_bits, op_bits, *d,
+    for d in danger_zones {
+        let mut jumped_at = Vec::new();
+        for i in 0..d.len() {
+            let scan = d[(i + 1)..min(d.len(), i + 1 + range as usize)].iter()
+                .enumerate()
+                .filter(|(_j, c)| **c == '#')
+                .fold(0, |acc, (j, _c)| acc | (1 << j));
+
+            // We're aerial if we jumped within the last few tiles
+            let mut aerial = Bool::from_bool(&ctx, false);
+            for j in i.saturating_sub(3)..i {
+                aerial = aerial.or(&[&jumped_at[j]]);
+            }
+
+            // We only jump if the program says to jump
+            let jump = build_model(
+                instructions, range, in_bits, op_bits, scan,
                 &ctx, &ops, &in_srcs, &out_dests, &solver);
-        solver.assert(&m.not());
+
+            // We also only jump if we're not in mid-air
+            jumped_at.push(jump.and(&[&aerial.not()]));
+
+            // Record whether we're aerial or not
+            if d[i] != '#' {
+                solver.assert(&aerial);
+            }
+        }
     }
-    //println!("{}", solver);
     println!("{:?}", solver.check());
 
     let model = solver.get_model();
@@ -299,6 +213,6 @@ fn main() {
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).unwrap();
 
-    println!("Part 1: {}", solve(&input, 4, "WALK"));
-    //solve(&input, 9, "RUN");
+    //println!("Part 1: {}", solve(&input, 4, "WALK"));
+    println!("Part 2: {}", solve(&input, 9, "RUN"));
 }
