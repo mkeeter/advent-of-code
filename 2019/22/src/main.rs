@@ -1,28 +1,28 @@
+use std::collections::HashMap;
 use std::io::BufRead;
 use std::str::FromStr;
-use std::collections::VecDeque;
 
 #[derive(Debug)]
 enum Action {
-    CutPos(usize),
-    CutNeg(usize),
-    DealIncrement(usize),
+    CutPos(i64),
+    CutNeg(i64),
+    DealIncrement(i64),
     DealStack(),
 }
 
 impl Action {
     fn new(s: &str) -> Action {
         let i = s.split(' ')
-            .filter_map(|i| i32::from_str(i).ok())
-            .collect::<Vec<i32>>();
+            .filter_map(|i| i64::from_str(i).ok())
+            .collect::<Vec<i64>>();
         if s.starts_with("cut") {
             if i[0] < 0 {
-                Action::CutNeg(-i[0] as usize)
+                Action::CutNeg(-i[0])
             } else {
-                Action::CutPos(i[0] as usize)
+                Action::CutPos(i[0])
             }
         } else if s.starts_with("deal with increment") {
-            Action::DealIncrement(i[0] as usize)
+            Action::DealIncrement(i[0])
         } else if s == "deal into new stack" {
             Action::DealStack()
         } else {
@@ -30,25 +30,35 @@ impl Action {
         }
     }
 
-    fn index(&self, c: usize, deck_size: usize) -> usize {
+    // returns A, B such that A*c + B is the new position
+    fn math(&self, deck_size: i64) -> (i64, i64) {
         match self {
             Action::CutPos(i) => {
-                (c + i) % deck_size
+                (1, -*i)
             },
             Action::CutNeg(i) => {
-                (c + deck_size - i) % deck_size
+                (1, deck_size + *i)
             }
             Action::DealIncrement(i) => {
-                (0..).filter(|j| (c + (j * deck_size)) % *i == 0)
-                    .map(|j| (c + (j * deck_size)) / *i)
-                    .nth(0)
-                    .unwrap()
+                (*i, 0)
             }
             Action::DealStack() => {
-                deck_size - c - 1
+                (-1, deck_size - 1)
             }
         }
     }
+}
+
+fn fuse((a, b): (i64, i64), (c, d): (i64, i64), deck_size: i64) -> (i64, i64) {
+    let mut a = c as i128 * a as i128;
+    let mut b = c as i128 * b as i128 + d as i128;
+    while a < 0 {
+        a += deck_size as i128;
+    }
+    while b < 0 {
+        b += deck_size as i128;
+    }
+    ((a % deck_size as i128) as i64, (b % deck_size as i128) as i64)
 }
 
 fn main() {
@@ -57,26 +67,37 @@ fn main() {
         .map(|line| Action::new(&line.unwrap()))
         .collect::<Vec<Action>>();
 
-    let deck_size = 10007;
-    let mut cards = (0..deck_size).collect::<Vec<usize>>();
-    let mut next = cards.clone();
-    for a in actions.iter() {
-        for i in 0..deck_size {
-            next[i] = cards[a.index(i, deck_size)];
-        }
-        std::mem::swap(&mut next, &mut cards);
-    }
-    for i in 0..deck_size {
-        if cards[i] == 2019 {
-            println!("Part 1: {}", i);
-            break;
-        }
-    }
+    let build = |deck_size: i64| {
+        actions.iter()
+            .fold((1, 0), |acc, action|
+                  fuse(acc, action.math(deck_size), deck_size))
+    };
+
+    let deck_size: i64 = 10007;
+    let t = build(deck_size);
+    println!("Part 1: {}", (t.0 * 2019 + t.1) % deck_size);
 
     ////////////////////////////////////////////////////////////////////////////////
 
-    let deck_size: usize = 119315717514047;
-    let mut c: usize = 2020;
-    for a in actions.iter() {
+    let deck_size: i64 = 119315717514047;
+    let num_passes: i64 = 101741582076661;
+    let mut t = build(deck_size);
+
+    let mut i = 1;
+    let mut v = Vec::new();
+    while i <= num_passes {
+        v.push(t.clone());
+        i *= 2;
+        t = fuse(t, t, deck_size);
     }
+
+    let mut t = (1, 0);
+    let mut total: usize = 0;
+    for (i, p) in v.iter().enumerate() {
+        if (num_passes & (1 << i)) != 0 {
+            t = fuse(t, *p, deck_size);
+            total += (1 << i);
+        }
+    }
+    println!("Part 2: Ask Wolfram Alpha to solve ({} * i + {}) % {} = 0", t.0, t.1 - 2020, deck_size);
 }
