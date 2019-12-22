@@ -75,6 +75,11 @@ fn main() {
         t = apply(t, t, deck_size);
     }
 
-    let m = modinverse(acc.0, deck_size).unwrap();
-    println!("Part 2: {}", ((2020 - acc.1) * m).rem_euclid(deck_size));
+    // At this point, we want to solve
+    //      A*i + B = 2020 [mod deck_size]
+    // which we phrase as
+    //      i = A_inverse * (2020 - B)  [mod deck_size]
+    // where A_inverse is the modular multiplicative inverse of A
+    let inv = modinverse(acc.0, deck_size).unwrap();
+    println!("Part 2: {}", (inv * (2020 - acc.1)).rem_euclid(deck_size));
 }
