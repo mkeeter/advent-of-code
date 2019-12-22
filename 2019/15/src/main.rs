@@ -1,5 +1,6 @@
 use std::io::Read;
 use std::collections::{HashMap, HashSet};
+use std::collections::hash_map::Entry;
 use std::str::FromStr;
 
 use vm::Vm;
@@ -46,7 +47,7 @@ fn main() {
                              (4, ( 1,  0))].iter()
         {
             let pos = (bot.pos.0 + delta.0, bot.pos.1 + delta.1);
-            if !seen.contains_key(&pos) {
+            if let Entry::Vacant(v) = seen.entry(pos) {
                 let mut next = Robot {
                     pos,
                     history: bot.history.clone(),
@@ -55,7 +56,7 @@ fn main() {
                 next.history.push(*cmd);
                 next.vm.input(*cmd);
                 if let Some(o) = next.vm.run_until() {
-                    seen.insert(pos, o);
+                    v.insert(o);
                     match o {
                         0 => (),
                         1 => todo.push(next),
