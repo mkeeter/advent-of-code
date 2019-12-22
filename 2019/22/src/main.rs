@@ -39,7 +39,7 @@ impl Action {
     }
 }
 
-fn fuse((a, b): Transform, (c, d): Transform, deck_size: i128) -> Transform {
+fn apply((a, b): Transform, (c, d): Transform, deck_size: i128) -> Transform {
     let a = c * a;
     let b = c * b + d;
     (a.rem_euclid(deck_size), b.rem_euclid(deck_size))
@@ -54,7 +54,7 @@ fn main() {
     let build = |deck_size: i128| {
         actions.iter()
             .fold((1, 0), |acc, action|
-                  fuse(acc, action.math(deck_size), deck_size))
+                  apply(acc, action.math(deck_size), deck_size))
     };
 
     let deck_size: i128 = 10007;
@@ -67,21 +67,14 @@ fn main() {
     let num_passes: i128 = 101741582076661;
     let mut t = build(deck_size);
 
-    let mut i = 1;
-    let mut v = Vec::new();
-    while i <= num_passes {
-        v.push(t.clone());
-        i *= 2;
-        t = fuse(t, t, deck_size);
-    }
-
-    let mut t = (1, 0);
-    for (i, p) in v.iter().enumerate() {
-        if (num_passes & (1 << i)) != 0 {
-            t = fuse(t, *p, deck_size);
+    let mut acc = (1, 0);
+    for i in 0..(128 - num_passes.leading_zeros()) {
+        if (num_passes & (1i128 << i)) != 0 {
+            acc = apply(acc, t, deck_size);
         }
+        t = apply(t, t, deck_size);
     }
 
-    let m = modinverse(t.0, deck_size).unwrap();
-    println!("Part 2: {}", ((2020 - t.1) * m).rem_euclid(deck_size));
+    let m = modinverse(acc.0, deck_size).unwrap();
+    println!("Part 2: {}", ((2020 - acc.1) * m).rem_euclid(deck_size));
 }
