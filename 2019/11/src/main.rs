@@ -1,9 +1,11 @@
 use std::io::Read;
 use std::collections::HashMap;
+use std::str::FromStr;
+
 use vm::Vm;
 
 fn paint(input: &str, s: bool) -> HashMap<(i32, i32), bool> {
-    let mut vm = Vm::from_str(&input);
+    let mut vm = Vm::from_str(&input).unwrap();
 
     let mut panels : HashMap<(i32, i32), bool> = HashMap::new();
     panels.insert((0, 0), s);
@@ -56,6 +58,6 @@ fn main() {
                 print!(" ");
             }
         }
-        print!("\n");
+        println!();
     }
 }

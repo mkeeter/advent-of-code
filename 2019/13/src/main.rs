@@ -1,8 +1,12 @@
 use std::io::Read;
 use std::collections::HashMap;
 use std::cmp::Ordering;
+use std::str::FromStr;
+
 
 use vm::Vm;
+
+const DRAW_GAME: bool = false;
 
 fn get_pixel_with(vm: &mut Vm, input: i64) -> Option<(i64, i64, i64)> {
     if let Some(x) = vm.run_until_with(input) {
@@ -30,14 +34,14 @@ fn draw(tiles: &HashMap<(i64, i64), i64>) {
                 _ => unreachable!(),
             });
         }
-        print!("\n");
+        println!();
     }
 }
 
 fn main() {
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).unwrap();
-    let mut vm = Vm::from_str(&input);
+    let mut vm = Vm::from_str(&input).unwrap();
 
     let mut tiles = HashMap::new();
     while vm.running() {
@@ -52,7 +56,7 @@ fn main() {
     }
     println!("Part 1: {}", tiles.values().filter(|v| **v == 2).count());
 
-    let mut vm = Vm::from_str(&input);
+    let mut vm = Vm::from_str(&input).unwrap();
     vm.poke(0, 2);
 
     // Build the initial game state
@@ -76,7 +80,7 @@ fn main() {
                 Ordering::Equal => 0,
             };
 
-            if redraw && false {
+            if redraw && DRAW_GAME{
                 draw(&tiles);
             }
         }

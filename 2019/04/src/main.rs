@@ -1,4 +1,5 @@
 use std::io::Read;
+use std::cmp::Ordering;
 use std::str::FromStr;
 use std::iter::successors;
 
@@ -10,14 +11,14 @@ fn check(i: u32) -> (bool, bool) {
     let itr = successors(Some(i), |&i| if i > 0 { Some(i/10) }
                                        else     { None });
     for next in itr.map(|d| d % 10) {
-        if next > prev {
-            return (false, false);
-        } else if next == prev {
-            count += 1;
-        } else {
-            has_double      |= count == 1;
-            has_any_double  |= count  > 0;
-            count = 0;
+         match next.cmp(&prev) {
+            Ordering::Greater => return (false, false),
+            Ordering::Less => {
+                has_double      |= count == 1;
+                has_any_double  |= count  > 0;
+                count = 0;
+            },
+            Ordering::Equal => count += 1,
         }
         prev = next;
     }

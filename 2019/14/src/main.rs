@@ -9,7 +9,7 @@ fn parse(s: &str) -> Vec<(i32, String)>
 {
     let words = s.replace(|c| !char::is_alphanumeric(c), " ")
         .split(' ')
-        .filter(|s| s.len() > 0)
+        .filter(|s| !s.is_empty())
         .map(|s| s.to_owned())
         .collect::<Vec<String>>();
 
@@ -30,7 +30,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut sums : HashMap<&str, Vec<(usize, i32)>> = HashMap::new();
     for (i, inputs) in eqns.iter().enumerate() {
         for (count, name) in inputs {
-            sums.entry(&name).or_insert(Vec::new()).push((i, *count))
+            sums.entry(&name).or_insert_with(Vec::new).push((i, *count))
         }
     }
 

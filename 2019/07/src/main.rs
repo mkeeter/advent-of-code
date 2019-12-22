@@ -1,5 +1,7 @@
 use std::io::Read;
 use itertools::Itertools;
+use std::str::FromStr;
+
 use vm::Vm;
 
 fn main() {
@@ -11,7 +13,7 @@ fn main() {
     let best = (0..5).permutations(5)
         .map(|ps| {
             // Build a fresh set of VMs and queues
-            let mut vms = vec![Vm::from_str(&input); 5];
+            let mut vms = vec![Vm::from_str(&input).unwrap(); 5];
             for (i, vm) in vms.iter_mut().enumerate() {
                 vm.input(ps[i] as i64);
             }
@@ -35,7 +37,7 @@ fn main() {
     let best = (5..10).permutations(5)
         .map(|ps| {
             // Build a fresh set of VMs and queues
-            let mut vms = vec![Vm::from_str(&input); 5];
+            let mut vms = vec![Vm::from_str(&input).unwrap(); 5];
             for (i, vm) in vms.iter_mut().enumerate() {
                 vm.input(ps[i] as i64);
             }

@@ -1,7 +1,7 @@
 use std::io::Read;
 use std::cmp::min;
 
-fn cumsum(input: &Vec<i32>) -> Vec<i32> {
+fn cumsum(input: &[i32]) -> Vec<i32> {
     let mut output = vec![0; input.len() + 1];
     for (i, v) in input.iter().enumerate() {
         output[i + 1] = output[i] + v;
@@ -9,7 +9,7 @@ fn cumsum(input: &Vec<i32>) -> Vec<i32> {
     output
 }
 
-fn dft(scale: usize, csum: &Vec<i32>) -> i32 {
+fn dft(scale: usize, csum: &[i32]) -> i32 {
     assert!(scale > 0);
     let mut i = scale;
     let mut sign = true;
@@ -47,7 +47,7 @@ fn main() {
     for c in input[..8].iter() {
         print!("{}", c);
     }
-    println!("");
+    println!();
 
     let size = input.len();
     let mut input = s.chars()
@@ -70,5 +70,5 @@ fn main() {
     for c in input[offset..(offset + 8)].iter() {
         print!("{}", c);
     }
-    println!("");
+    println!();
 }

@@ -1,12 +1,14 @@
 use std::io::Read;
 use std::collections::VecDeque;
+use std::str::FromStr;
+
 use vm::Vm;
 
 fn main() {
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).unwrap();
 
-    let vm = Vm::from_str(&input);
+    let vm = Vm::from_str(&input).unwrap();
     let run = |x, y| -> i64 {
         let mut vm = vm.clone();
         vm.input(x);
@@ -56,7 +58,7 @@ fn main() {
             let span_end = span_start + 100;
             if buf.iter().all(|&(xmin, xmax)|
                 span_start <= xmax && span_start >= xmin &&
-                span_end <= xmax && span_start >= xmin)
+                span_end   <= xmax && span_end   >= xmin)
             {
                 let corner = (span_start, y - 100 + 1);
                 println!("Part 2: {}", corner.0 * 10000 + corner.1);

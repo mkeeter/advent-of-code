@@ -30,15 +30,18 @@ pub struct Vm {
     base: i64,
 }
 
-impl Vm {
-    pub fn from_str(s: &str) -> Self {
-        Self::new(&s.trim()
+impl FromStr for Vm {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self::new(&s.trim()
             .split(',')
             .map(|i| i64::from_str(i))
             .map(|r| r.expect("Could not parse int"))
-            .collect::<Vec<_>>())
+            .collect::<Vec<_>>()))
     }
+}
 
+impl Vm {
     pub fn new(mem: &[i64]) -> Self {
         Self { mem: mem.to_vec(), ip: 0, input: VecDeque::new(), base: 0 }
     }
@@ -48,7 +51,7 @@ impl Vm {
     }
 
     pub fn needs_input(&self) -> bool {
-        self.mem[self.ip] % 100 == OP_INPUT && self.input.len() == 0
+        self.mem[self.ip] % 100 == OP_INPUT && self.input.is_empty()
     }
 
     fn get(&mut self, index: usize) -> &mut i64 {

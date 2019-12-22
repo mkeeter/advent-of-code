@@ -129,7 +129,7 @@ fn main() {
     let mut cache = Cache::new();
     let bots = smallvec![(start.0, start.1)];
     let edges = build_graph(&bots, &tiles);
-    let state = State { bots: bots, keys: 0 };
+    let state = State { bots, keys: 0 };
     println!("Part 1: {}", solve(state, target, &edges, &mut cache));
 
     ////////////////////////////////////////////////////////////////////////////
@@ -148,6 +148,6 @@ fn main() {
         .collect();
 
     let edges = build_graph(&bots, &tiles);
-    let state = State { bots: bots, keys: 0 };
+    let state = State { bots, keys: 0 };
     println!("Part 2: {}", solve(state, target, &edges, &mut cache));
 }

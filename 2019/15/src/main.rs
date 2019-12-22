@@ -1,5 +1,7 @@
 use std::io::Read;
 use std::collections::{HashMap, HashSet};
+use std::str::FromStr;
+
 use vm::Vm;
 
 struct Robot {
@@ -22,7 +24,7 @@ fn _draw(seen: &HashMap<(i64, i64), i64>) {
                 _ => panic!("Invalid tile"),
             }
         }
-        println!("");
+        println!();
     }
 }
 
@@ -30,10 +32,10 @@ fn main() {
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).unwrap();
 
-    let vm = Vm::from_str(&input);
+    let vm = Vm::from_str(&input).unwrap();
 
     let mut todo = Vec::new();
-    todo.push(Robot { pos: (0, 0), history: vec![], vm: vm });
+    todo.push(Robot { pos: (0, 0), history: vec![], vm });
 
     let mut seen = HashMap::new();
     while let Some(bot) = todo.pop()
@@ -46,7 +48,7 @@ fn main() {
             let pos = (bot.pos.0 + delta.0, bot.pos.1 + delta.1);
             if !seen.contains_key(&pos) {
                 let mut next = Robot {
-                    pos: pos,
+                    pos,
                     history: bot.history.clone(),
                     vm: bot.vm.clone(),
                 };
@@ -65,7 +67,7 @@ fn main() {
         }
     }
 
-    let source = *seen.iter().filter(|i| *i.1 == 2).next().unwrap().0;
+    let source = *seen.iter().find(|i| *i.1 == 2).unwrap().0;
     let mut next: HashSet<(i64, i64)> = HashSet::new();
     next.insert(source);
 

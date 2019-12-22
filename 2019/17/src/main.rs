@@ -1,5 +1,7 @@
 use std::io::Read;
 use std::collections::HashMap;
+use std::str::FromStr;
+
 use vm::Vm;
 
 fn optimize(commands: Vec<String>, c: i32) -> Option<Vec<Vec<String>>> {
@@ -33,7 +35,7 @@ fn optimize(commands: Vec<String>, c: i32) -> Option<Vec<Vec<String>>> {
             // Build a reduced command tape that uses these commands
             let mut new_commands = Vec::new();
             let mut j = 0;
-            let sub = ('A' as u8 + (c - 1) as u8) as char;
+            let sub = (b'A' + (c - 1) as u8) as char;
             while j < commands.len() {
                 if j + k <= commands.len() && s == &commands[j..(j+k)] {
                     new_commands.push(sub.to_string());
@@ -45,7 +47,7 @@ fn optimize(commands: Vec<String>, c: i32) -> Option<Vec<Vec<String>>> {
             }
 
             if let Some(vs) = optimize(new_commands, c - 1) {
-                let mut vs = vs.clone();
+                let mut vs = vs;
                 vs.push(s.to_vec());
                 return Some(vs);
             }
@@ -58,7 +60,7 @@ fn main() {
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).unwrap();
 
-    let mut vm = Vm::from_str(&input);
+    let mut vm = Vm::from_str(&input).unwrap();
 
     let mut tiles = HashMap::new();
     let mut x = 0;
@@ -98,8 +100,7 @@ fn main() {
 
     // Get bot location and orientation
     let bot = tiles.iter()
-        .filter(|(_k, v)| **v != '.' && **v != '#')
-        .next()
+        .find(|(_k, v)| **v != '.' && **v != '#')
         .unwrap();
     let mut pos: (i32, i32) = *bot.0;
     let mut dir = match *bot.1 {
@@ -138,7 +139,7 @@ fn main() {
         pos.1 += dir.1;
     }
 
-    let mut vm = Vm::from_str(&input);
+    let mut vm = Vm::from_str(&input).unwrap();
     vm.poke(0, 2);
 
     let cmds = optimize(commands, 3).unwrap();

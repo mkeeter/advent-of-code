@@ -1,6 +1,8 @@
 use std::cmp::min;
 use std::collections::HashMap;
 use std::io::Read;
+use std::str::FromStr;
+
 use vm::Vm;
 
 use z3::ast::Ast;
@@ -14,7 +16,7 @@ fn test(mut vm: Vm, plan: &str, speed: &str) -> Result<i64, Vec<char>> {
     for c in speed.chars() {
         vm.input(c as i64);
     }
-    vm.input('\n' as u8 as i64);
+    vm.input(b'\n' as i64);
 
     let mut line = String::new();
     while let Some(i) = vm.run_until() {
@@ -40,7 +42,7 @@ fn solve(input: &str, range: usize, speed: &str) -> i64 {
     let mut solver = Solver::new(&ctx, range);
 
     loop {
-        let vm = Vm::from_str(input);
+        let vm = Vm::from_str(input).unwrap();
         let tape = solver.plan();
         match test(vm, &tape, speed) {
             Ok(i) => return i,
@@ -96,17 +98,17 @@ impl<'ctx> Solver<'ctx> {
         }
 
         Solver {
-            ctx: ctx,
-            ops: ops,
-            in_srcs: in_srcs,
-            out_dests: out_dests,
+            ctx,
+            ops,
+            in_srcs,
+            out_dests,
 
-            in_bits: in_bits,
-            op_bits: op_bits,
-            range: range,
-            instructions: instructions,
+            in_bits,
+            op_bits,
+            range,
+            instructions,
 
-            solver: solver,
+            solver,
             cache: HashMap::new(),
         }
     }
@@ -177,7 +179,7 @@ impl<'ctx> Solver<'ctx> {
         j_prev
     }
 
-    fn append(&mut self, d: &Vec<char>) {
+    fn append(&mut self, d: &[char]) {
         let mut jumped_at = Vec::new();
         for i in 0..d.len() {
             let scan = d[(i + 1)..min(d.len(), i + 1 + self.range )].iter()
@@ -187,8 +189,8 @@ impl<'ctx> Solver<'ctx> {
 
             // We're aerial if we jumped within the last few tiles
             let mut aerial = Bool::from_bool(&self.ctx, false);
-            for j in i.saturating_sub(3)..i {
-                aerial = aerial.or(&[&jumped_at[j]]);
+            for j in &jumped_at[i.saturating_sub(3)..i] {
+                aerial = aerial.or(&[j]);
             }
 
             // We only jump if the program says to jump,
@@ -234,7 +236,7 @@ impl<'ctx> Solver<'ctx> {
             } else if in_src == self.range + 1 {
                 'J'
             } else {
-                ('A' as u8 + in_src as u8) as char
+                (b'A' + in_src as u8) as char
             };
 
             let rhs = if out_dest { 'T' } else { 'J' };

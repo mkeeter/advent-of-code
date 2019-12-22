@@ -63,8 +63,12 @@ fn main() {
 
     ////////////////////////////////////////////////////////////////////////////////
 
+    #[allow(clippy::unreadable_literal)]
     let deck_size: i128 = 119315717514047;
+
+    #[allow(clippy::unreadable_literal)]
     let num_passes: i128 = 101741582076661;
+
     let mut t = build(deck_size);
 
     let mut acc = (1, 0);
