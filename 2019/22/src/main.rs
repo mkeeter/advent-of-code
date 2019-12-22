@@ -1,6 +1,8 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
+use modinverse::modinverse;
+
 // Represents T.0*x + T.1
 type Transform = (i128, i128);
 
@@ -79,6 +81,7 @@ fn main() {
             t = fuse(t, *p, deck_size);
         }
     }
-    println!("Part 2: Ask Wolfram Alpha to solve ({} * i + {}) % {} = 0",
-             t.0, t.1 - 2020, deck_size);
+
+    let m = modinverse(t.0, deck_size).unwrap();
+    println!("Part 2: {}", ((2020 - t.1) * m).rem_euclid(deck_size));
 }
