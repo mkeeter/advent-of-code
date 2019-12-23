@@ -162,14 +162,18 @@ impl Vm {
 
     pub fn run_until_with(&mut self, input: i64) -> Option<i64> {
         while self.running() {
-            if self.needs_input() {
-                self.input(input);
-            }
-            if let Some(i) = self.step() {
+            if let Some(i) = self.step_with(input) {
                 return Some(i);
             }
         }
         None
+    }
+
+    pub fn step_with(&mut self, input: i64) -> Option<i64> {
+        if self.needs_input() {
+            self.input(input);
+        }
+        self.step()
     }
 
     pub fn peek(&self, i: usize) -> i64 {
