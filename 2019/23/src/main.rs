@@ -26,9 +26,8 @@ fn main() {
             if seen.contains(&nat.1) {
                 println!("Part 2: {}", nat.1);
                 break;
-            } else {
-                seen.insert(nat.1);
             }
+            seen.insert(nat.1);
             vms[0].input(nat.0);
             vms[0].input(nat.1);
             idle = [0; NUM_MACHINES];
