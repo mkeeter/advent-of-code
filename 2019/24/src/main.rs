@@ -1,41 +1,119 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::HashSet;
 use std::io::BufRead;
 
 const SIZE: i32 = 5;
+const CENTER: i32 = SIZE / 2;
+
+type Map = HashSet<(i32, i32)>;
+struct RecursiveMap(HashSet<(i32, i32, i32)>);
+
+impl RecursiveMap {
+    fn get(&self, x: i32, y: i32, z: i32) -> bool {
+        if x == CENTER && y == CENTER {
+            panic!("Stared into the abyss");
+        }
+        self.0.contains(&(x, y, z))
+    }
+
+    fn neighbors(&self, x: i32, y: i32, z: i32) -> usize {
+        if x == CENTER && y == CENTER {
+            panic!("Stared into the abyss");
+        }
+
+        let neighbors_left = if x > 0 {
+            if !(y == CENTER && x == CENTER + 1) {
+                self.get(x - 1, y, z) as usize
+            } else {
+                (0..SIZE).filter(|i| self.get(SIZE - 1, *i, z + 1)).count()
+            }
+        } else {
+            self.get(CENTER - 1, CENTER, z - 1) as usize
+        };
+
+        let neighbors_right = if x < SIZE - 1 {
+            if !(y == CENTER && x == CENTER - 1) {
+                self.get(x + 1, y, z) as usize
+            } else {
+                (0..SIZE).filter(|i| self.get(0, *i, z + 1)).count()
+            }
+        } else {
+            self.get(CENTER + 1, CENTER, z - 1) as usize
+        };
+
+        let neighbors_above = if y > 0 {
+            if !(x == CENTER && y == CENTER + 1) {
+                self.get(x, y - 1, z) as usize
+            } else {
+                (0..SIZE).filter(|i| self.get(*i, SIZE - 1, z + 1)).count()
+            }
+        } else {
+            self.get(CENTER, CENTER - 1, z - 1) as usize
+        };
+
+        let neighbors_below = if y < SIZE - 1 {
+            if !(x == CENTER && y == CENTER - 1) {
+                self.get(x, y + 1, z) as usize
+            } else {
+                (0..SIZE).filter(|i| self.get(*i, 0, z + 1)).count()
+            }
+        } else {
+            self.get(CENTER, CENTER + 1, z - 1) as usize
+        };
+
+        neighbors_left + neighbors_right + neighbors_above + neighbors_below
+    }
+}
 
 fn main() {
-    let mut world: HashMap<(i32, i32), char> = HashMap::new();
+    let mut input = HashSet::new();
     for (y, line) in std::io::stdin().lock().lines().enumerate() {
         for (x, c) in line.unwrap().chars().enumerate() {
-            world.insert((x as i32, y as i32), c);
+            if c == '#' {
+                input.insert((x as i32, y as i32));
+            }
         }
     }
 
-    let neighbors = [(0, 1), (1, 0), (0, -1), (-1, 0)];
     let mut seen = HashSet::new();
+    let mut world: Map = input.clone();
     loop {
         let w = world.iter()
-            .filter(|(_k, v)| **v == '#')
-            .fold(0, |acc, ((x, y), _v)| acc | (1 << (x + y * SIZE)));
+            .fold(0, |acc, (x, y)| acc | (1 << (x + y * SIZE)));
         if seen.contains(&w) {
             println!("Part 1: {}", w);
             break;
         }
         seen.insert(w);
 
-        world = world.iter()
-            .map(|((x, y), v)| {
-                let bugs = neighbors.iter()
-                    .filter_map(|(dx, dy)| world.get(&(x + dx, y + dy)))
-                    .filter(|c| **c == '#')
+        world = (0..SIZE)
+            .flat_map(|y| (0..SIZE).map(move |x| (x, y)))
+            .filter(|&(x, y)| {
+                let nearby_bugs = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+                    .iter()
+                    .filter(|(dx, dy)| world.contains(&(x + dx, y + dy)))
                     .count();
-                let spawn = if *v == '#' {
-                    bugs == 1
-                } else {
-                    bugs == 1 || bugs == 2
-                };
-                ((*x, *y), if spawn { '#' } else { '.' })
+                let is_bug = world.contains(&(x, y));
+                nearby_bugs == 1 || (nearby_bugs == 2 && !is_bug)
             })
             .collect();
     }
+
+    let mut world = RecursiveMap(input.iter()
+        .map(|&(x, y)| (x, y, 0))
+        .collect());
+
+    for i in 0..200 {
+        world = RecursiveMap(
+            ((-i - 1)..=(i + 1)) // We can grow by one Z level each cycle
+                .flat_map(|z| (0..SIZE).map(move |y| (y, z)))
+                .flat_map(|(y, z)| (0..SIZE).map(move |x| (x, y, z)))
+                .filter(|&(x, y, _z)| x != CENTER || y != CENTER)
+                .filter(|&(x, y, z)| {
+                    let nearby_bugs = world.neighbors(x, y, z);
+                    let is_bug = world.0.contains(&(x, y, z));
+                    nearby_bugs == 1 || (nearby_bugs == 2 && !is_bug)
+                })
+            .collect());
+    }
+    println!("Part 2: {}", world.0.len());
 }
