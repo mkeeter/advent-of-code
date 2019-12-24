@@ -1,54 +1,41 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::io::BufRead;
 
-const SIZE: usize = 5;
-
-fn next(world: u32) -> u32 {
-    let get = |x, y| -> bool {
-        if x >= 0 && y >= 0 && x < SIZE as i32 && y < SIZE as i32 {
-            world & (1u32 << (x + y * SIZE as i32)) != 0
-        } else {
-            false
-        }
-    };
-
-    let mut out = 0;
-    let neighbors = [(0, 1), (1, 0), (0, -1), (-1, 0)];
-    for y in 0..SIZE {
-        for x in 0..SIZE {
-            let bugs = neighbors.iter()
-                .filter(|(dx, dy)| get(x as i32 + dx, y as i32 + dy))
-                .count();
-            let spawn = if get(x as i32, y as i32) {
-                bugs == 1
-            } else {
-                bugs == 1 || bugs == 2
-            };
-            if spawn {
-                out |= 1 << (x + y * SIZE);
-            }
-        }
-    }
-    out
-}
+const SIZE: i32 = 5;
 
 fn main() {
-    let mut world: u32 = 0;
+    let mut world: HashMap<(i32, i32), char> = HashMap::new();
     for (y, line) in std::io::stdin().lock().lines().enumerate() {
         for (x, c) in line.unwrap().chars().enumerate() {
-            if c == '#' {
-                world |= 1 << (x + y * SIZE);
-            }
+            world.insert((x as i32, y as i32), c);
         }
     }
 
+    let neighbors = [(0, 1), (1, 0), (0, -1), (-1, 0)];
     let mut seen = HashSet::new();
     loop {
-        if seen.contains(&world) {
-            println!("Part 1: {}", world);
+        let w = world.iter()
+            .filter(|(_k, v)| **v == '#')
+            .fold(0, |acc, ((x, y), _v)| acc | (1 << (x + y * SIZE)));
+        if seen.contains(&w) {
+            println!("Part 1: {}", w);
             break;
         }
-        seen.insert(world);
-        world = next(world);
+        seen.insert(w);
+
+        world = world.iter()
+            .map(|((x, y), v)| {
+                let bugs = neighbors.iter()
+                    .filter_map(|(dx, dy)| world.get(&(x + dx, y + dy)))
+                    .filter(|c| **c == '#')
+                    .count();
+                let spawn = if *v == '#' {
+                    bugs == 1
+                } else {
+                    bugs == 1 || bugs == 2
+                };
+                ((*x, *y), if spawn { '#' } else { '.' })
+            })
+            .collect();
     }
 }
