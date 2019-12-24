@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::io::BufRead;
+use itertools::iproduct;
 
 const SIZE: i32 = 5;
 const CENTER: i32 = SIZE / 2;
@@ -20,42 +21,34 @@ impl RecursiveMap {
             panic!("Stared into the abyss");
         }
 
-        let neighbors_left = if x > 0 {
-            if !(y == CENTER && x == CENTER + 1) {
-                self.get(x - 1, y, z) as usize
-            } else {
-                (0..SIZE).filter(|i| self.get(SIZE - 1, *i, z + 1)).count()
-            }
+        let neighbors_left = if x == CENTER + 1 && y == CENTER {
+            (0..SIZE).filter(|i| self.get(SIZE - 1, *i, z + 1)).count()
+        } else if x > 0 {
+            self.get(x - 1, y, z) as usize
         } else {
             self.get(CENTER - 1, CENTER, z - 1) as usize
         };
 
-        let neighbors_right = if x < SIZE - 1 {
-            if !(y == CENTER && x == CENTER - 1) {
-                self.get(x + 1, y, z) as usize
-            } else {
-                (0..SIZE).filter(|i| self.get(0, *i, z + 1)).count()
-            }
+        let neighbors_right = if x == CENTER - 1 && y == CENTER {
+            (0..SIZE).filter(|i| self.get(0, *i, z + 1)).count()
+        } else if x < SIZE - 1 {
+            self.get(x + 1, y, z) as usize
         } else {
             self.get(CENTER + 1, CENTER, z - 1) as usize
         };
 
-        let neighbors_above = if y > 0 {
-            if !(x == CENTER && y == CENTER + 1) {
-                self.get(x, y - 1, z) as usize
-            } else {
-                (0..SIZE).filter(|i| self.get(*i, SIZE - 1, z + 1)).count()
-            }
+        let neighbors_above = if y == CENTER + 1 && x == CENTER {
+            (0..SIZE).filter(|i| self.get(*i, SIZE - 1, z + 1)).count()
+        } else if y > 0 {
+            self.get(x, y - 1, z) as usize
         } else {
             self.get(CENTER, CENTER - 1, z - 1) as usize
         };
 
-        let neighbors_below = if y < SIZE - 1 {
-            if !(x == CENTER && y == CENTER - 1) {
-                self.get(x, y + 1, z) as usize
-            } else {
-                (0..SIZE).filter(|i| self.get(*i, 0, z + 1)).count()
-            }
+        let neighbors_below = if y == CENTER - 1 && x == CENTER {
+            (0..SIZE).filter(|i| self.get(*i, 0, z + 1)).count()
+        } else if y < SIZE - 1 {
+            self.get(x, y + 1, z) as usize
         } else {
             self.get(CENTER, CENTER + 1, z - 1) as usize
         };
@@ -85,8 +78,7 @@ fn main() {
         }
         seen.insert(w);
 
-        world = (0..SIZE)
-            .flat_map(|y| (0..SIZE).map(move |x| (x, y)))
+        world = iproduct!(0..SIZE, 0..SIZE)
             .filter(|&(x, y)| {
                 let nearby_bugs = [(0, 1), (1, 0), (0, -1), (-1, 0)]
                     .iter()
@@ -104,9 +96,7 @@ fn main() {
 
     for i in 0..200 {
         world = RecursiveMap(
-            ((-i - 1)..=(i + 1)) // We can grow by one Z level each cycle
-                .flat_map(|z| (0..SIZE).map(move |y| (y, z)))
-                .flat_map(|(y, z)| (0..SIZE).map(move |x| (x, y, z)))
+            iproduct!(0..SIZE, 0..SIZE, (-i - 1)..=(i + 1))
                 .filter(|&(x, y, _z)| x != CENTER || y != CENTER)
                 .filter(|&(x, y, z)| {
                     let nearby_bugs = world.neighbors(x, y, z);
