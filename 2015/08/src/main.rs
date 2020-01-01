@@ -19,7 +19,7 @@ fn decode(s: &str) -> usize {
             bytes += 1;
         }
     }
-    return s.len() - bytes;
+    s.len() - bytes
 }
 
 fn encode(s: &str) -> usize {

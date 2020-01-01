@@ -44,7 +44,7 @@ fn parse(s: &str) -> Gate {
     } else {
         Op::Dup(arg(words[0]))
     };
-    Gate(op, words.last().unwrap().to_string())
+    Gate(op, (*words.last().unwrap()).to_string())
 }
 
 fn run(gates: &[Gate]) -> u16 {
