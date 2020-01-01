@@ -17,7 +17,7 @@ fn walk<I>(input: I) -> HashSet<(i32, i32)>
         pos = (pos.0 + dpos.0, pos.1 + dpos.1);
         seen.insert(pos);
     }
-    return seen;
+    seen
 }
 
 fn main() {

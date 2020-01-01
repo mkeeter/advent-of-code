@@ -45,14 +45,14 @@ fn main() {
         let b = planet(&words[2]);
         let dist = usize::from_str(words.last().unwrap()).unwrap();
         edges.entry(a)
-            .or_insert(HashMap::new())
+            .or_insert_with(|| HashMap::new())
             .insert(b, dist);
         edges.entry(b)
-            .or_insert(HashMap::new())
+            .or_insert_with(|| HashMap::new())
             .insert(a, dist);
     }
 
-    let start = planets.values().map(|i| *i).collect::<Path>();
+    let start = planets.values().copied().collect::<Path>();
     let ps = paths(smallvec![], &start);
     let best: usize = ps.iter()
         .map(|path| path[..].windows(2)

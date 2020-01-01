@@ -5,7 +5,7 @@ fn main() {
 
     let hashes = || std::iter::successors(Some(1), |i| Some(i + 1))
         .map(|i| input.clone() + &i.to_string())
-        .map(|s| md5::compute(s));
+        .map(md5::compute);
 
     let n = hashes()
         .take_while(|m| m[0] != 0 || m[1] != 0 || m[2] >> 4 != 0 )
