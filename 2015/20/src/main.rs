@@ -32,7 +32,7 @@ fn main() {
         let houses = part1(size);
         if let Some(h) = houses.iter()
             .enumerate()
-            .filter(|(i, p)| **p >= presents)
+            .filter(|(_i, p)| **p >= presents)
             .next()
         {
             println!("Part 1: {}", h.0 + 1);
@@ -45,7 +45,7 @@ fn main() {
         let houses = part2(size);
         if let Some(h) = houses.iter()
             .enumerate()
-            .filter(|(i, p)| **p >= presents)
+            .filter(|(_i, p)| **p >= presents)
             .next()
         {
             println!("Part 2: {}", h.0 + 1);

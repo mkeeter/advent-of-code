@@ -18,7 +18,7 @@ fn main() {
                 panic!("Invalid line {}", line);
             };
             let nums = line.replace(",", " ")
-                        .split(" ")
+                        .split(' ')
                         .filter_map(|s| usize::from_str(s).ok())
                         .collect::<Vec<_>>();
             (cmd, nums)
