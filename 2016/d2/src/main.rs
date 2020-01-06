@@ -1,30 +1,53 @@
-use std::io::{self, Read};
+use std::collections::HashMap;
+use std::io::Read;
 
 fn main() {
-    let mut buffer = String::new();
-    io::stdin().read_to_string(&mut buffer).unwrap();
+    let mut input = String::new();
+    std::io::stdin().read_to_string(&mut input).unwrap();
 
-    let mut x : usize = 1;
-    let mut y : usize = 1;
-
-    let beep = "  1  "
-               " 234 "
-               "56789"
-               " ABC "
-               "  D  ";
-
-    let numpad = [[7, 8, 9], [4, 5, 6], [1, 2, 3]];
-
-    for line in buffer.lines() {
-        for b in line.as_bytes() {
-            match *b as char {
-                'U' => y = if y == 2 { 2 } else {y + 1},
-                'D' => y = if y == 0 { 0 } else {y - 1},
-                'R' => x = if x == 2 { 2 } else {x + 1},
-                'L' => x = if x == 0 { 0 } else {x - 1},
-                _ => panic!("wargarble"),
+    let run = |keypad: &str| {
+        let mut keys: HashMap<(i32, i32), char> = HashMap::new();
+        let mut pos = (0, 0);
+        for (y, line) in keypad.lines().enumerate() {
+            for (x, c) in line.chars().enumerate() {
+                if c != ' ' {
+                    let p = (x as i32 / 2, y as i32);
+                    keys.insert(p, c);
+                    if c == '5' {
+                        pos = p;
+                    }
+                }
             }
         }
-        print!("{}", numpad[y][x]);
-    }
+
+        for line in input.lines() {
+            for b in line.chars() {
+                let next = match b {
+                    'U' => (pos.0, pos.1 - 1),
+                    'D' => (pos.0, pos.1 + 1),
+                    'R' => (pos.0 + 1, pos.1),
+                    'L' => (pos.0 - 1, pos.1),
+                    _ => panic!("Invalid character"),
+                };
+                if keys.get(&next).is_some() {
+                    pos = next;
+                }
+            }
+            print!("{}", keys.get(&pos).unwrap())
+        }
+    };
+
+    print!("Part 1: ");
+    run(concat!("1 2 3\n",
+                "4 5 6\n",
+                "7 8 9"));
+    println!();
+
+    print!("Part 2: ");
+    run(concat!("    1    \n",
+                "  2 3 4  \n",
+                "5 6 7 8 9\n",
+                "  A B C  \n",
+                "    D    "));
+    println!();
 }
