@@ -27,10 +27,10 @@ fn main() {
 
     let mut grid = vec![vec![false; 1000]; 1000];
     for (cmd, nums) in input.iter() {
-        for x in nums[0]..=nums[2] {
-            for y in nums[1]..=nums[3] {
-                let prev = grid[x][y];
-                grid[x][y] = match cmd {
+        for row in &mut grid[nums[0]..=nums[2]] {
+            for g in &mut row[nums[1]..=nums[3]] {
+                let prev = *g;
+                *g = match cmd {
                     Cmd::On => true,
                     Cmd::Off => false,
                     Cmd::Toggle => !prev,
@@ -47,10 +47,10 @@ fn main() {
 
     let mut grid = vec![vec![0; 1000]; 1000];
     for (cmd, nums) in input.iter() {
-        for x in nums[0]..=nums[2] {
-            for y in nums[1]..=nums[3] {
-                let prev = grid[x][y];
-                grid[x][y] += match cmd {
+        for row in &mut grid[nums[0]..=nums[2]] {
+            for g in &mut row[nums[1]..=nums[3]] {
+                let prev = *g;
+                *g += match cmd {
                     Cmd::On => 1,
                     Cmd::Off => -((prev > 0) as i32),
                     Cmd::Toggle => 2,

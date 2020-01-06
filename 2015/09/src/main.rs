@@ -15,7 +15,7 @@ fn paths(s: Path, todo: &Path) -> Vec<Path> {
                 next_path.push(*t);
                 let next_todo = todo.iter()
                     .filter(|i| *i != t)
-                    .map(|i| *i)
+                    .copied()
                     .collect();
                 paths(next_path, &next_todo) })
             .collect()
@@ -35,20 +35,20 @@ fn main() {
         }
     };
 
-    let mut edges = HashMap::new();
+    let mut edges: HashMap<u8, HashMap<u8, usize>> = HashMap::new();
     for line in std::io::stdin().lock().lines() {
         let words = line.unwrap()
-            .split(" ")
+            .split(' ')
             .map(|s| s.to_owned())
             .collect::<Vec<String>>();
         let a = planet(&words[0]);
         let b = planet(&words[2]);
         let dist = usize::from_str(words.last().unwrap()).unwrap();
         edges.entry(a)
-            .or_insert_with(|| HashMap::new())
+            .or_default()
             .insert(b, dist);
         edges.entry(b)
-            .or_insert_with(|| HashMap::new())
+            .or_default()
             .insert(a, dist);
     }
 

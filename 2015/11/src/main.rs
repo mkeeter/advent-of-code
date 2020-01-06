@@ -2,7 +2,7 @@ use std::io::Read;
 
 type Password = [u8; 8];
 
-fn next(pw: &Password) -> Password {
+fn next(pw: Password) -> Password {
     let mut carry = 1;
     let mut out = [0; 8];
     for (i, c) in pw.iter().enumerate().rev() {
@@ -18,7 +18,7 @@ fn next(pw: &Password) -> Password {
     out
 }
 
-fn check(pw: &Password) -> bool {
+fn check(pw: Password) -> bool {
     pw.windows(3)   // Three increasing characters
         .any(|w| w[1] == w[0] + 1 && w[2] == w[1] + 1)
     &&
@@ -42,8 +42,8 @@ fn main() {
         pw[i] = c as u8;
     }
 
-    let mut itr = std::iter::successors(Some(pw), |c| Some(next(c)))
-        .filter(check);
+    let mut itr = std::iter::successors(Some(pw), |c| Some(next(*c)))
+        .filter(|p| check(*p));
 
     for i in 1..=2 {
         print!("Part {}: ", i);

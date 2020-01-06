@@ -17,7 +17,7 @@ fn optimize<F>(remaining: usize, recipe: Recipe,
         }
     }
     let add = |tbs| {
-        let mut recipe = recipe.clone();
+        let mut recipe = recipe;
         for (i,j) in ingredients[0].iter().enumerate() {
             recipe[i] += j * tbs;
         }

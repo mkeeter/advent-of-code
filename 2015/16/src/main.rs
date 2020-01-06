@@ -9,7 +9,7 @@ fn main() {
         .map(|line| {
             line.unwrap()
                 .replace(|c| c == ',' || c == ':', "")
-                .split(" ")
+                .split(' ')
                 .tuples()
                 .map(|(a, b)| (a.to_string(), usize::from_str(b).unwrap()))
                 .collect::<HashMap<String, usize>>()
@@ -28,7 +28,7 @@ fn main() {
             ("cars", 2),
             ("perfumes", 1)
         ].iter()
-        .map(|(k, v)| (k.to_string(), *v))
+        .map(|(k, v)| ((*k).to_string(), *v))
         .collect::<HashMap<String, usize>>();
 
     'part1: for s in sues.iter() {
@@ -54,10 +54,8 @@ fn main() {
                     if q >= k.1 {
                         continue 'part2;
                     }
-                } else {
-                    if q != k.1 {
-                        continue 'part2;
-                    }
+                } else if q != k.1 {
+                    continue 'part2;
                 }
             }
         }

@@ -13,7 +13,7 @@ enum Spell {
 }
 
 impl Spell {
-    fn mana(&self) -> i32 {
+    fn mana(self) -> i32 {
         match self {
             Spell::MagicMissile => 53,
             Spell::Drain => 73,
@@ -168,7 +168,7 @@ fn main() {
     }
 
     let mut todo = BinaryHeap::new();
-    todo.push(start.clone());
+    todo.push(start);
     while let Some(mut state) = todo.pop() {
         if state.boss_hp <= 0 {
             println!("Part 2: {}", state.spent_mana);

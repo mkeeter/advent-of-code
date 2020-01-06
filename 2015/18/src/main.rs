@@ -39,7 +39,7 @@ fn main() {
     }
     println!("Part 1: {}", part1.len());
 
-    let mut part2 = map.clone();
+    let mut part2 = map;
     let stuck = [(0, 0), (0, SIZE - 1), (SIZE - 1, 0), (SIZE - 1, SIZE - 1)]
         .iter()
         .cloned()

@@ -9,10 +9,10 @@ fn main() {
         .map(|line| line.unwrap())
         .map(|line| {
             let sign = if line.contains("gain") { 1 } else { -1 };
-            let a = line.split(" ").next().unwrap().to_owned();
-            let mut b = line.split(" ").last().unwrap().to_owned();
+            let a = line.split(' ').next().unwrap().to_owned();
+            let mut b = line.split(' ').last().unwrap().to_owned();
             b.pop(); // Remove trailing '.'
-            let v = line.split(" ")
+            let v = line.split(' ')
                 .filter_map(|i| i32::from_str(i).ok())
                 .next()
                 .unwrap();
