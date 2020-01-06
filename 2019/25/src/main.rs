@@ -13,7 +13,7 @@ fn fuzz(vm: &mut Vm, dir: &str) {
     }
     let inv: Vec<String> = output.lines()
         .filter(|i| i.starts_with("- "))
-        .map(|i| i.replace("- ", "").to_owned())
+        .map(|i| i.replace("- ", ""))
         .collect();
 
     for i in 0..(1 << inv.len()) {
@@ -59,7 +59,7 @@ fn main() {
             let mut cmd = String::new();
             std::io::stdin().read_line(&mut cmd).unwrap();
             if cmd.starts_with("fuzz") {
-                let dir = cmd.split(" ").nth(1).unwrap();
+                let dir = cmd.split(' ').nth(1).unwrap();
                 fuzz(&mut vm, dir);
                 break;
             } else {
@@ -67,10 +67,8 @@ fn main() {
                     vm.input(c as u8 as i64);
                 }
             }
-        } else {
-            if let Some(i) = vm.step() {
-                print!("{}", i as u8 as char);
-            }
+        } else if let Some(i) = vm.step() {
+            print!("{}", i as u8 as char);
         }
     }
 }
