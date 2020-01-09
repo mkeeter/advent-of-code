@@ -1,11 +1,21 @@
 use std::io::Read;
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 enum Chunk {
     Chars(usize),
     Marker(usize, usize),
 }
+
+impl Chunk {
+    fn len(&self) -> usize {
+        match self {
+            Self::Chars(u) => *u,
+            Self::Marker(a, b) => format!("({}x{})", a, b).len(),
+        }
+    }
+}
+
 
 fn parse(mut s: String) -> Vec<Chunk> {
     let mut out = Vec::new();
@@ -31,71 +41,59 @@ fn parse(mut s: String) -> Vec<Chunk> {
     out
 }
 
-fn expand(s: &str) -> String {
-    enum State {
-        Normal,
-        ReadBlockSize,
-        ReadBlockCount,
-        ReadBlock,
-    };
-    use State::*;
+fn expand(s: &[Chunk]) -> Vec<Chunk> {
+    use Chunk::*;
 
-    let mut state = Normal;
+    let mut i = 0;
     let mut out = Vec::new();
-    let mut tmp = Vec::new();
-    let mut block_size = 0;
-    let mut block_count = 0;
-
-    for c in s.chars() {
-        match state {
-            Normal => {
-                if (c) == '(' {
-                    state = ReadBlockSize;
-                    block_size = 0;
-                } else {
-                    out.push(c);
-                }
-            }
-            ReadBlockSize => {
-                if c == 'x' {
-                    state = ReadBlockCount;
-                    block_count = 0;
-                } else {
-                    block_size = block_size * 10 + c.to_digit(10).unwrap();
-                }
-            }
-            ReadBlockCount => {
-                if c == ')' {
-                    state = ReadBlock;
-                    tmp.clear();
-                } else {
-                    block_count = block_count * 10 + c.to_digit(10).unwrap();
-                }
-            }
-            ReadBlock => {
-                tmp.push(c);
-                block_size -= 1;
-                if block_size == 0 {
-                    for _i in 0..block_count {
-                        for t in tmp.iter() {
-                            out.push(*t);
+    while i < s.len() {
+        match s[i] {
+            Chars(s) => {
+                out.push(Chars(s));
+                i += 1;
+            },
+            Marker(size, repeat) => {
+                let mut size: usize = size;
+                let mut tmp = Vec::new();
+                let mut next = None;
+                while size > 0 {
+                    i += 1;
+                    match s[i] {
+                        Chars(s) => {
+                            if s > size {
+                                tmp.push(Chars(size));
+                                next = Some(Chars(s - size));
+                                break;
+                            } else {
+                                tmp.push(Chars(s));
+                            }
+                        },
+                        Marker(a,b) => {
+                            tmp.push(Marker(a, b));
                         }
                     }
-                    state = Normal;
+                    size -= s[i].len();
                 }
+                for _r in 0..repeat {
+                    for t in tmp.iter() {
+                        out.push(*t);
+                    }
+                }
+                if let Some(n) = next {
+                    out.push(n);
+                }
+                i += 1;
             }
         }
     }
-    out.iter().collect()
+    out
 }
 
 fn main() {
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).unwrap();
-    input = input.trim().to_owned();
 
-    println!("{:?}", parse(input.clone()));
-
-    input = expand(&input);
-    println!("{}", input.len());
+    let parsed = parse(input.trim().to_string());
+    let e = expand(&parsed);
+    println!("{:?}", e);
 }
