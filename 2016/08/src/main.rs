@@ -58,7 +58,7 @@ fn main() {
             _ => panic!("Invalid command {}", words[0]),
         }
     }
-    println!("Part 1: {}", screen.iter().count());
+    println!("Part 1: {}", screen.size());
     println!("Part 2:");
     for y in 0..HEIGHT {
         for x in 0..WIDTH {
