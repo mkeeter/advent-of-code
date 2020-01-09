@@ -39,6 +39,74 @@ name = "day08"
 version = "0.1.0"
 
 [[package]]
+name = "day09"
+version = "0.1.0"
+
+[[package]]
+name = "day10"
+version = "0.1.0"
+
+[[package]]
+name = "day11"
+version = "0.1.0"
+
+[[package]]
+name = "day12"
+version = "0.1.0"
+
+[[package]]
+name = "day13"
+version = "0.1.0"
+
+[[package]]
+name = "day14"
+version = "0.1.0"
+
+[[package]]
+name = "day15"
+version = "0.1.0"
+
+[[package]]
+name = "day16"
+version = "0.1.0"
+
+[[package]]
+name = "day17"
+version = "0.1.0"
+
+[[package]]
+name = "day18"
+version = "0.1.0"
+
+[[package]]
+name = "day19"
+version = "0.1.0"
+
+[[package]]
+name = "day20"
+version = "0.1.0"
+
+[[package]]
+name = "day21"
+version = "0.1.0"
+
+[[package]]
+name = "day22"
+version = "0.1.0"
+
+[[package]]
+name = "day23"
+version = "0.1.0"
+
+[[package]]
+name = "day24"
+version = "0.1.0"
+
+[[package]]
+name = "day25"
+version = "0.1.0"
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
