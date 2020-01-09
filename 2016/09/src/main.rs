@@ -9,9 +9,20 @@ enum Chunk {
 
 impl Chunk {
     fn len(&self) -> usize {
-        match self {
-            Self::Chars(u) => *u,
-            Self::Marker(a, b) => format!("({}x{})", a, b).len(),
+        match *self {
+            Self::Chars(u) => u,
+            Self::Marker(mut a, mut b) => {
+                let mut len = 3;
+                while a > 0 {
+                    len += 1;
+                    a /= 10;
+                }
+                while b > 0 {
+                    len += 1;
+                    b /= 10;
+                }
+                len
+            },
         }
     }
 }
@@ -27,8 +38,9 @@ fn parse(mut s: String) -> Vec<Chunk> {
         let j = marker.find(')').unwrap();
         let mut next = marker.split_off(j);
 
-        println!("{}", marker);
-        let mut itr = marker.split('x').filter_map(|i| usize::from_str(i).ok());
+        let mut itr = marker
+            .split('x')
+            .filter_map(|i| usize::from_str(i).ok());
         let size = itr.next().unwrap();
         let repeat = itr.next().unwrap();
         out.push(Chunk::Marker(size, repeat));
@@ -41,28 +53,26 @@ fn parse(mut s: String) -> Vec<Chunk> {
     out
 }
 
-fn expand(s: &[Chunk]) -> Vec<Chunk> {
+fn expand(s: &[Chunk], recurse: bool) -> usize {
     use Chunk::*;
 
     let mut i = 0;
-    let mut out = Vec::new();
+    let mut out = 0;
     while i < s.len() {
         match s[i] {
             Chars(s) => {
-                out.push(Chars(s));
-                i += 1;
+                out += s;
             },
             Marker(size, repeat) => {
                 let mut size: usize = size;
                 let mut tmp = Vec::new();
-                let mut next = None;
                 while size > 0 {
                     i += 1;
                     match s[i] {
                         Chars(s) => {
                             if s > size {
                                 tmp.push(Chars(size));
-                                next = Some(Chars(s - size));
+                                out += s - size;
                                 break;
                             } else {
                                 tmp.push(Chars(s));
@@ -74,17 +84,14 @@ fn expand(s: &[Chunk]) -> Vec<Chunk> {
                     }
                     size -= s[i].len();
                 }
-                for _r in 0..repeat {
-                    for t in tmp.iter() {
-                        out.push(*t);
-                    }
-                }
-                if let Some(n) = next {
-                    out.push(n);
-                }
-                i += 1;
+                out += repeat * if recurse {
+                    expand(&tmp, recurse)
+                } else {
+                    tmp.iter().map(|c| c.len()).sum::<usize>()
+                };
             }
         }
+        i += 1;
     }
     out
 }
@@ -93,7 +100,7 @@ fn main() {
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).unwrap();
 
-    let parsed = parse(input.trim().to_string());
-    let e = expand(&parsed);
-    println!("{:?}", e);
+    let input = parse(input.trim().to_string());
+    println!("Part 1: {}", expand(&input, false));
+    println!("Part 2: {}", expand(&input, true));
 }
