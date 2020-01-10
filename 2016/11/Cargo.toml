@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 itertools = "0.8.2"
+priority-queue = "0.7.0"

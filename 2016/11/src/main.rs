@@ -1,117 +1,148 @@
-use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashSet, HashMap};
+use std::cmp::Reverse;
+use std::collections::HashMap;
 use std::io::BufRead;
-use std::hash::{Hash, Hasher};
+
+use priority_queue::PriorityQueue;
 
 use itertools::Itertools;
 
-#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Copy, Clone)]
 enum Item {
     Generator(u8),
     Microchip(u8),
 }
+
 use Item::*;
 
-impl Item {
-    fn is_microchip(&self) -> bool {
-        match self {
-            Generator(_) => false,
-            Microchip(_) => true,
+////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Copy, Clone, Debug, Hash, Eq, Default, PartialEq)]
+struct Floor {
+    // Bitfield masks (8 items max)
+    microchips: u8,
+    generators: u8,
+}
+
+impl Floor {
+    fn insert(&mut self, item: Item) {
+        match item {
+            Generator(i) => self.generators |= i,
+            Microchip(i) => self.microchips |= i,
         }
     }
-    fn element(&self) -> u8 {
-        *match self {
-            Generator(s) => s,
-            Microchip(s) => s,
+    fn remove(&mut self, item: Item) {
+        match item {
+            Generator(i) => self.generators &= !i,
+            Microchip(i) => self.microchips &= !i,
         }
+    }
+    fn count_items(self) -> u32 {
+        self.generators.count_ones() + self.microchips.count_ones()
     }
 }
 
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+////////////////////////////////////////////////////////////////////////////////
+
+#[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq)]
 struct State {
-    floors: [HashSet<Item>; 4],
-    elevator: usize,
+    floors: [Floor; 4],
+    elevator: u8,
 }
 
 impl State {
     fn valid(&self) -> bool {
         self.floors.iter().all(|f|
             // Either this floor only contains microchips
-            f.iter().all(|i| i.is_microchip()) ||
+            f.generators == 0 ||
             // Or every microchip has a matching generator
-            f.iter().filter(|i| i.is_microchip())
-                .all(|i| f.contains(&Generator(i.element()))))
+            f.microchips & !f.generators == 0)
     }
-}
 
-impl Ord for State {
-    fn cmp(&self, other: &Self) -> Ordering {
-        let weight = |s: &State| (0..4)
-            .map(|i| (i + 1) * s.floors[i].len())
-            .sum::<usize>();
-        weight(self).cmp(&weight(other))
+    fn heuristic(&self) -> u32 {
+        self.floors.iter()
+            .enumerate()
+            .map(|(i, f)| {
+                // In the best case, we carry two items per trip,
+                // and need to go up-and-back (other than the
+                // final trip, which only goes up).
+                let num_trips = f.count_items() / 2;
+                i as u32 * (num_trips * 2).saturating_sub(1)
+            })
+            .sum()
     }
-}
 
-impl PartialOrd for State {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
+    fn neighbors(&self) -> Vec<State> {
+        let mut out = Vec::new();
+        let elevator = self.elevator as usize;
+        let floor = self.floors[elevator];
+        for i in (1..=2).rev() {
+            let microchips = (0..8)
+                .map(|i| 1 << i)
+                .filter(|i| floor.microchips & i != 0)
+                .map(Microchip);
+            let generators = (0..8)
+                .map(|i| 1 << i)
+                .filter(|i| floor.generators & i != 0)
+                .map(Generator);
 
-impl Hash for State {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        let mut v: [Vec<&Item>; 4] = Default::default();
-        for i in 0..4 {
-            for j in self.floors[i].iter() {
-                v[i].push(j);
-            }
-            v[i].sort();
-        }
-        (v, self.elevator).hash(state);
-    }
-}
-
-fn run(state: State) -> i32 {
-    let mut todo = BinaryHeap::new();
-    let mut seen = HashSet::new();
-    todo.push((0, state));
-    while let Some((steps, state)) = todo.pop() {
-        // De-duplicate states which we've already seen
-        if !state.valid() {
-            continue;
-        }
-
-        if seen.contains(&state) {
-            continue;
-        }
-        seen.insert(state.clone());
-
-        // Check our termination condition
-        if state.floors[0..=2].iter().all(|f| f.is_empty()) {
-            return -steps;
-        }
-
-        for i in 1..=2 {
-            for c in state.floors[state.elevator].iter().combinations(i) {
-                if state.elevator > 0 {
-                    let mut next = state.clone();
+            for c in microchips.chain(generators).combinations(i) {
+                if elevator < 3 {
+                    let mut next = *self;
                     for j in c.iter() {
-                        next.floors[state.elevator - 1].insert(**j);
-                        next.floors[state.elevator].remove(j);
-                    }
-                    next.elevator -= 1;
-                    todo.push((steps - 1, next));
-                }
-                if state.elevator < 3 {
-                    let mut next = state.clone();
-                    for j in c.iter() {
-                        next.floors[state.elevator].remove(j);
-                        next.floors[state.elevator + 1].insert(**j);
+                        next.floors[elevator + 1].insert(*j);
+                        next.floors[elevator].remove(*j);
                     }
                     next.elevator += 1;
-                    todo.push((steps - 1, next));
+                    if next.valid() {
+                        out.push(next);
+                    }
                 }
+                if elevator > 0 {
+                    let mut next = *self;
+                    for j in c.iter() {
+                        next.floors[elevator - 1].insert(*j);
+                        next.floors[elevator].remove(*j);
+                    }
+                    next.elevator -= 1;
+                    if next.valid() {
+                        out.push(next);
+                    }
+                }
+            }
+        }
+        out
+    }
+}
+
+fn run(start: State) -> u32 {
+    let mut open_set = PriorityQueue::new();
+
+    let mut g_score = HashMap::new();
+    let mut f_score = HashMap::new();
+
+    g_score.insert(start.clone(), 0);
+    f_score.insert(start.clone(), start.heuristic());
+
+    open_set.push((start, 0), Reverse(start.heuristic()));
+    while let Some(((state, steps), _p)) = open_set.pop() {
+        // Check our termination condition
+        if state.floors[0..=2].iter()
+            .all(|f| f.count_items() == 0)
+        {
+            return g_score[&state];
+        }
+
+        for n in state.neighbors().into_iter() {
+            let g_score_tentative = steps + 1;
+            if g_score_tentative < *g_score.get(&n).unwrap_or(&std::u32::MAX) {
+                g_score.insert(n, g_score_tentative);
+
+                let f = g_score_tentative + n.heuristic();
+                f_score.insert(n, f);
+
+                open_set.push((n, steps + 1), Reverse(f));
             }
         }
     }
@@ -123,7 +154,7 @@ fn main() {
     let mut elements = HashMap::new();
     let mut get_element = |s: &str| -> u8 {
         let i = elements.len() as u8;
-        *elements.entry(s.to_string()).or_insert(i)
+        *elements.entry(s.to_string()).or_insert(1 << i)
     };
 
     for (floor, line) in std::io::stdin().lock().lines().enumerate() {
@@ -141,11 +172,11 @@ fn main() {
     }
     assert!(state.valid());
 
-    println!("Part 1: {}", run(state.clone()));
+    println!("Part 1: {}", run(state));
 
     state.floors[0].insert(Generator(get_element("elerium")));
     state.floors[0].insert(Microchip(get_element("elerium")));
     state.floors[0].insert(Generator(get_element("dilithium")));
     state.floors[0].insert(Microchip(get_element("dilithium")));
-    println!("Part 2: {}", run(state.clone()));
+    println!("Part 2: {}", run(state));
 }
