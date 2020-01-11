@@ -51,7 +51,7 @@ impl FromStr for Action {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 struct Word(Vec<char>);
 
 impl Word {
@@ -61,6 +61,7 @@ impl Word {
             .find(|a| *a.1 == c)
             .unwrap().0
     }
+
     fn apply(&mut self, a: Action) {
         match a {
             SwapPosition(ia, ib) => {
@@ -100,6 +101,52 @@ impl Word {
             }
         }
     }
+
+    fn unapply(&mut self, a: Action) {
+        match a {
+            SwapPosition(ia, ib) => {
+                let ca = self.0[ia];
+                let cb = self.0[ib];
+                self.0[ia] = cb;
+                self.0[ib] = ca;
+            },
+            SwapLetter(ca, cb) => {
+                let ia = self.find(ca);
+                let ib = self.find(cb);
+                self.0[ia] = cb;
+                self.0[ib] = ca;
+            },
+            RotateLeft(n) => {
+                self.0.rotate_right(n);
+            },
+            RotateRight(n) => {
+                self.0.rotate_left(n);
+            },
+            RotateLetter(c) => {
+                let orig = self.clone();
+                loop {
+                    let mut tmp = self.clone();
+                    tmp.apply(RotateLetter(c));
+                    if tmp == orig {
+                        break;
+                    }
+                    self.0.rotate_left(1);
+                }
+            },
+            Reverse(ia, ib) => {
+                for i in 0..((ib - ia + 1) / 2) {
+                    let ca = self.0[ia + i];
+                    let cb = self.0[ib - i];
+                    self.0[ia + i] = cb;
+                    self.0[ib - i] = ca;
+                }
+            }
+            Move(ia, ib) => {
+                let c = self.0.remove(ib);
+                self.0.insert(ia, c);
+            }
+        }
+    }
 }
 
 fn main() {
@@ -109,8 +156,14 @@ fn main() {
         .collect::<Vec<Action>>();
 
     let mut word = Word("abcdefgh".chars().collect());
-    for a in input.into_iter() {
-        word.apply(a);
+    for a in input.iter() {
+        word.apply(*a);
     }
     println!("Part 1: {}", word.0.iter().collect::<String>());
+
+    let mut word = Word("fbgdceah".chars().collect());
+    for a in input.iter().rev() {
+        word.unapply(*a);
+    }
+    println!("Part 2: {}", word.0.iter().collect::<String>());
 }
