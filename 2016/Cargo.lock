@@ -70,6 +70,9 @@ version = "0.1.0"
 [[package]]
 name = "day14"
 version = "0.1.0"
+dependencies = [
+ "md5 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "day15"
