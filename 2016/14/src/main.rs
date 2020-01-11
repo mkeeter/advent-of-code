@@ -1,14 +1,13 @@
 use std::collections::{VecDeque, HashSet};
 use std::io::Read;
 
-fn run<T>(itr: T) -> usize
-    where T: Iterator<Item=md5::Digest>
+fn run(itr: impl Iterator<Item=String>) -> usize
 {
     let mut itr = itr
-        .map(|i| format!("{:x}", i).chars().collect::<Vec<_>>())
+        .map(|s| s.chars().collect::<Vec<_>>())
         .enumerate()
         .map(|(n, s)| {
-             let triples = s.windows(3)
+             let triple = s.windows(3)
                  .filter(|w| w.iter().all(|&c| c == w[0]))
                  .map(|w| w[0])
                  .next();
@@ -16,7 +15,7 @@ fn run<T>(itr: T) -> usize
                  .filter(|w| w.iter().all(|&c| c == w[0]))
                  .map(|w| w[0])
                  .collect::<HashSet<char>>();
-             (n, triples, quintics)
+             (n, triple, quintics)
         });
 
     let mut q = VecDeque::new();
@@ -25,15 +24,12 @@ fn run<T>(itr: T) -> usize
     }
 
     let mut found = 0;
-    while let Some((n, t, _quintics)) = q.pop_front() {
-        if let Some(t) = t {
-            for i in 0..1000 {
-                if q.get(i).unwrap().2.contains(&t) {
-                    found += 1;
-                    if found == 64 {
-                        return n;
-                    }
-                    break;
+    while let Some((n, triple, _quintics)) = q.pop_front() {
+        if let Some(t) = triple {
+            if q.iter().any(|v| v.2.contains(&t)) {
+                found += 1;
+                if found == 64 {
+                    return n;
                 }
             }
         }
@@ -49,7 +45,14 @@ fn main() {
 
     let hashes = (0..)
         .map(|i| input.to_string() + &i.to_string())
-        .map(md5::compute);
-
+        .map(md5::compute)
+        .map(|i| format!("{:x}", i));
     println!("Part 1: {}", run(hashes));
+
+    let hashes = (0..)
+        .map(|i| input.to_string() + &i.to_string())
+        .filter_map(|s| std::iter::successors(Some(s),
+                |s| Some(format!("{:x}", md5::compute(s))))
+            .nth(2017));
+    println!("Part 2: {}", run(hashes));
 }
