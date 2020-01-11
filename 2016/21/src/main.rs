@@ -104,17 +104,9 @@ impl Word {
 
     fn unapply(&mut self, a: Action) {
         match a {
-            SwapPosition(ia, ib) => {
-                let ca = self.0[ia];
-                let cb = self.0[ib];
-                self.0[ia] = cb;
-                self.0[ib] = ca;
-            },
-            SwapLetter(ca, cb) => {
-                let ia = self.find(ca);
-                let ib = self.find(cb);
-                self.0[ia] = cb;
-                self.0[ib] = ca;
+            // These are reversible actions
+            SwapPosition(_, _) | SwapLetter(_, _) | Reverse(_, _) => {
+                self.apply(a);
             },
             RotateLeft(n) => {
                 self.0.rotate_right(n);
@@ -123,6 +115,8 @@ impl Word {
                 self.0.rotate_left(n);
             },
             RotateLetter(c) => {
+                // Search for every possible rotation
+                // and find the one which matches
                 let orig = self.clone();
                 loop {
                     let mut tmp = self.clone();
@@ -133,14 +127,6 @@ impl Word {
                     self.0.rotate_left(1);
                 }
             },
-            Reverse(ia, ib) => {
-                for i in 0..((ib - ia + 1) / 2) {
-                    let ca = self.0[ia + i];
-                    let cb = self.0[ib - i];
-                    self.0[ia + i] = cb;
-                    self.0[ib - i] = ca;
-                }
-            }
             Move(ia, ib) => {
                 let c = self.0.remove(ib);
                 self.0.insert(ia, c);
