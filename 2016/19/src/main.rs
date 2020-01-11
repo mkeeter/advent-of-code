@@ -22,51 +22,22 @@ fn main() {
     println!("Part 1: {}", winner);
 
     // Use a Vec-backed linked list
-    let mut elves = Vec::new();
+    let mut robbers = VecDeque::new();
+    let mut victims = VecDeque::new();
     for i in 0..count {
-        elves.push((i + 1, 1, (i + 1) % count));
+        if i < count/2 {
+            &mut robbers
+        } else {
+            &mut victims
+        }.push_back((i + 1, 1));
     }
-    let mut remaining = count;
-    let mut robber = 0;
-    while remaining > 1 {
-        if remaining % 1000 == 0 {
-            println!("{}", remaining);
-        }
-        let mut prev = 0;
-        let mut victim = robber;
-        for j in 0..(remaining / 2) {
-            prev = victim;
-            victim = elves[victim].2;
-        }
-        elves[prev].2 = elves[victim].2;
-        elves[robber].1 += elves[victim].1;
-        elves[victim].1 = 0;
-
-        robber = elves[robber].2;
-        remaining -= 1;
-    }
-    /*
-    println!("Part 2: {}", winner);
-    let mut elves = vec![1; count];
-    let mut remaining = count;
-    while elves.iter().filter(|p| **p > 0).count() > 1 {
-        for i in 0..elves.len() {
-            if elves[i] == 0 {
-                continue;
-            }
-            let next = (i..)
-                .filter(|j| elves[j % count] > 0)
-                .nth(remaining / 2)
-                .unwrap();
-            elves[i] += elves[next % count];
-            elves[next % count] = 0;
-            remaining -= 1;
+    for i in 1..count {
+        let robber = robbers.pop_front().unwrap();
+        let victim = victims.pop_front().unwrap();
+        victims.push_back((robber.0, robber.1 + victim.1));
+        if i % 2 == 1 {
+            robbers.push_back(victims.pop_front().unwrap());
         }
     }
-    let winner = elves.iter()
-        .enumerate()
-        .find(|(i, p)| **p > 0)
-        .unwrap().0;
-    println!("Part 2: {}", winner + 1);
-    */
+    println!("Part 2: {}", victims.pop_back().unwrap().0);
 }
