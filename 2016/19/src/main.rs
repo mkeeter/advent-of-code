@@ -21,7 +21,7 @@ fn main() {
     let winner = elves.pop_front().unwrap().0;
     println!("Part 1: {}", winner);
 
-    // Use a Vec-backed linked list
+    // Use a pair of queues to represent each half of the list
     let mut robbers = VecDeque::new();
     let mut victims = VecDeque::new();
     for i in 0..count {
