@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 enum Value {
     Lit(i32),
     Reg(usize)
@@ -35,7 +35,7 @@ impl FromStr for Value {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 #[allow(non_camel_case_types)]
 enum Instruction {
     cpy(Value, Value),
@@ -43,6 +43,7 @@ enum Instruction {
     dec(Value),
     jnz(Value, Value),
     tgl(Value),
+    out(Value),
 }
 use Instruction::*;
 
@@ -64,6 +65,7 @@ impl FromStr for Instruction {
             "dec" => Ok(dec(args[0])),
             "jnz" => Ok(jnz(args[0], args[1])),
             "tgl" => Ok(tgl(args[0])),
+            "out" => Ok(out(args[0])),
             _ => Err(()),
         }
     }
@@ -71,7 +73,7 @@ impl FromStr for Instruction {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash, Eq, PartialEq)]
 pub struct Vm {
     instructions: Vec<Instruction>,
     ip: i32,
@@ -97,56 +99,70 @@ impl Vm {
     }
 
     fn delta(&self, start: i32, end: i32) -> Option<[i32; 4]> {
-        let mut out = [0; 4];
+        let mut d = [0; 4];
+        println!("JIT target:");
+        for i in start..=end {
+            println!("   {:?}", self.instructions[i as usize]);
+        }
         for i in (start..end).rev() {
             match self.instructions[i as usize] {
-                inc(a) => a.reg().map(|a| out[a] += 1),
-                dec(a) => a.reg().map(|a| out[a] -= 1),
+                inc(a) => a.reg().map(|a| d[a] += 1),
+                dec(a) => a.reg().map(|a| d[a] -= 1),
                 _ => return None,
             };
         }
-        Some(out)
+        Some(d)
     }
 
     // This will optimize out simple loops like
     //      inc(Reg(0))
     //      dec(Reg(2))
     //      jnz(Reg(2), Lit(-2))
-    fn jit(&mut self, start: i32, end: i32) {
+    fn jit(&mut self, start: i32, end: i32) -> bool {
         if let Some(d) = self.delta(start, end) {
             let r = match self.instructions[end as usize] {
-                jnz(a, _) => a.reg().unwrap(),
+                jnz(a, _) => match a.reg() {
+                    Some(a) => a,
+                    _ => return false,
+                },
                 _ => panic!(),
             };
+            if d[r] == 0 {
+                return false;
+            }
             let v = self.regs[r];
             let iterations = (v + -d[r] - 1) / -d[r];
             for (i, r) in self.regs.iter_mut().enumerate() {
                 *r += iterations * d[i];
             }
+            return true;
         } else {
-            self.ip = start;
+            return false;
         }
     }
 
-    fn apply(&mut self, i: Instruction) {
+    fn apply(&mut self, i: Instruction) -> Option<i32> {
         match i {
             cpy(a, b) => {
                 if let Some(b) = b.reg() {
                     self.regs[b] = self.get(a);
                 }
                 self.ip += 1;
+                None
             },
             inc(a) => {
                 if let Some(a) = a.reg() {
                     self.regs[a] += 1;
                 }
                 self.ip += 1;
+                None
             }
             dec(a) => {
                 if let Some(a) = a.reg() {
                     self.regs[a] -= 1;
                 }
                 self.ip += 1;
+                None
             }
             jnz(a, b) => {
                 if self.get(a) != 0 {
@@ -154,14 +170,13 @@ impl Vm {
                     let target = self.ip + self.get(b);
 
                     // If b is a literal value, then try to JIT the loop
-                    if b.reg() == None {
-                        self.jit(target, self.ip);
-                    } else {
+                    if b.reg() != None || !self.jit(target, self.ip) {
                         self.ip = target;
                     }
                 } else {
                     self.ip += 1;
                 };
+                None
             }
             tgl(a) => {
                 let target = self.ip + self.get(a);
@@ -172,10 +187,16 @@ impl Vm {
                         dec(a) => inc(a),
                         jnz(a, b) => cpy(a, b),
                         tgl(a) => inc(a),
+                        out(a) => inc(a),
                     };
                     self.instructions[target as usize] = i;
                 }
                 self.ip += 1;
+                None
+            }
+            out(a) => {
+                self.ip += 1;
+                Some(self.get(a))
             }
         }
     }
@@ -184,5 +205,15 @@ impl Vm {
             let i = self.instructions[self.ip as usize];
             self.apply(i);
         }
+    }
+
+    pub fn next(&mut self) -> Option<i32> {
+        while self.ip >= 0 && (self.ip as usize) < self.instructions.len() {
+            let i = self.instructions[self.ip as usize];
+            if let Some(o) = self.apply(i) {
+                return Some(o);
+            }
+        }
+        None
     }
 }
