@@ -9,6 +9,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "assembunny"
+version = "0.1.0"
+
+[[package]]
 name = "autocfg"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -62,6 +66,9 @@ dependencies = [
 [[package]]
 name = "day12"
 version = "0.1.0"
+dependencies = [
+ "assembunny 0.1.0",
+]
 
 [[package]]
 name = "day13"
@@ -115,6 +122,9 @@ version = "0.1.0"
 [[package]]
 name = "day23"
 version = "0.1.0"
+dependencies = [
+ "assembunny 0.1.0",
+]
 
 [[package]]
 name = "day24"
