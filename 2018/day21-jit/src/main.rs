@@ -82,11 +82,10 @@ unsafe extern "C" fn callback(reg: *const i64) -> bool {
         println!("Part 1: {}", target);
     }
 
-    if seen.contains(&target) {
+    if !seen.contains(target) {
         println!("Part 2: {}", PREV);
         return true;
     } else {
-        seen.insert(target);
         PREV = target;
         return false;
     }

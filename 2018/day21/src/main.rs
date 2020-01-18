@@ -95,12 +95,11 @@ fn part2() {
                       .next().unwrap();
         }
 
-        if seen.contains(&v3) {
+        if !seen.insert(v3) {
             println!("Part 2: {}", prev);
             break;
         } else {
             prev = v3;
-            seen.insert(v3);
         }
     }
 }
