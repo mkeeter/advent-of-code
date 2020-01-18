@@ -117,6 +117,14 @@ impl Vm {
                 self.regs[d] = 0;
                 true
             },
+            [inc(Reg(a)),
+             dec(Reg(b)),
+             jnz(Reg(b1), Lit(-2))] if a != b && b == b1 => {
+                 self.regs[a] += self.regs[b];
+                 self.regs[b] = 0;
+                 true
+            }
+
             _ => {
                 /*
                 println!("Failed to optimize");
