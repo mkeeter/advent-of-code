@@ -1,0 +1,16 @@
+Solutions to [Advent of Code](adventofcode.com) for all years (2015-2019).
+
+| Year | Stars | Languages | Standardized |
+|------|----------|--------|--------------|
+| [2015](https://adventofcode.com/2015) | 50 | Rust, Python | ✓ |
+| [2016](https://adventofcode.com/2016) | 50 | Rust | ✓ |
+| [2017](https://adventofcode.com/2015) | 50 | IPython, C, Haskell | ✗ |
+| [2018](https://adventofcode.com/2015) | 50 | Rust | ? |
+| [2019](https://adventofcode.com/2015) | 50 | Rust | ✓ |
+
+**Standardized** code reads an input file from `stdin` and prints
+```
+Part 1: X
+Part 2: Y
+```
+to `stdout`
