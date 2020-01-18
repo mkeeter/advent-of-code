@@ -13,8 +13,8 @@ fn main() {
     let mut visited = HashSet::new();
     visited.insert((0,0));
 
-    for cmd in buffer.split(',')
-    {
+    let mut p2 = None;
+    for cmd in buffer.split(',') {
         let trimmed = cmd.trim();
         dir = match trimmed.as_bytes()[0] as char {
             'R' => if dir == 0 { 3 } else { dir - 1 },
@@ -23,22 +23,15 @@ fn main() {
         };
 
         let steps = trimmed[1..].parse::<usize>().unwrap();
-        for _ in 0..steps
-        {
+        for _ in 0..steps {
             x += vecs[dir as usize][0];
             y += vecs[dir as usize][1];
 
-            let pt = (x, y);
-
-            println!("Visited {} {} again", x, y);
-            if visited.contains(&pt)
-            {
-                println!("Visited {} {} again, {} blocks!", x, y,
-                         x.abs() + y.abs());
-                return;
+            if !visited.insert((x, y)) && p2.is_none() {
+                p2 = Some(x.abs() + y.abs());
             }
-            visited.insert(pt);
         }
     }
-    println!("x: {}\ty: {}\tblocks: {}", x, y, x.abs() + y.abs());
+    println!("Part 1: {}", x.abs() + y.abs());
+    println!("Part 2: {}", p2.unwrap());
 }
