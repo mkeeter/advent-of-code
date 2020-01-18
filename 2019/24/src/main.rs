@@ -72,11 +72,10 @@ fn main() {
     loop {
         let w = world.iter()
             .fold(0, |acc, (x, y)| acc | (1 << (x + y * SIZE)));
-        if seen.contains(&w) {
+        if !seen.insert(w) {
             println!("Part 1: {}", w);
             break;
         }
-        seen.insert(w);
 
         world = iproduct!(0..SIZE, 0..SIZE)
             .filter(|&(x, y)| {

@@ -34,11 +34,9 @@ fn main() {
     loop {
         for i in deltas.iter() {
             wavelength += i;
-            if seen.contains(&wavelength) {
+            if !seen.insert(wavelength) {
                 println!("duplicate: {}", wavelength);
                 return;
-            } else {
-                seen.insert(wavelength);
             }
         }
     }

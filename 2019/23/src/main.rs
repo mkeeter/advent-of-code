@@ -23,11 +23,10 @@ fn main() {
         // two packets without sending anything.
         if idle.iter().all(|i| *i > 1) {
             let nat = nat.unwrap();
-            if seen.contains(&nat.1) {
+            if !seen.insert(nat.1) {
                 println!("Part 2: {}", nat.1);
                 break;
             }
-            seen.insert(nat.1);
             vms[0].input(nat.0);
             vms[0].input(nat.1);
             idle = [0; NUM_MACHINES];

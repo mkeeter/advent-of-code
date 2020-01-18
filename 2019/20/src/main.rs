@@ -49,11 +49,9 @@ fn main() {
         if (x, y) == exit {
             println!("Part 1: {}", steps);
             break;
-        }
-        if seen.contains(&(x, y)) {
+        } else if !seen.insert((x, y)) {
             continue;
         }
-        seen.insert((x, y));
         let c = get(x, y);
         if char::is_uppercase(c) {
             if let Some(w) = links.get(&(x, y)) {
@@ -89,11 +87,9 @@ fn main() {
         if (x, y) == exit && level == 0 {
             println!("Part 2: {}", steps);
             break;
-        }
-        if seen.contains(&(x, y, level)) {
+        } else if !seen.insert((x, y, level)) {
             continue;
         }
-        seen.insert((x, y, level));
         let c = get(x, y);
         if char::is_uppercase(c) {
             if let Some(w) = links.get(&(x, y)) {

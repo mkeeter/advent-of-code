@@ -14,10 +14,8 @@ fn search(tiles: &HashSet<(usize, usize)>,
 
     todo.push_back((start.0, start.1, 0));
     while let Some((x, y, steps)) = todo.pop_front() {
-        if seen.contains(&(x, y)) || !tiles.contains(&(x, y)) {
+        if !seen.insert((x, y)) || !tiles.contains(&(x, y)) {
             continue;
-        } else {
-            seen.insert((x, y));
         }
 
         if let Some(c) = targets.get(&(x, y)) {

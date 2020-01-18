@@ -33,10 +33,9 @@ fn explore(x: i32, y: i32, map: &Map) -> Vec<Edge> {
     let mut found = Vec::new();
     let mut seen = HashSet::new();
     while let Some((tx, ty, keys, step)) = todo.pop_front() {
-        if seen.contains(&(tx, ty)) {
+        if !seen.insert((tx, ty)) {
             continue;
         }
-        seen.insert((tx, ty));
 
         let c = *map.get(&(tx, ty)).unwrap_or(&'#');
         let mut door = 0;
