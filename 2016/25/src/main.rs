@@ -9,7 +9,7 @@ fn main() {
     std::io::stdin().read_to_string(&mut input).unwrap();
     let mut vm = Vm::from_str(&input).unwrap();
 
-    for i in 0..5 {
+    for i in 0.. {
         let mut vm = vm.clone();
         vm.regs[0] = i;
         let mut seq = Vec::new();
@@ -23,8 +23,9 @@ fn main() {
             seq.push(i);
         }
         println!("{}: Got repeating sequence {:?}", i, seq);
-        if seq.into_iter().zip([0, 1].into_iter().cycle()).all(|(a, b)| a == *b) {
+        if seq.iter().zip([0, 1].into_iter().cycle()).all(|(a, b)| a == b) {
             println!("Part 1: {}", i);
+            break;
         }
     }
 }

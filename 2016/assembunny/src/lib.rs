@@ -103,7 +103,6 @@ impl Vm {
      *  optimize into more efficient versions */
     fn peephole(&mut self, start: i32, end: i32) -> bool {
         use Value::*;
-
         match self.instructions[start as usize..=end as usize] {
             [cpy(Reg(a), Reg(b)),
              inc(Reg(c)),
@@ -111,27 +110,76 @@ impl Vm {
              jnz(Reg(b2), Lit(-2)),
              dec(Reg(d)),
              jnz(Reg(d1), Lit(-5))] if b == b1 && b == b2 && d == d1 &&
-                                       a != b && a != c && a != d => {
+                                       a != b && a != c && a != d &&
+                                       b != c && b != d && c != d => {
                 self.regs[c] += self.regs[a] * self.regs[d];
                 self.regs[b] = 0;
                 self.regs[d] = 0;
+                self.ip += 1;
                 true
             },
+
+            [cpy(Lit(a), Reg(b)),
+             inc(Reg(c)),
+             dec(Reg(b1)),
+             jnz(Reg(b2), Lit(-2)),
+             dec(Reg(d)),
+             jnz(Reg(d1), Lit(-5))] if b == b1 && b == b2 && d == d1 &&
+                                       b != c && b != d && c != d => {
+                self.regs[c] += a * self.regs[d];
+                self.regs[b] = 0;
+                self.regs[d] = 0;
+                self.ip += 1;
+                true
+            },
+
             [inc(Reg(a)),
              dec(Reg(b)),
-             jnz(Reg(b1), Lit(-2))] if a != b && b == b1 => {
-                 self.regs[a] += self.regs[b];
-                 self.regs[b] = 0;
+             jnz(Reg(b1), Lit(-2))] if b == b1 && a != b => {
+                self.regs[a] += self.regs[b];
+                self.regs[b] = 0;
+                self.ip += 1;
+                true
+            }
+
+            [dec(Reg(a)),
+             inc(Reg(b)),
+             jnz(Reg(a1), Lit(-2))] if a == a1 && a != b => {
+                self.regs[b] += self.regs[a];
+                self.regs[a] = 0;
+                self.ip += 1;
+                true
+            }
+
+            [jnz(Reg(a), Lit(2)),
+             jnz(Lit(1), Lit(4)),
+             dec(Reg(b)),
+             dec(Reg(a1)),
+             jnz(Lit(1), Lit(-4))] if a != b && a == a1 => {
+                 self.regs[b] -= self.regs[a];
+                 self.regs[a] = 0;
+                 self.ip += 1;
                  true
             }
 
-            _ => {
-                /*
-                println!("Failed to optimize");
-                for i in start..=end {
-                    println!("   {:?}", self.instructions[i as usize]);
+            [jnz(Reg(a), Lit(2)),
+             jnz(Lit(1), Lit(6)),
+             dec(Reg(a1)),
+             dec(Reg(b)),
+             jnz(Reg(b1), Lit(-4))] if a == a1 && b == b1 && a != b => {
+                if self.regs[a] < self.regs[b] {
+                    self.regs[b] -= self.regs[a];
+                    self.regs[a] = 0;
+                    self.ip += 3;
+                } else {
+                    self.regs[a] -= self.regs[b];
+                    self.regs[b] = 0;
+                    self.ip += 1;
                 }
-                */
+                true
+            }
+
+            _ => {
                 false
             },
         }
@@ -166,7 +214,7 @@ impl Vm {
                     let target = self.ip + self.get(b);
 
                     // If b is a literal value, then try to optimize the loop
-                    if b.reg() == None && self.peephole(target, self.ip) {
+                    if target < self.ip && b.reg() == None && self.peephole(target, self.ip) {
                         // Optimization succeeded!
                     } else {
                         self.ip = target;
