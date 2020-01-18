@@ -98,46 +98,34 @@ impl Vm {
         }
     }
 
-    fn delta(&self, start: i32, end: i32) -> Option<[i32; 4]> {
-        let mut d = [0; 4];
-        println!("JIT target:");
-        for i in start..=end {
-            println!("   {:?}", self.instructions[i as usize]);
-        }
-        for i in (start..end).rev() {
-            match self.instructions[i as usize] {
-                inc(a) => a.reg().map(|a| d[a] += 1),
-                dec(a) => a.reg().map(|a| d[a] -= 1),
-                _ => return None,
-            };
-        }
-        Some(d)
-    }
+    /*
+     *  Peephole optimizer looking for particular patterns which we can
+     *  optimize into more efficient versions */
+    fn peephole(&mut self, start: i32, end: i32) -> bool {
+        use Value::*;
 
-    // This will optimize out simple loops like
-    //      inc(Reg(0))
-    //      dec(Reg(2))
-    //      jnz(Reg(2), Lit(-2))
-    fn jit(&mut self, start: i32, end: i32) -> bool {
-        if let Some(d) = self.delta(start, end) {
-            let r = match self.instructions[end as usize] {
-                jnz(a, _) => match a.reg() {
-                    Some(a) => a,
-                    _ => return false,
-                },
-                _ => panic!(),
-            };
-            if d[r] == 0 {
-                return false;
-            }
-            let v = self.regs[r];
-            let iterations = (v + -d[r] - 1) / -d[r];
-            for (i, r) in self.regs.iter_mut().enumerate() {
-                *r += iterations * d[i];
-            }
-            return true;
-        } else {
-            return false;
+        match self.instructions[start as usize..=end as usize] {
+            [cpy(Reg(a), Reg(b)),
+             inc(Reg(c)),
+             dec(Reg(b1)),
+             jnz(Reg(b2), Lit(-2)),
+             dec(Reg(d)),
+             jnz(Reg(d1), Lit(-5))] if b == b1 && b == b2 && d == d1 &&
+                                       a != b && a != c && a != d => {
+                self.regs[c] += self.regs[a] * self.regs[d];
+                self.regs[b] = 0;
+                self.regs[d] = 0;
+                true
+            },
+            _ => {
+                /*
+                println!("Failed to optimize");
+                for i in start..=end {
+                    println!("   {:?}", self.instructions[i as usize]);
+                }
+                */
+                false
+            },
         }
     }
 
@@ -169,8 +157,10 @@ impl Vm {
                     // This is the jump target
                     let target = self.ip + self.get(b);
 
-                    // If b is a literal value, then try to JIT the loop
-                    if b.reg() != None || !self.jit(target, self.ip) {
+                    // If b is a literal value, then try to optimize the loop
+                    if b.reg() == None && self.peephole(target, self.ip) {
+                        // Optimization succeeded!
+                    } else {
                         self.ip = target;
                     }
                 } else {
