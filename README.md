@@ -1,6 +1,6 @@
 Solutions to [Advent of Code](adventofcode.com) for all years (2015-2019 complete; 2020 in progress).
 
-|🗓 Year                                |🌟 Stars |🔠 Languages        | ✨Standardized |
+|🗓 Year                                |🌟 Stars |🔠 Languages        |✨ Standardized |
 |---------------------------------------|---------|---------------------|--------------|
 | [2015](https://adventofcode.com/2015) | 50      | Rust                | ✓            |
 | [2016](https://adventofcode.com/2016) | 50      | Rust                | ✓            |
