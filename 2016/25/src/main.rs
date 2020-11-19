@@ -22,7 +22,7 @@ fn main() {
             }
             seq.push(i);
         }
-        if seq.iter().zip([0, 1].into_iter().cycle()).all(|(a, b)| a == b) {
+        if seq.iter().zip([0, 1].iter().cycle()).all(|(a, b)| a == b) {
             println!("Part 1: {}", i);
             break;
         }
