@@ -6,7 +6,7 @@ fn trace(s : &str) -> HashMap<(i32, i32), usize> {
     let mut out = HashMap::new();
     let mut steps = 0;
     for cmd in s.split(',') {
-        let (dx, dy) = match cmd.chars().nth(0).unwrap() {
+        let (dx, dy) = match cmd.chars().next().unwrap() {
             'L' => (-1,  0),
             'R' => ( 1,  0),
             'U' => ( 0,  1),
