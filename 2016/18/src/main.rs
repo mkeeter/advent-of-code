@@ -37,5 +37,5 @@ fn main() {
     let cols = input.len();
 
     println!("Part 1: {}", run(traps.clone(), 40, cols));
-    println!("Part 2: {}", run(traps.clone(), 400000, cols));
+    println!("Part 2: {}", run(traps, 400000, cols));
 }
