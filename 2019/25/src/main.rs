@@ -51,6 +51,8 @@ fn fuzz(vm: &mut Vm, dir: &str) {
 }
 
 fn main() {
+    // We bake the machine into the program at compile time so that
+    // the game can use stdin and be interactive
     let input = include_str!("../input");
     let mut vm = Vm::from_str(&input).unwrap();
 
