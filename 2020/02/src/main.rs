@@ -5,7 +5,6 @@ use regex::Regex;
 
 fn main() {
     let re = Regex::new(r"^(\d+)-(\d+) ([a-z]): ([a-z]+)$").unwrap();
-
     let sum = std::io::stdin().lock().lines().fold((0, 0),
         |sum, line| {
             let line = line.unwrap();
@@ -18,8 +17,8 @@ fn main() {
             let n = pwd.chars().filter(|&c| c == chr).count();
             let p1 = n >= a && n <= b;
 
-            let p2 = (((pwd.chars().nth(a - 1).unwrap() == chr) as u8) +
-                      ((pwd.chars().nth(b - 1).unwrap() == chr) as u8)) == 1;
+            let p2 = (pwd.chars().nth(a - 1).unwrap() == chr) !=
+                     (pwd.chars().nth(b - 1).unwrap() == chr);
 
             (sum.0 + p1 as usize, sum.1 + p2 as usize)
         }
