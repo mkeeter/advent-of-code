@@ -1,24 +1,28 @@
 use std::io::BufRead;
-use std::str::FromStr;
 
-use regex::Regex;
+use parse_display::{Display, FromStr};
+
+#[derive(Display, FromStr, PartialEq, Debug)]
+#[display("{a}-{b} {chr}: {pwd}")]
+struct Line {
+    a: usize,
+    b: usize,
+    chr: char,
+    pwd: String,
+}
 
 fn main() {
-    let re = Regex::new(r"^(\d+)-(\d+) (.): (.+)$").unwrap();
     let sum = std::io::stdin().lock().lines().fold((0, 0),
         |sum, line| {
-            let line = line.unwrap();
-            let caps = re.captures(&line).unwrap();
-            let a = usize::from_str(caps.get(1).unwrap().as_str()).unwrap();
-            let b = usize::from_str(caps.get(2).unwrap().as_str()).unwrap();
-            let chr = caps.get(3).unwrap().as_str().chars().next().unwrap();
-            let pwd = caps.get(4).unwrap().as_str();
+            let line = line.unwrap().parse::<Line>().unwrap();
 
-            let n = pwd.chars().filter(|&c| c == chr).count();
-            let p1 = n >= a && n <= b;
+            let p1 = {
+                let n = line.pwd.chars().filter(|&c| c == line.chr).count();
+                n >= line.a && n <= line.b
+            };
 
-            let p2 = (pwd.chars().nth(a - 1).unwrap() == chr) !=
-                     (pwd.chars().nth(b - 1).unwrap() == chr);
+            let p2 = (line.pwd.chars().nth(line.a - 1).unwrap() == line.chr) ^
+                     (line.pwd.chars().nth(line.b - 1).unwrap() == line.chr);
 
             (sum.0 + p1 as usize, sum.1 + p2 as usize)
         }
