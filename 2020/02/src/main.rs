@@ -4,7 +4,7 @@ use std::str::FromStr;
 use regex::Regex;
 
 fn main() {
-    let re = Regex::new(r"^(\d+)-(\d+) ([a-z]): ([a-z]+)$").unwrap();
+    let re = Regex::new(r"^(\d+)-(\d+) (.): (.+)$").unwrap();
     let sum = std::io::stdin().lock().lines().fold((0, 0),
         |sum, line| {
             let line = line.unwrap();
