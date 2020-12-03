@@ -1,5 +1,4 @@
 use std::io::BufRead;
-use std::collections::HashSet;
 
 fn main() {
     let lines: Vec<String> = std::io::stdin().lock().lines()
@@ -9,14 +8,12 @@ fn main() {
     let height = lines.len();
     assert!(lines.iter().all(|line| line.chars().count() == width));
 
-    let trees: HashSet<(usize, usize)> = lines.iter().enumerate()
-        .flat_map(|(y, line)| line.chars()
-            .enumerate()
-            .filter_map(move |(x, c)| Some((x, y)).filter(|_| c == '#')))
+    let trees: Vec<Vec<bool>> = lines.iter()
+        .map(|line| line.chars().map(|c| c == '#').collect())
         .collect();
 
     let check = |dx: usize, dy: usize| (0..(height / dy))
-        .filter(|i| trees.contains(&((dx * i) % width, dy * i)))
+        .filter(|i| trees[dy * i][(dx * i) % width])
         .count();
 
     println!("Part 1: {}", check(3, 1));
