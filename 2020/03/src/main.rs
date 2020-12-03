@@ -12,7 +12,7 @@ fn main() {
         .map(|line| line.chars().map(|c| c == '#').collect())
         .collect();
 
-    let check = |dx: usize, dy: usize| (0..(height / dy))
+    let check = |dx: usize, dy: usize| (0..((height + dy - 1) / dy))
         .filter(|i| trees[dy * i][(dx * i) % width])
         .count();
 
