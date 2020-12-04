@@ -9,12 +9,12 @@ fn check(c: &str) -> bool {
     lazy_static! {
         static ref HCL: Regex = Regex::new("^#[a-f0-9]{6}$").unwrap();
         static ref ECL: HashSet<&'static str> = "amb blu brn gry grn hzl oth"
-            .split(" ").collect();
+            .split(' ').collect();
         static ref PID: Regex = Regex::new("^[0-9]{9}$").unwrap();
         static ref HGT: Regex = Regex::new("^([0-9]+)(cm|in)$").unwrap();
     }
 
-    let mut itr = c.splitn(2, ":");
+    let mut itr = c.splitn(2, ':');
     let key = itr.next().unwrap();
     let val = itr.next().unwrap();
 
