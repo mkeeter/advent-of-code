@@ -7,7 +7,7 @@ Solutions to [Advent of Code](adventofcode.com) for all years (2015-2019 complet
 | [2017](https://adventofcode.com/2017) | 50      | IPython, C, Haskell | ✗            |
 | [2018](https://adventofcode.com/2018) | 50      | Rust                | ?            |
 | [2019](https://adventofcode.com/2019) | 50      | Rust                | ✓            |
-| [2020](https://adventofcode.com/2020) | 10      | Rust                | ?            |
+| [2020](https://adventofcode.com/2020) | 12      | Rust                | ?            |
 
 **Standardized** code reads an input file from `stdin` and prints
 ```
