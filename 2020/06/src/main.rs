@@ -18,7 +18,7 @@ fn main() {
     let p2: usize = lines.iter()
         .map(|g| g.lines()
             .map(|n| n.chars().collect::<HashSet<_>>())
-            .fold(chars.clone(), |a, b| a.intersection(&b).copied().collect())
+            .fold(chars.clone(), |a, b| (&a) & (&b))
             .len())
         .sum();
     println!("Part 2: {}", p2);
