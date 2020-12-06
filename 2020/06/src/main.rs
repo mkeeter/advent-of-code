@@ -4,8 +4,8 @@ use std::collections::HashSet;
 fn main() {
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).expect("Failed to read input");
-
     let lines: Vec<&str> = input.split("\n\n").collect();
+
     let p1: usize = lines.iter()
         .map(|g| g.chars()
             .filter(|c| c.is_alphabetic())
