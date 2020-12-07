@@ -10,10 +10,10 @@ fn parse(s: &str) -> (&str, HashMap<&str, usize>) {
             if sub == "no other bags." {
                 return None;
             }
-            let mut itr = sub.splitn(2, " ");
+            let mut itr = sub.splitn(2, ' ');
             let count = usize::from_str(itr.next().unwrap()).unwrap();
             let rest = itr.next().unwrap();
-            let bag = rest.rsplitn(2, " ").skip(1).next().unwrap();
+            let bag = rest.rsplitn(2, ' ').nth(1).unwrap();
             Some((bag, count))
         })
         .collect();
