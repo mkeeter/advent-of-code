@@ -63,13 +63,15 @@ fn main() {
     let p1 = p.run().unwrap_err();
     println!("Part 1: {}", p1);
 
-    for i in (0..p.0.len()).filter(|&i| p.0[i].0 != Opcode::acc) {
-        let mut p_ = p.clone();
-        p_.0[i].0 = match p.0[i].0 {
+    for i in 0..p.0.len() {
+        let op = match p.0[i].0 {
             Opcode::jmp => Opcode::nop,
             Opcode::nop => Opcode::jmp,
-            Opcode::acc => unreachable!(),
+            Opcode::acc => continue,
         };
+        let mut p_ = p.clone();
+        p_.0[i].0 = op;
+
         if let Ok(p2) = p_.run() {
             println!("Part 2: {}", p2);
             break;
