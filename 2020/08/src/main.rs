@@ -2,13 +2,14 @@ use std::io::BufRead;
 use std::str::FromStr;
 
 #[allow(non_camel_case_types)]
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 enum Opcode {
     nop,
     acc,
     jmp,
 }
 
+#[derive(Clone)]
 struct Program(Vec<(Opcode, i64)>);
 impl Program {
     fn parse_line(s: &str) -> (Opcode, i64) {
@@ -27,7 +28,7 @@ impl Program {
         (op, num)
     }
 
-    fn step(&self, ip: i64, ac: i64) -> (i64, i64) {
+    fn step(&self, (ip, ac) : (i64, i64)) -> (i64, i64) {
         let (op, v) = &self.0[ip as usize];
         match op {
             Opcode::nop => (ip + 1, ac),
@@ -39,20 +40,16 @@ impl Program {
     // Returns Okay(ac) if the program terminates, and Err(ac) if not
     fn run(&self) -> Result<i64, i64> {
         let mut seen = vec![false; self.0.len()];
-        let mut ip = 0;
-        let mut ac = 0;
+        let mut state = (0, 0); // ip, ac
         loop {
-            let ip_ = ip as usize;
-            if ip_ == self.0.len() + 1 {
-                return Ok(ac);
-            } else if seen[ip_] {
-                return Err(ac);
-            } else {
-                seen[ip_] = true;
+            let ip = state.0 as usize;
+            if ip == self.0.len() {
+                return Ok(state.1);
+            } else if seen[ip] {
+                return Err(state.1);
             }
-            let next = self.step(ip, ac);
-            ip = next.0;
-            ac = next.1;
+            seen[ip] = true;
+            state = self.step(state);
         }
     }
 }
@@ -65,5 +62,18 @@ fn main() {
 
     let p1 = p.run().unwrap_err();
     println!("Part 1: {}", p1);
+
+    for i in (0..p.0.len()).filter(|&i| p.0[i].0 != Opcode::acc) {
+        let mut p_ = p.clone();
+        p_.0[i].0 = match p.0[i].0 {
+            Opcode::jmp => Opcode::nop,
+            Opcode::nop => Opcode::jmp,
+            Opcode::acc => unreachable!(),
+        };
+        if let Ok(p2) = p_.run() {
+            println!("Part 2: {}", p2);
+            break;
+        }
+    }
 
 }
