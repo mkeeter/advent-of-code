@@ -13,7 +13,7 @@ enum Opcode {
 struct Program(Vec<(Opcode, i64)>);
 impl Program {
     fn parse_line(s: &str) -> (Opcode, i64) {
-        let mut itr = s.split(" ");
+        let mut itr = s.split(' ');
 
         let op_str = itr.next().unwrap();
         let op = match op_str {
