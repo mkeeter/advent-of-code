@@ -28,11 +28,11 @@ impl Program {
         (op, num)
     }
 
-    fn step(&self, (ip, ac) : (i64, i64)) -> (i64, i64) {
+    fn step(&self, (ip, ac): (i64, i64)) -> (i64, i64) {
         let (op, v) = &self.0[ip as usize];
         match op {
             Opcode::nop => (ip + 1, ac),
-            Opcode::acc => (ip + 1, v + ac),
+            Opcode::acc => (ip + 1, ac + v),
             Opcode::jmp => (ip + v, ac),
         }
     }
