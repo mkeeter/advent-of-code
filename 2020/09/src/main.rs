@@ -1,5 +1,6 @@
 use std::io::BufRead;
 use std::str::FromStr;
+use std::cmp::Ordering;
 
 const LOOKBACK: usize = 25;
 
@@ -27,13 +28,15 @@ fn main() {
         let mut csum = p[i];
         for j in (i + 1)..p.len() {
             csum += p[j];
-            if csum > target {
-                continue 'outer;
-            } else if csum == target {
-                let min = p[i..=j].iter().min().unwrap();
-                let max = p[i..=j].iter().max().unwrap();
-                println!("Part 2: {}", min + max);
-                break 'outer;
+            match csum.cmp(&target) {
+                Ordering::Equal => {
+                    let min = p[i..=j].iter().min().unwrap();
+                    let max = p[i..=j].iter().max().unwrap();
+                    println!("Part 2: {}", min + max);
+                    break 'outer;
+                }
+                Ordering::Greater => continue 'outer,
+                Ordering::Less => (),
             }
         }
     }
