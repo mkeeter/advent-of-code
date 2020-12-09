@@ -28,7 +28,7 @@ fn main() {
         for j in (i + 1)..p.len() {
             csum += p[j];
             if csum > target {
-                break;
+                continue 'outer;
             } else if csum == target {
                 let min = p[i..=j].iter().min().unwrap();
                 let max = p[i..=j].iter().max().unwrap();
