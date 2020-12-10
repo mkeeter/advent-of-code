@@ -33,7 +33,6 @@ fn main() {
             }});
     println!("Part 1: {}", count.0 * count.1);
 
-
     // Cache how many ways we can get from a particular joltage to 0.
     // For all non-adapter joltages, the answer is 0, so pre-cache these.
     let p: HashSet<u8> = p.into_iter().collect();
