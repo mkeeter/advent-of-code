@@ -6,10 +6,10 @@ fn main() {
     // Build a map from chairs to positions in a Vec
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).expect("Failed to read input");
-    let input: HashMap<(usize, usize), usize> = input.lines().enumerate()
+    let chairs: HashMap<(i32, i32), usize> = input.lines().enumerate()
         .flat_map(|(y, line)| line.chars().enumerate()
             .filter(|(_, c)| *c == 'L')
-            .map(move |(x, _)| (x, y)))
+            .map(move |(x, _)| (x as i32, y as i32)))
         .zip(0..)
         .collect();
 
@@ -17,7 +17,17 @@ fn main() {
                                         ( 0, -1), /* 0, */ ( 0, 1),
                                         ( 1, -1), ( 1, 0), ( 1, 1)];
 
-    let vs: Vec<ArrayVec<[usize; 8]>> = Vec::new();
+    let mut ns: Vec<ArrayVec<[usize; 8]>> = Vec::new();
+    for ((x, y), i) in chairs.iter() {
+        let mut arr = ArrayVec::new();
+        for n in NEIGHBORS.iter()
+            .filter_map(|(dx, dy)| chairs.get(&(x + dx, y + dy)))
+        {
+            arr.push(*n);
+        }
+        ns.push(arr);
+    }
+    println!("{:?}", ns);
     /*
 
     let mut chairs = input.clone();
