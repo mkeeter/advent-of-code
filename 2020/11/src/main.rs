@@ -1,19 +1,25 @@
 use std::collections::HashMap;
 use std::io::Read;
+use arrayvec::ArrayVec;
 
 fn main() {
+    // Build a map from chairs to positions in a Vec
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).expect("Failed to read input");
-    let input: HashMap<(i32, i32), bool> = input.lines().enumerate()
+    let input: HashMap<(usize, usize), usize> = input.lines().enumerate()
         .flat_map(|(y, line)| line.chars().enumerate()
             .filter(|(_, c)| *c == 'L')
-            .map(move |(x, c)| ((x as i32, y as i32), c)))
-        .map(|(xy, _)| (xy, false))
+            .map(move |(x, _)| (x, y)))
+        .zip(0..)
         .collect();
 
     const NEIGHBORS: [(i32, i32); 8] = [(-1, -1), (-1, 0), (-1, 1),
                                         ( 0, -1), /* 0, */ ( 0, 1),
                                         ( 1, -1), ( 1, 0), ( 1, 1)];
+
+    let vs: Vec<ArrayVec<[usize; 8]>> = Vec::new();
+    /*
+
     let mut chairs = input.clone();
     let mut next = HashMap::new();
     let mut changed = true;
@@ -53,4 +59,5 @@ fn main() {
         std::mem::swap(&mut chairs, &mut next);
     }
     println!("Part 2: {}", chairs.iter().filter(|(_, v)| **v).count());
+    */
 }
