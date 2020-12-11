@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::Read;
 use arrayvec::ArrayVec;
 
-fn run<F>(ns: &Vec<ArrayVec::<[usize; 8]>>, pred: F) -> usize
+fn run<F>(ns: &[ArrayVec::<[usize; 8]>], pred: F) -> usize
     where F: Fn(bool, usize) -> bool
 {
     let mut state = vec![true; ns.len()];
