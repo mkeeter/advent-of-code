@@ -1,15 +1,15 @@
 use std::collections::HashMap;
-use std::io::BufRead;
+use std::io::Read;
 
 fn main() {
-    let mut input: HashMap<(i32, i32), bool> = HashMap::new();
-    for (y, line) in std::io::stdin().lock().lines().enumerate() {
-        for (x, c) in line.unwrap().chars().enumerate() {
-            if c == 'L' {
-                input.insert((x as i32, y as i32), false);
-            }
-        }
-    }
+    let mut input = String::new();
+    std::io::stdin().read_to_string(&mut input).expect("Failed to read input");
+    let input: HashMap<(i32, i32), bool> = input.lines().enumerate()
+        .flat_map(|(y, line)| line.chars().enumerate()
+            .filter(|(_, c)| *c == 'L')
+            .map(move |(x, c)| ((x as i32, y as i32), c)))
+        .map(|(xy, _)| (xy, false))
+        .collect();
 
     const NEIGHBORS: [(i32, i32); 8] = [(-1, -1), (-1, 0), (-1, 1),
                                         ( 0, -1), /* 0, */ ( 0, 1),
@@ -39,18 +39,6 @@ fn main() {
     let mut next = HashMap::new();
     while changed {
         changed = false;
-        for x in 0..10 {
-            for y in 0..10 {
-                if let Some(c) = chairs.get(&(x, y)) {
-                    print!("{}", if *c { '#' } else { 'L' });
-                } else {
-                    print!(".");
-                }
-            }
-            println!();
-        }
-        println!();
-
         for ((x, y), filled) in chairs.iter() {
             let count = NEIGHBORS.iter()
                 .filter_map(|(dx, dy)| (1..150).filter_map(|i| chairs.get(&(x + i*dx, y + i*dy))).next())
