@@ -1,5 +1,4 @@
 use std::io::BufRead;
-use std::str::FromStr;
 
 #[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -23,7 +22,7 @@ impl Program {
             _ => panic!("Unknown opcode {}", op_str),
         };
 
-        let num = i64::from_str(itr.next().unwrap()).unwrap();
+        let num = itr.next().unwrap().parse().unwrap();
 
         (op, num)
     }

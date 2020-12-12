@@ -1,12 +1,10 @@
 use std::io::BufRead;
-use std::str::FromStr;
 use std::collections::HashMap;
 
 fn main() {
     let nums = std::io::stdin().lock().lines()
-        .map(|line| i32::from_str(&line.unwrap()))
-        .map(|res| res.expect("Could not parse int"))
-        .collect::<Vec<_>>();
+        .map(|line| line.unwrap().parse().unwrap())
+        .collect::<Vec<i32>>();
 
     // Build a map from sum -> product for all pairs in the input
     let sums: HashMap<i32, i32> = nums.iter()

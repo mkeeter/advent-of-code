@@ -1,12 +1,11 @@
 use std::io::BufRead;
-use std::str::FromStr;
 use std::cmp::Ordering;
 
 const LOOKBACK: usize = 25;
 
 fn main() {
     let p = std::io::stdin().lock().lines()
-        .map(|line| u64::from_str(&line.unwrap()).unwrap())
+        .map(|line| line.unwrap().parse().unwrap())
         .collect::<Vec<u64>>();
 
     let mut buf = [0; LOOKBACK];

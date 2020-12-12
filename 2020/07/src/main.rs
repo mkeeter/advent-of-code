@@ -1,5 +1,4 @@
 use std::io::Read;
-use std::str::FromStr;
 use std::collections::HashMap;
 
 fn parse(s: &str) -> (&str, HashMap<&str, usize>) {
@@ -11,7 +10,7 @@ fn parse(s: &str) -> (&str, HashMap<&str, usize>) {
                 return None;
             }
             let mut itr = sub.splitn(2, ' ');
-            let count = usize::from_str(itr.next().unwrap()).unwrap();
+            let count = itr.next().unwrap().parse().unwrap();
             let rest = itr.next().unwrap();
             let bag = rest.rsplitn(2, ' ').nth(1).unwrap();
             Some((bag, count))

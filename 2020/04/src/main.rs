@@ -1,5 +1,4 @@
 use std::io::Read;
-use std::str::FromStr;
 use std::collections::HashSet;
 
 use regex::Regex;
@@ -19,11 +18,11 @@ fn check(c: &str) -> bool {
     let val = itr.next().unwrap();
 
     match key {
-        "byr" => i32::from_str(val).map_or(false, |v| v >= 1920 && v <= 2002),
-        "iyr" => i32::from_str(val).map_or(false, |v| v >= 2010 && v <= 2020),
-        "eyr" => i32::from_str(val).map_or(false, |v| v >= 2020 && v <= 2030),
+        "byr" => val.parse().map_or(false, |v: i32| v >= 1920 && v <= 2002),
+        "iyr" => val.parse().map_or(false, |v: i32| v >= 2010 && v <= 2020),
+        "eyr" => val.parse().map_or(false, |v: i32| v >= 2020 && v <= 2030),
         "hgt" => HGT.captures(val).map_or(false, |c| {
-            let h = i32::from_str(c.get(1).unwrap().as_str()).unwrap();
+            let h: i32 = c.get(1).unwrap().as_str().parse().unwrap();
             let unit = c.get(2).unwrap().as_str();
             match unit {
                 "in" => h >= 59 && h <= 76,
