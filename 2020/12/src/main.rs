@@ -1,9 +1,9 @@
 use std::io::BufRead;
 
-fn run<F>(input: &Vec<(char, i64)>, mut dir: (i64, i64), f: F) -> i64
-    where F: Fn(char, (i64, i64), (i64, i64)) -> ((i64, i64), (i64, i64))
+type State = ((i64, i64), (i64, i64));
+fn run<F>(input: &Vec<(char, i64)>, mut state: State, f: F) -> i64
+    where F: Fn(char, State) -> State
 {
-    let mut pos: (i64, i64) = (0, 0);
     for (cmd, count) in input.iter() {
         let n = match cmd {
             'N'|'S'|'E'|'W'|'F' => *count,
@@ -11,12 +11,10 @@ fn run<F>(input: &Vec<(char, i64)>, mut dir: (i64, i64), f: F) -> i64
             _ => panic!("Invalid command {}", cmd),
         };
         for _i in 0..n {
-            let next = f(*cmd, pos, dir);
-            pos = next.0;
-            dir = next.1;
+            state = f(*cmd, state);
         }
     }
-    pos.0.abs() + pos.1.abs()
+    state.0.0.abs() + state.0.1.abs()
 }
 
 fn main() {
@@ -28,7 +26,7 @@ fn main() {
         })
         .collect();
 
-    let p1 = |cmd, pos: (i64, i64), dir: (i64, i64)| match cmd {
+    let p1 = |cmd, (pos, dir): State| match cmd {
         'N' => ((pos.0, pos.1 + 1), dir),
         'S' => ((pos.0, pos.1 - 1), dir),
         'E' => ((pos.0 + 1, pos.1), dir),
@@ -38,9 +36,9 @@ fn main() {
         'R' => (pos, ( dir.1, -dir.0)),
         _ => panic!("Invalid command {}", cmd),
     };
-    println!("Part 1: {}", run(&input, (1, 0), p1));
+    println!("Part 1: {}", run(&input, ((0, 0), (1, 0)), p1));
 
-    let p2 = |cmd, pos: (i64, i64), dir: (i64, i64)| match cmd {
+    let p2 = |cmd, (pos, dir): State| match cmd {
         'N' => (pos, (dir.0, dir.1 + 1)),
         'S' => (pos, (dir.0, dir.1 - 1)),
         'E' => (pos, (dir.0 + 1, dir.1)),
@@ -50,5 +48,5 @@ fn main() {
         'R' => (pos, ( dir.1, -dir.0)),
         _ => panic!("Invalid command {}", cmd),
     };
-    println!("Part 2: {}", run(&input, (10, 1), p2));
+    println!("Part 2: {}", run(&input, ((0, 0), (10, 1)), p2));
 }
