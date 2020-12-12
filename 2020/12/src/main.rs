@@ -1,20 +1,20 @@
 use std::io::BufRead;
 
 type State = ((i64, i64), (i64, i64));
-fn run<F>(input: &Vec<(char, i64)>, mut state: State, f: F) -> i64
+fn run<F>(input: &Vec<(char, i64)>, state: State, f: F) -> i64
     where F: Fn(char, State) -> State
 {
-    for (cmd, count) in input.iter() {
+    let out = input.iter().fold(state, |state, (cmd, count)| {
         let n = match cmd {
             'N'|'S'|'E'|'W'|'F' => *count,
             'R'|'L' => count / 90,
             _ => panic!("Invalid command {}", cmd),
         };
-        for _i in 0..n {
-            state = f(*cmd, state);
-        }
-    }
-    state.0.0.abs() + state.0.1.abs()
+        std::iter::successors(Some(state), |state| Some(f(*cmd, *state)))
+            .nth(n as usize)
+            .unwrap()
+    });
+    out.0.0.abs() + out.0.1.abs()
 }
 
 fn main() {
