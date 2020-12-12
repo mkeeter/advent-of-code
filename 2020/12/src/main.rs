@@ -5,13 +5,12 @@ fn run<F>(input: &Vec<(char, i64)>, state: State, f: F) -> i64
     where F: Fn(char, State) -> State
 {
     let out = input.iter().fold(state, |state, (cmd, count)| {
-        let n = match cmd {
-            'N'|'S'|'E'|'W'|'F' => *count,
-            'R'|'L' => count / 90,
-            _ => panic!("Invalid command {}", cmd),
+        let count = count / match cmd {
+            'R'|'L' => 90,
+            _ => 1,
         };
         std::iter::successors(Some(state), |state| Some(f(*cmd, *state)))
-            .nth(n as usize)
+            .nth(count as usize)
             .unwrap()
     });
     out.0.0.abs() + out.0.1.abs()
