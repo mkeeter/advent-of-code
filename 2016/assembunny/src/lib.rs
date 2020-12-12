@@ -21,7 +21,7 @@ impl FromStr for Value {
         if let Ok(i) = i32::from_str(s) {
             Ok(Self::Lit(i))
         } else if s.len() == 1 {
-            let c = s.chars().nth(0).unwrap();
+            let c = s.chars().next().unwrap();
             if c >= 'a' && c <= 'd' {
                 Ok(Self::Reg((c as u32 - b'a' as u32) as usize))
             } else {
