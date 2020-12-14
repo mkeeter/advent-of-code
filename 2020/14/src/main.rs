@@ -7,8 +7,8 @@ fn run<F, G, T>(lines: &[String], decode: F, write: G) -> u64
     where F: Fn(&str) -> T,
           G: Fn(u64, u64, &T, &mut Memory),
 {
-    let imem = Regex::new(r#"^mem\[([0-9]+)\] = ([0-9]+)$"#).unwrap();
-    let imask = Regex::new(r#"^mask = ([01X]+)$"#).unwrap();
+    let imem = Regex::new(r#"^mem\[(\d+)\] = (\d+)$"#).unwrap();
+    let imask = Regex::new(r#"^mask = ([01X]{36})$"#).unwrap();
 
     let mut mem = HashMap::new();
 
