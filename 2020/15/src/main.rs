@@ -25,7 +25,7 @@ fn main() {
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).unwrap();
 
-    let input: Vec<u32> = input.split(",").flat_map(|s| s.parse()).collect();
+    let input: Vec<u32> = input.split(',').flat_map(|s| s.parse()).collect();
 
     println!("Part 1: {}", run(&input, 2020));
     println!("Part 2: {}", run(&input, 30000000));
