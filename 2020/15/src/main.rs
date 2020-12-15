@@ -2,8 +2,8 @@ use std::io::Read;
 
 fn run(input: &[u32], n: usize) -> u32 {
     let mut history = vec![0; n];
-    let mut next: u32 = 0;
-    for i in 0..n {
+    let mut next: u32 = input[0];
+    for i in 1..n {
         let speak = next;
 
         // Where wast thou when I laid the foundations of the Earth?
