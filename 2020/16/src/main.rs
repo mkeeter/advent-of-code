@@ -56,15 +56,12 @@ fn main() {
         .collect::<Vec<_>>();
 
     let mut err_rate = 0;
-    let tickets: Vec<_> = tickets.into_iter().filter(|o| {
-        let mut valid = true;
-        for k in o.iter() {
-            if !rules.iter().any(|r| r.check(*k)) {
-                err_rate += k;
-                valid = false;
-            }
-        }
-        valid
+    let tickets: Vec<_> = tickets.into_iter().filter(|ticket| {
+        let err: u64 = ticket.iter()
+            .filter(|k| !rules.iter().any(|r| r.check(**k)))
+            .sum();
+        err_rate += err;
+        err == 0
     }).collect();
     println!("Part 1: {}", err_rate);
 
