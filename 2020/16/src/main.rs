@@ -49,14 +49,14 @@ fn main() {
         .map(|i| i.parse().unwrap())
         .collect::<Vec<u64>>();
 
-    let others = iter.next().unwrap().lines().skip(1)
+    let tickets = iter.next().unwrap().lines().skip(1)
         .map(|s| s.split(',')
             .map(|i| i.parse().unwrap())
             .collect::<Vec<u64>>())
         .collect::<Vec<_>>();
 
     let mut err_rate = 0;
-    let out: Vec<_> = others.into_iter().filter(|o| {
+    let tickets: Vec<_> = tickets.into_iter().filter(|o| {
         let mut valid = true;
         for k in o.iter() {
             if !rules.iter().any(|r| r.check(*k)) {
@@ -70,9 +70,10 @@ fn main() {
 
     // This is an array of which rules are possible given the inputs,
     // indexed as possible[rule][item]
+    let n = tickets[0].len();
     let mut possible: Vec<Vec<bool>> = rules.iter().map(
-            |rule| (0..out[0].len()).map(
-                |j| out.iter().all(|o| rule.check(o[j]))
+            |rule| (0..n).map(
+                |j| tickets.iter().all(|ticket| rule.check(ticket[j]))
         ).collect()
     ).collect();
 
