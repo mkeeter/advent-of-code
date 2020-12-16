@@ -77,7 +77,8 @@ fn main() {
     // Now that we've built the matrix, loop through and assign rules.  At
     // any given time, at least one rule must be available to assign, so
     // we assign it then clear its "possible" flag in all other rows.
-    let step = || (0..possible.len()).find_map(|j| {
+    let m = possible.len();
+    let step = || (0..m).find_map(|j| {
         let mut iter = possible[j].iter().enumerate().filter(|b| *b.1);
         if let Some((i, _)) = iter.next() {
             if iter.next() == None {
