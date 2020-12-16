@@ -85,15 +85,13 @@ fn main() {
     let mut decoded = Vec::new();
     'outer: loop {
         for j in 0..possible.len() {
-            if possible[j].iter().filter(|b| **b).count() == 1 {
-                let i = possible[j].iter()
-                    .enumerate()
-                    .find(|b| *b.1)
-                    .unwrap().0;
-
-                possible.iter_mut().for_each(|r| r[i] = false);
-                decoded.push((j, i));
-                continue 'outer;
+            let mut iter = possible[j].iter().enumerate().filter(|b| *b.1);
+            if let Some((i, _)) = iter.next() {
+                if iter.next() == None {
+                    possible.iter_mut().for_each(|r| r[i] = false);
+                    decoded.push((j, i));
+                    continue 'outer;
+                }
             }
         }
         break;
