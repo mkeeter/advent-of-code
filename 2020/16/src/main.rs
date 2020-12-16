@@ -80,24 +80,17 @@ fn main() {
     // Now that we've built the matrix, loop through and assign rules.  At
     // any given time, at least one rule must be available to assign, so
     // we assign it then clear its "possible" flag in all other rows.
-    let mut decoded = Vec::new();
-    'outer: loop {
-        for j in 0..possible.len() {
-            let mut iter = possible[j].iter().enumerate().filter(|b| *b.1);
-            if let Some((i, _)) = iter.next() {
-                if iter.next() == None {
-                    possible.iter_mut().for_each(|p| p[i] = false);
-                    decoded.push((j, i));
-                    continue 'outer;
+    let step = || (0..possible.len()).find_map(|j| {
+        let mut iter = possible[j].iter().enumerate().filter(|b| *b.1);
+        if let Some((i, _)) = iter.next() {
+            if iter.next() == None {
+                possible.iter_mut().for_each(|p| p[i] = false);
+                if rules[j].name.starts_with("departure") {
+                    return Some(my_ticket[i]);
                 }
             }
         }
-        break;
-    }
-
-    let out = decoded.into_iter()
-        .filter(|(r, _)| rules[*r].name.starts_with("departure"))
-        .map(|(_, k)| my_ticket[k])
-        .product::<u64>();
-    println!("Part 2: {}", out);
+        None
+    });
+    println!("Part 2: {}", std::iter::from_fn(step).product::<u64>());
 }
