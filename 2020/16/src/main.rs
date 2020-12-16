@@ -102,11 +102,9 @@ fn main() {
         }
     }
 
-    let mut out = 1;
-    for (r,k) in decoded {
-        if rules[r].name.starts_with("departure") {
-            out *= my_ticket[k];
-        }
-    }
+    let out = decoded.into_iter()
+        .filter(|(r, _)| rules[*r].name.starts_with("departure"))
+        .map(|(_, k)| my_ticket[k])
+        .product::<u64>();
     println!("Part 2: {}", out);
 }
