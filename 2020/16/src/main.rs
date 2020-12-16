@@ -5,7 +5,7 @@ use regex::Regex;
 
 struct Rule<'a> {
     name: &'a str,
-    bounds: [(u32, u32); 2],
+    bounds: [(u64, u64); 2],
 }
 impl<'a> Rule<'a> {
     fn parse(s: &str) -> Rule {
@@ -24,7 +24,7 @@ impl<'a> Rule<'a> {
         Rule { name, bounds: [(min1, max1), (min2, max2)] }
     }
 
-    fn check(&self, i: u32) -> bool {
+    fn check(&self, i: u64) -> bool {
         (i >= self.bounds[0].0 && i <= self.bounds[0].1) ||
         (i >= self.bounds[1].0 && i <= self.bounds[1].1)
     }
@@ -44,28 +44,66 @@ fn main() {
         .next().unwrap()
         .split(',')
         .map(|i| i.parse().unwrap())
-        .collect::<Vec<u32>>();
+        .collect::<Vec<u64>>();
 
     let others = iter.next().unwrap().lines().skip(1)
         .map(|s| s.split(',')
             .map(|i| i.parse().unwrap())
-            .collect::<Vec<u32>>())
+            .collect::<Vec<u64>>())
         .collect::<Vec<_>>();
 
-    let mut out = Vec::new();
     let mut err_rate = 0;
-    for o in others.into_iter() {
+    let out: Vec<_> = others.into_iter().filter(|o| {
         let mut valid = true;
-        for i in o.iter() {
-            if !rules.iter().any(|r| r.check(*i)) {
-                err_rate += i;
+        for k in o.iter() {
+            if !rules.iter().any(|r| r.check(*k)) {
+                err_rate += k;
                 valid = false;
             }
         }
-        if valid {
-            out.push(o);
+        valid
+    }).collect();
+
+    println!("Part 1: {}", err_rate);
+
+    // This is an array of which rules are possible given the inputs,
+    // indexed as possible[rule][item]
+    let mut possible = vec![vec![true; out[0].len()]; rules.len()];
+
+    for o in out.iter() {
+        println!("Testing {:?}", o);
+        for (i, k) in o.iter().enumerate() {
+            for (j, r) in rules.iter().enumerate() {
+                possible[j][i] &= r.check(*k);
+            }
+        }
+    }
+    // Now that we've built the matrix, loop through and assign rules
+    let mut decoded = Vec::new();
+    loop {
+        let mut t = None;
+        for (j, p) in possible.iter().enumerate() {
+            if p.iter().filter(|b| **b).count() == 1 {
+                let i = p.iter().enumerate().find(|b| *b.1).unwrap().0;
+                t = Some((j, i))
+            }
+        }
+        match t {
+            Some(t) => {
+                decoded.push(t);
+                for r in possible.iter_mut() {
+                    r[t.1] = false;
+                }
+            },
+            _ => break,
         }
     }
 
-    println!("{}", err_rate);
+    let mut out = 1;
+    for (r,k) in decoded {
+        if rules[r].name.starts_with("departure") {
+            out *= my_ticket[k];
+        }
+    }
+    println!("Part 2: {}", out);
 }
