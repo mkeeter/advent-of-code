@@ -87,6 +87,8 @@ fn main() {
                 possible.iter_mut().for_each(|p| p[i] = false);
                 if rules[j].name.starts_with("departure") {
                     return Some(my_ticket[i]);
+                } else {
+                    return Some(1);
                 }
             }
         }
