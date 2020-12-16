@@ -1,35 +1,39 @@
 use std::io::Read;
+use std::str::FromStr;
 
 use lazy_static::lazy_static;
 use regex::Regex;
 
-struct Rule<'a> {
-    name: &'a str,
+struct Rule {
+    name: String,
     bounds: [(u64, u64); 2],
 }
-impl<'a> Rule<'a> {
-    fn parse(s: &str) -> Rule {
+
+impl FromStr for Rule {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, ()> {
         lazy_static! {
             static ref RULE: Regex = Regex::new(
                 r#"^(.*): (\d+)-(\d+) or (\d+)-(\d+)$"#)
                 .unwrap();
         }
-        let cap = RULE.captures(s).unwrap();
-        let name = cap.get(1).unwrap().as_str();
-        let min1 = cap.get(2).unwrap().as_str().parse().unwrap();
-        let max1 = cap.get(3).unwrap().as_str().parse().unwrap();
-        let min2 = cap.get(4).unwrap().as_str().parse().unwrap();
-        let max2 = cap.get(5).unwrap().as_str().parse().unwrap();
+        let cap = RULE.captures(s).ok_or(())?;
+        let name = cap.get(1).ok_or(())?.as_str().to_owned();
+        let min1 = cap.get(2).ok_or(())?.as_str().parse().map_err(|_| ())?;
+        let max1 = cap.get(3).ok_or(())?.as_str().parse().map_err(|_| ())?;
+        let min2 = cap.get(4).ok_or(())?.as_str().parse().map_err(|_| ())?;
+        let max2 = cap.get(5).ok_or(())?.as_str().parse().map_err(|_| ())?;
 
-        Rule { name, bounds: [(min1, max1), (min2, max2)] }
+        Ok(Rule { name, bounds: [(min1, max1), (min2, max2)] })
     }
+}
 
+impl Rule {
     fn check(&self, i: u64) -> bool {
         (i >= self.bounds[0].0 && i <= self.bounds[0].1) ||
         (i >= self.bounds[1].0 && i <= self.bounds[1].1)
     }
 }
-
 
 fn main() {
     let mut input = String::new();
@@ -37,11 +41,10 @@ fn main() {
 
     let mut iter = input.split("\n\n");
     let rules = iter.next().unwrap().lines()
-        .map(|s| Rule::parse(s))
-        .collect::<Vec<_>>();
+        .map(|s| s.parse().unwrap())
+        .collect::<Vec<Rule>>();
 
-    let my_ticket = iter.next().unwrap().lines().skip(1)
-        .next().unwrap()
+    let my_ticket = iter.next().unwrap().lines().nth(1).unwrap()
         .split(',')
         .map(|i| i.parse().unwrap())
         .collect::<Vec<u64>>();
@@ -63,7 +66,6 @@ fn main() {
         }
         valid
     }).collect();
-
     println!("Part 1: {}", err_rate);
 
     // This is an array of which rules are possible given the inputs,
@@ -71,7 +73,6 @@ fn main() {
     let mut possible = vec![vec![true; out[0].len()]; rules.len()];
 
     for o in out.iter() {
-        println!("Testing {:?}", o);
         for (i, k) in o.iter().enumerate() {
             for (j, r) in rules.iter().enumerate() {
                 possible[j][i] &= r.check(*k);
