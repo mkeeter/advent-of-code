@@ -60,7 +60,6 @@ fn main() {
             if !rules.iter().any(|r| r.check(*i)) {
                 err_rate += i;
                 valid = false;
-                break;
             }
         }
         if valid {
