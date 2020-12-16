@@ -71,7 +71,6 @@ fn main() {
     // This is an array of which rules are possible given the inputs,
     // indexed as possible[rule][item]
     let mut possible = vec![vec![true; out[0].len()]; rules.len()];
-
     for o in out.iter() {
         for (i, k) in o.iter().enumerate() {
             for (j, r) in rules.iter().enumerate() {
@@ -79,7 +78,10 @@ fn main() {
             }
         }
     }
-    // Now that we've built the matrix, loop through and assign rules
+
+    // Now that we've built the matrix, loop through and assign rules.  At
+    // any given time, at least one rule must be available to assign, so
+    // we assign it then clear its "possible" flag in all other rows.
     let mut decoded = Vec::new();
     loop {
         let mut t = None;
