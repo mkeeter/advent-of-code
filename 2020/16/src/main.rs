@@ -82,11 +82,12 @@ fn main() {
         if let Some((i, _)) = iter.next() {
             if iter.next() == None {
                 possible.iter_mut().for_each(|p| p[i] = false);
-                if rules[j].name.starts_with("departure") {
-                    return Some(my_ticket[i]);
-                } else {
-                    return Some(1);
-                }
+                return Some(
+                    if rules[j].name.starts_with("departure") {
+                        my_ticket[i]
+                    } else {
+                        1
+                    });
             }
         }
         None
