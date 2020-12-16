@@ -88,7 +88,7 @@ fn main() {
             let mut iter = possible[j].iter().enumerate().filter(|b| *b.1);
             if let Some((i, _)) = iter.next() {
                 if iter.next() == None {
-                    possible.iter_mut().for_each(|r| r[i] = false);
+                    possible.iter_mut().for_each(|p| p[i] = false);
                     decoded.push((j, i));
                     continue 'outer;
                 }
