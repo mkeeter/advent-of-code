@@ -70,14 +70,11 @@ fn main() {
 
     // This is an array of which rules are possible given the inputs,
     // indexed as possible[rule][item]
-    let mut possible = vec![vec![true; out[0].len()]; rules.len()];
-    for o in out.iter() {
-        for (j, r) in rules.iter().enumerate() {
-            for (i, k) in o.iter().enumerate() {
-                possible[j][i] &= r.check(*k);
-            }
-        }
-    }
+    let mut possible: Vec<Vec<bool>> = rules.iter().map(
+            |rule| (0..out[0].len()).map(
+                |j| out.iter().all(|o| rule.check(o[j]))
+        ).collect()
+    ).collect();
 
     // Now that we've built the matrix, loop through and assign rules.  At
     // any given time, at least one rule must be available to assign, so
