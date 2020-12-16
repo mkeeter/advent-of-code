@@ -3,21 +3,33 @@ use std::io::Read;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-fn parse_rule(s: &str) -> (&str, [(u32, u32); 2]) {
-    lazy_static! {
-        static ref RULE: Regex = Regex::new(
-            r#"^(.*): (\d+)-(\d+) or (\d+)-(\d+)$"#)
-            .unwrap();
-    }
-    let cap = RULE.captures(s).unwrap();
-    let name = cap.get(1).unwrap().as_str();
-    let min1 = cap.get(2).unwrap().as_str().parse().unwrap();
-    let max1 = cap.get(3).unwrap().as_str().parse().unwrap();
-    let min2 = cap.get(4).unwrap().as_str().parse().unwrap();
-    let max2 = cap.get(5).unwrap().as_str().parse().unwrap();
-
-    (name, [(min1, max1), (min2, max2)])
+struct Rule<'a> {
+    name: &'a str,
+    bounds: [(u32, u32); 2],
 }
+impl<'a> Rule<'a> {
+    fn parse(s: &str) -> Rule {
+        lazy_static! {
+            static ref RULE: Regex = Regex::new(
+                r#"^(.*): (\d+)-(\d+) or (\d+)-(\d+)$"#)
+                .unwrap();
+        }
+        let cap = RULE.captures(s).unwrap();
+        let name = cap.get(1).unwrap().as_str();
+        let min1 = cap.get(2).unwrap().as_str().parse().unwrap();
+        let max1 = cap.get(3).unwrap().as_str().parse().unwrap();
+        let min2 = cap.get(4).unwrap().as_str().parse().unwrap();
+        let max2 = cap.get(5).unwrap().as_str().parse().unwrap();
+
+        Rule { name, bounds: [(min1, max1), (min2, max2)] }
+    }
+
+    fn check(&self, i: u32) -> bool {
+        (i >= self.bounds[0].0 && i <= self.bounds[0].1) ||
+        (i >= self.bounds[1].0 && i <= self.bounds[1].1)
+    }
+}
+
 
 fn main() {
     let mut input = String::new();
@@ -25,7 +37,7 @@ fn main() {
 
     let mut iter = input.split("\n\n");
     let rules = iter.next().unwrap().lines()
-        .map(|s| parse_rule(s))
+        .map(|s| Rule::parse(s))
         .collect::<Vec<_>>();
 
     let my_ticket = iter.next().unwrap().lines().skip(1)
@@ -45,16 +57,7 @@ fn main() {
     for o in others.into_iter() {
         let mut valid = true;
         for i in o.iter() {
-            let mut matched = false;
-            for r in rules.iter() {
-                if (*i >= r.1[0].0 && *i <= r.1[0].1) ||
-                   (*i >= r.1[1].0 && *i <= r.1[1].1)
-                {
-                    matched = true;
-                    break;
-                }
-            }
-            if !matched {
+            if !rules.iter().any(|r| r.check(*i)) {
                 err_rate += i;
                 valid = false;
                 break;
