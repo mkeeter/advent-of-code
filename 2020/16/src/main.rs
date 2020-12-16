@@ -72,8 +72,8 @@ fn main() {
     // indexed as possible[rule][item]
     let mut possible = vec![vec![true; out[0].len()]; rules.len()];
     for o in out.iter() {
-        for (i, k) in o.iter().enumerate() {
-            for (j, r) in rules.iter().enumerate() {
+        for (j, r) in rules.iter().enumerate() {
+            for (i, k) in o.iter().enumerate() {
                 possible[j][i] &= r.check(*k);
             }
         }
@@ -83,23 +83,20 @@ fn main() {
     // any given time, at least one rule must be available to assign, so
     // we assign it then clear its "possible" flag in all other rows.
     let mut decoded = Vec::new();
-    loop {
-        let mut t = None;
-        for (j, p) in possible.iter().enumerate() {
-            if p.iter().filter(|b| **b).count() == 1 {
-                let i = p.iter().enumerate().find(|b| *b.1).unwrap().0;
-                t = Some((j, i))
+    'outer: loop {
+        for j in 0..possible.len() {
+            if possible[j].iter().filter(|b| **b).count() == 1 {
+                let i = possible[j].iter()
+                    .enumerate()
+                    .find(|b| *b.1)
+                    .unwrap().0;
+
+                possible.iter_mut().for_each(|r| r[i] = false);
+                decoded.push((j, i));
+                continue 'outer;
             }
         }
-        match t {
-            Some(t) => {
-                decoded.push(t);
-                for r in possible.iter_mut() {
-                    r[t.1] = false;
-                }
-            },
-            _ => break,
-        }
+        break;
     }
 
     let out = decoded.into_iter()
