@@ -57,11 +57,13 @@ fn main() {
 
     let mut err_rate = 0;
     let tickets: Vec<_> = tickets.into_iter().filter(|ticket| {
-        let err: u64 = ticket.iter()
+        // This iterator returns any numbers that don't match any rules
+        let mut err_iter = ticket.iter()
             .filter(|k| !rules.iter().any(|r| r.check(**k)))
-            .sum();
-        err_rate += err;
-        err == 0
+            .peekable();
+        let valid = err_iter.peek() == None;
+        err_rate += err_iter.sum::<u64>();
+        valid
     }).collect();
     println!("Part 1: {}", err_rate);
 
@@ -79,8 +81,10 @@ fn main() {
     // we assign it then clear its "possible" flag in all other rows.
     let m = possible.len();
     let step = || (0..m).find_map(|j| {
+        // This iterator walks through all of the 'true' values in the row
         let mut iter = possible[j].iter().enumerate().filter(|b| *b.1);
         if let Some((i, _)) = iter.next() {
+            // If there is only one 'true' in this row, then match the rule
             if iter.next() == None {
                 possible.iter_mut().for_each(|p| p[i] = false);
                 return Some(
