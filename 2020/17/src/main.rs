@@ -46,8 +46,8 @@ fn main() {
     println!("{}", grid.len());
 
     // Convert into a 4D grid by setting w = 0;
-    let mut grid: HashSet<(i64, i64, i64, i64)> = input.into_iter()
-        .map(|(x, y)| (x, y, 0, 0))
+    let mut grid: HashSet<(i64, i64, i64, i64)> = input.iter()
+        .map(|&(x, y)| (x, y, 0, 0))
         .collect();
 
     for _i in 0..6 {
