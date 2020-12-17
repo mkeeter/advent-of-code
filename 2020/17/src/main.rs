@@ -43,7 +43,7 @@ fn main() {
             })
             .collect();
     }
-    println!("{}", grid.len());
+    println!("Part 1: {}", grid.len());
 
     // Convert into a 4D grid by setting w = 0;
     let mut grid: HashSet<(i64, i64, i64, i64)> = input.iter()
@@ -74,5 +74,5 @@ fn main() {
                     || (count == 3))
                 }).collect();
     }
-    println!("{}", grid.len());
+    println!("Part 2: {}", grid.len());
 }
