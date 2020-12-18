@@ -82,39 +82,10 @@ fn eval<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
 }
 
 fn eval_sy<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
-    let mut output = VecDeque::new();
     let mut ops = VecDeque::new();
 
-
-    // Basic shunting-yard parser
-    while let Some(token) = iter.next() {
-        match token {
-            Token::Int(i) => output.push_front(token),
-            Token::ParenLeft => ops.push_back(token),
-            Token::ParenRight => {
-                while *ops.back().unwrap() != Token::ParenLeft {
-                    output.push_front(ops.pop_back().unwrap());
-                }
-                if *ops.back().unwrap() == Token::ParenLeft {
-                    ops.pop_back();
-                }
-            },
-            Token::Add => {
-                ops.push_back(token);
-            },
-            Token::Mul => {
-                while *ops.back().unwrap_or(&Token::Mul) == Token::Add {
-                    output.push_front(ops.pop_back().unwrap());
-                }
-                ops.push_back(token);
-            },
-        }
-    }
-    while let Some(c) = ops.pop_back() {
-        output.push_front(c);
-    }
     let mut stack = Vec::new();
-    while let Some(c) = output.pop_back() {
+    let mut output = |c| {
         match c {
             Token::Add => {
                 let a = stack.pop().unwrap();
@@ -131,6 +102,32 @@ fn eval_sy<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
             },
             _ => panic!("Invalid op in output: {:?}", c),
         }
+    };
+
+    // Basic shunting-yard parser
+    while let Some(token) = iter.next() {
+        match token {
+            Token::Int(_) => output(token),
+            Token::ParenLeft => ops.push_back(token),
+            Token::ParenRight => {
+                while *ops.back().unwrap() != Token::ParenLeft {
+                    output(ops.pop_back().unwrap());
+                }
+                ops.pop_back().unwrap(); // Remove matching paren
+            },
+            Token::Add => {
+                ops.push_back(token);
+            },
+            Token::Mul => {
+                while *ops.back().unwrap_or(&Token::Mul) == Token::Add {
+                    output(ops.pop_back().unwrap());
+                }
+                ops.push_back(token);
+            },
+        }
+    }
+    while let Some(c) = ops.pop_back() {
+        output(c);
     }
     assert!(stack.len() == 1);
     return stack.pop().unwrap();
