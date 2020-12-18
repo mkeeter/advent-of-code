@@ -54,7 +54,6 @@ fn eval<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
     let mut op = None;
 
     while let Some(token) = iter.next() {
-        println!("Got token {:?}, acc {:?}, op {:?}", token, acc, op);
         let num = match token {
             Token::ParenLeft => Some(eval(iter)),
             Token::ParenRight => return acc.unwrap(),
@@ -79,13 +78,13 @@ fn eval<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
             }
         }
     }
-    println!("Returning {:?}", acc);
     acc.unwrap()
 }
 
 fn eval_sy<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
     let mut output = VecDeque::new();
     let mut ops = VecDeque::new();
+
 
     // Basic shunting-yard parser
     while let Some(token) = iter.next() {
@@ -114,8 +113,27 @@ fn eval_sy<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
     while let Some(c) = ops.pop_back() {
         output.push_front(c);
     }
-    println!("{:?}", output);
-    0
+    let mut stack = Vec::new();
+    while let Some(c) = output.pop_back() {
+        match c {
+            Token::Add => {
+                let a = stack.pop().unwrap();
+                let b = stack.pop().unwrap();
+                stack.push(a + b);
+            },
+            Token::Mul => {
+                let a = stack.pop().unwrap();
+                let b = stack.pop().unwrap();
+                stack.push(a * b);
+            },
+            Token::Int(i) => {
+                stack.push(i);
+            },
+            _ => panic!("Invalid op in output: {:?}", c),
+        }
+    }
+    assert!(stack.len() == 1);
+    return stack.pop().unwrap();
 }
 
 fn main() {
@@ -123,8 +141,13 @@ fn main() {
         .map(|line| tokenize(&line.unwrap()).collect())
         .collect();
 
-    let out: i64 = input.iter().map(|line| eval(&mut line.iter().copied())).sum();
+    let out: i64 = input.iter()
+        .map(|line| eval(&mut line.iter().copied()))
+        .sum();
     println!("Part 1: {}", out);
 
-    let out: i64 = input.iter().map(|line| eval_sy(&mut line.iter().copied())).sum();
+    let out: i64 = input.iter()
+        .map(|line| eval_sy(&mut line.iter().copied()))
+        .sum();
+    println!("Part 2: {}", out);
 }
