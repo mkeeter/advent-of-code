@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum Token {
-    Int(i64),
+    Num(i64),
     ParenLeft,
     ParenRight,
     Add,
@@ -29,7 +29,7 @@ fn next<I>(iter: &mut std::iter::Peekable<I>) -> Option<Token>
         }
     }
     if let Some(n) = num {
-        return Some(Token::Int(n));
+        return Some(Token::Num(n));
     }
 
     while let Some(c) = iter.next() {
@@ -62,7 +62,7 @@ fn eval<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
                 op = Some(token);
                 None
             },
-            Token::Int(i) => Some(i),
+            Token::Num(i) => Some(i),
         };
         if let Some(n) = num {
             if let Some(a) = acc {
@@ -87,6 +87,7 @@ fn eval_sy<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
     let mut stack = Vec::new();
     let mut output = |c| {
         match c {
+            Token::Num(i) => stack.push(i),
             Token::Add => {
                 let a = stack.pop().unwrap();
                 let b = stack.pop().unwrap();
@@ -97,9 +98,6 @@ fn eval_sy<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
                 let b = stack.pop().unwrap();
                 stack.push(a * b);
             },
-            Token::Int(i) => {
-                stack.push(i);
-            },
             _ => panic!("Invalid op in output: {:?}", c),
         }
     };
@@ -107,28 +105,25 @@ fn eval_sy<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
     // Basic shunting-yard parser
     while let Some(token) = iter.next() {
         match token {
-            Token::Int(_) => output(token),
-            Token::ParenLeft => ops.push_back(token),
+            Token::Num(_) => output(token),
+            Token::ParenLeft => ops.push_front(token),
             Token::ParenRight => {
-                while *ops.back().unwrap() != Token::ParenLeft {
-                    output(ops.pop_back().unwrap());
+                while *ops.front().unwrap() != Token::ParenLeft {
+                    output(ops.pop_front().unwrap());
                 }
-                ops.pop_back().unwrap(); // Remove matching paren
+                ops.pop_front().unwrap(); // Remove matching paren
             },
-            Token::Add => {
-                ops.push_back(token);
-            },
+            Token::Add => ops.push_front(token),
             Token::Mul => {
-                while *ops.back().unwrap_or(&Token::Mul) == Token::Add {
-                    output(ops.pop_back().unwrap());
+                while *ops.front().unwrap_or(&Token::Mul) == Token::Add {
+                    output(ops.pop_front().unwrap());
                 }
-                ops.push_back(token);
+                ops.push_front(token);
             },
         }
     }
-    while let Some(c) = ops.pop_back() {
-        output(c);
-    }
+    ops.into_iter().for_each(|c| output(c));
+
     assert!(stack.len() == 1);
     return stack.pop().unwrap();
 }
