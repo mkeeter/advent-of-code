@@ -64,6 +64,7 @@ fn eval<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
             },
             Token::Num(i) => Some(i),
         };
+        // Apply operations as soon as they're available
         if let Some(n) = num {
             if let Some(a) = acc {
                 match op.unwrap() {
