@@ -83,8 +83,10 @@ fn eval<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
 }
 
 fn main() {
-    let out: i64 = std::io::stdin().lock().lines()
-        .map(|line| eval(&mut tokenize(&line.unwrap())))
-        .sum();
+    let input: Vec<Vec<Token>> = std::io::stdin().lock().lines()
+        .map(|line| tokenize(&line.unwrap()).collect())
+        .collect();
+
+    let out: i64 = input.iter().map(|line| eval(&mut line.iter().copied())).sum();
     println!("Part 1: {}", out);
 }
