@@ -1,4 +1,5 @@
 use std::io::BufRead;
+use std::collections::VecDeque;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum Token {
@@ -82,6 +83,41 @@ fn eval<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
     acc.unwrap()
 }
 
+fn eval_sy<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
+    let mut output = VecDeque::new();
+    let mut ops = VecDeque::new();
+
+    // Basic shunting-yard parser
+    while let Some(token) = iter.next() {
+        match token {
+            Token::Int(i) => output.push_front(token),
+            Token::ParenLeft => ops.push_back(token),
+            Token::ParenRight => {
+                while *ops.back().unwrap() != Token::ParenLeft {
+                    output.push_front(ops.pop_back().unwrap());
+                }
+                if *ops.back().unwrap() == Token::ParenLeft {
+                    ops.pop_back();
+                }
+            },
+            Token::Add => {
+                ops.push_back(token);
+            },
+            Token::Mul => {
+                while *ops.back().unwrap_or(&Token::Mul) == Token::Add {
+                    output.push_front(ops.pop_back().unwrap());
+                }
+                ops.push_back(token);
+            },
+        }
+    }
+    while let Some(c) = ops.pop_back() {
+        output.push_front(c);
+    }
+    println!("{:?}", output);
+    0
+}
+
 fn main() {
     let input: Vec<Vec<Token>> = std::io::stdin().lock().lines()
         .map(|line| tokenize(&line.unwrap()).collect())
@@ -89,4 +125,6 @@ fn main() {
 
     let out: i64 = input.iter().map(|line| eval(&mut line.iter().copied())).sum();
     println!("Part 1: {}", out);
+
+    let out: i64 = input.iter().map(|line| eval_sy(&mut line.iter().copied())).sum();
 }
