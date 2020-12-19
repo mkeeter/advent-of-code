@@ -13,25 +13,23 @@ enum Rule {
 
 impl Rule {
     fn check(&self, s: &str, rules: &[Rule]) -> bool {
-        self.check_(s.chars(), &rules)
+        self.check_(s, &rules)
             .into_iter()
-            .any(|mut v| v.next() == None)
+            .any(|v| v == "")
     }
 
     // Returns possible postfixes based on matching on s
-    fn check_<I>(&self, mut iter: I, rules: &[Rule]) -> SmallVec<[I; 1]>
-        where I: Iterator<Item=char> + std::clone::Clone
-    {
+    fn check_<'a>(&self, s: &'a str, rules: &[Rule]) -> SmallVec<[&'a str; 1]> {
         match self {
-            Rule::Char(c) => if iter.next() == Some(*c) {
-                return smallvec![iter];
+            Rule::Char(c) => if s.starts_with(*c) {
+                return smallvec![&s[1..]];
             },
-            Rule::Rule(i) => return rules[*i].check_(iter, rules),
+            Rule::Rule(i) => return rules[*i].check_(s, rules),
             Rule::Alt(alt) => return alt.iter()
-                .flat_map(|a| a.check_(iter.clone(), rules).into_iter())
+                .flat_map(|a| a.check_(s, rules).into_iter())
                 .collect(),
             Rule::Chain(cs) => return cs.iter()
-                .fold(smallvec![iter], |out, r|
+                .fold(smallvec![s], |out, r|
                      out.into_iter()
                         .flat_map(|a| r.check_(a, rules).into_iter())
                         .collect()),
