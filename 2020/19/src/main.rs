@@ -92,15 +92,27 @@ fn main() {
         .map(|r| r.parse().unwrap())
         .collect();
 
-    for r in rules.iter() {
-        println!("{:?}", r);
-    }
-
-    let matched = iter.next().unwrap().lines()
+    let lines = iter.next().unwrap().lines().collect::<Vec<_>>();
+    let matched = lines.iter()
         .filter(|line| rules[0]
             .check(line.chars(), &rules)
             .into_iter()
             .any(|mut v| v.next() == None))
         .count();
     println!("Part 1: {}", matched);
+
+    let mut rules = rules;
+    rules[8] = Rule::Alt(vec![
+        Rule::Rule(42),
+        Rule::Chain(vec![Rule::Rule(42), Rule::Rule(8)])]);
+    rules[11] = Rule::Alt(vec![
+        Rule::Chain(vec![Rule::Rule(42), Rule::Rule(31)]),
+        Rule::Chain(vec![Rule::Rule(42), Rule::Rule(11), Rule::Rule(31)])]);
+    let matched = lines.iter()
+        .filter(|line| rules[0]
+            .check(line.chars(), &rules)
+            .into_iter()
+            .any(|mut v| v.next() == None))
+        .count();
+    println!("Part 2: {}", matched);
 }
