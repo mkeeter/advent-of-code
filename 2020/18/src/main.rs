@@ -32,16 +32,14 @@ fn next<I>(iter: &mut std::iter::Peekable<I>) -> Option<Token>
         return Some(Token::Num(n));
     }
 
-    while let Some(c) = iter.next() {
+    iter.next().map(|c|
         match c {
-            '(' =>  return Some(Token::ParenLeft),
-            ')' =>  return Some(Token::ParenRight),
-            '+' =>  return Some(Token::Add),
-            '*' =>  return Some(Token::Mul),
+            '(' => Token::ParenLeft,
+            ')' => Token::ParenRight,
+            '+' => Token::Add,
+            '*' => Token::Mul,
             _ => panic!("Invalid char: {}", c),
-        }
-    }
-    None
+        })
 }
 
 fn tokenize<'a>(s: &'a str) -> impl Iterator<Item=Token> + 'a {
@@ -104,7 +102,7 @@ fn eval_sy<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
     };
 
     // Basic shunting-yard parser
-    while let Some(token) = iter.next() {
+    for token in iter {
         match token {
             Token::Num(_) => output(token),
             Token::ParenLeft => ops.push_front(token),
@@ -123,10 +121,10 @@ fn eval_sy<I: Iterator<Item=Token>>(iter: &mut I) -> i64 {
             },
         }
     }
-    ops.into_iter().for_each(|c| output(c));
+    ops.into_iter().for_each(output);
 
     assert!(stack.len() == 1);
-    return stack.pop().unwrap();
+    stack.pop().unwrap()
 }
 
 fn main() {
