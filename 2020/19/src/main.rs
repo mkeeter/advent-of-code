@@ -15,7 +15,7 @@ impl Rule {
     fn check(&self, s: &str, rules: &[Rule]) -> bool {
         self.check_(s, &rules)
             .into_iter()
-            .any(|v| v == "")
+            .any(|v| v.is_empty())
     }
 
     // Returns possible postfixes based on matching on s
