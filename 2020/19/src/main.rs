@@ -22,19 +22,20 @@ impl Rule {
     fn check_<'a>(&self, s: &'a str, rules: &[Rule]) -> SmallVec<[&'a str; 1]> {
         match self {
             Rule::Char(c) => if s.starts_with(*c) {
-                return smallvec![&s[1..]];
+                smallvec![&s[1..]]
+            } else {
+                smallvec![]
             },
-            Rule::Rule(i) => return rules[*i].check_(s, rules),
-            Rule::Alt(alt) => return alt.iter()
+            Rule::Rule(i) => rules[*i].check_(s, rules),
+            Rule::Alt(alt) => alt.iter()
                 .flat_map(|a| a.check_(s, rules).into_iter())
                 .collect(),
-            Rule::Chain(cs) => return cs.iter()
+            Rule::Chain(cs) => cs.iter()
                 .fold(smallvec![s], |out, r|
                      out.into_iter()
                         .flat_map(|a| r.check_(a, rules).into_iter())
                         .collect()),
         }
-        smallvec![]
     }
 }
 
