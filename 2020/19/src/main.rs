@@ -27,9 +27,7 @@ impl Rule {
                 }
             }
             Rule::Rule(i) => {
-                return rules[*i].check_(iter, rules)
-                    .into_iter()
-                    .collect()
+                return rules[*i].check_(iter, rules);
             },
             Rule::Alt(alt) => {
                 return alt.iter()
