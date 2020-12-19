@@ -59,6 +59,7 @@ impl FromStr for Rule {
         // Grab the text of the rule
         let r = iter.next().unwrap();
 
+        // Detect a character because it's always wrapped in quotes
         let mut chars = r.chars();
         if chars.next().unwrap() == '"' {
             return Ok(Rule::Char(chars.next().unwrap()));
@@ -98,7 +99,7 @@ fn main() {
         .map(|r| r.parse().unwrap())
         .collect();
 
-    let lines = iter.next().unwrap().lines().collect::<Vec<_>>();
+    let lines: Vec<_> = iter.next().unwrap().lines().collect();
     let matched = lines.iter()
         .filter(|line| rules[0].check(line, &rules))
         .count();
