@@ -1,6 +1,8 @@
 use std::io::Read;
 use std::str::FromStr;
 
+use smallvec::{smallvec, SmallVec};
+
 #[derive(Debug)]
 enum Rule {
     Char(char),
@@ -17,24 +19,24 @@ impl Rule {
     }
 
     // Returns possible postfixes based on matching on s
-    fn check_<I>(&self, mut iter: I, rules: &[Rule]) -> Vec<I>
+    fn check_<I>(&self, mut iter: I, rules: &[Rule]) -> SmallVec<[I; 1]>
         where I: Iterator<Item=char> + std::clone::Clone
     {
         match self {
             Rule::Char(c) => if iter.next() == Some(*c) {
-                return vec![iter];
+                return smallvec![iter];
             },
             Rule::Rule(i) => return rules[*i].check_(iter, rules),
             Rule::Alt(alt) => return alt.iter()
                 .flat_map(|a| a.check_(iter.clone(), rules).into_iter())
                 .collect(),
             Rule::Chain(cs) => return cs.iter()
-                .fold(vec![iter], |out, r|
+                .fold(smallvec![iter], |out, r|
                      out.into_iter()
                         .flat_map(|a| r.check_(a, rules).into_iter())
                         .collect()),
         }
-        vec![]
+        smallvec![]
     }
 }
 
