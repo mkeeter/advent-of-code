@@ -56,7 +56,7 @@ impl FromStr for Rule {
         }
 
         let alts = r.split(" | ").map(|sub| {
-            let rs = sub.split(" ")
+            let rs = sub.split(' ')
                 .map(|i| Rule::Rule(i.parse().unwrap()))
                 .collect::<Vec<Rule>>();
             if rs.len() == 1 {
