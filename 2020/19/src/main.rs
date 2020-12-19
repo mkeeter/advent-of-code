@@ -10,8 +10,14 @@ enum Rule {
 }
 
 impl Rule {
+    fn check(&self, s: &str, rules: &[Rule]) -> bool {
+        self.check_(s.chars(), &rules)
+            .into_iter()
+            .any(|mut v| v.next() == None)
+    }
+
     // Returns possible postfixes based on matching on s
-    fn check<I>(&self, mut iter: I, rules: &[Rule]) -> Vec<I>
+    fn check_<I>(&self, mut iter: I, rules: &[Rule]) -> Vec<I>
         where I: Iterator<Item=char> + std::clone::Clone
     {
         let mut out = Vec::new();
@@ -22,20 +28,20 @@ impl Rule {
                 }
             }
             Rule::Rule(i) => {
-                out = rules[*i].check(iter, rules)
+                out = rules[*i].check_(iter, rules)
                     .into_iter()
                     .collect()
             },
             Rule::Alt(alt) => {
                 out = alt.iter()
-                    .flat_map(|a| a.check(iter.clone(), rules).into_iter())
+                    .flat_map(|a| a.check_(iter.clone(), rules).into_iter())
                     .collect()
             },
             Rule::Chain(cs) => {
                 out.push(iter);
                 for r in cs.iter() {
                     out = out.into_iter()
-                        .flat_map(|a| r.check(a, rules).into_iter())
+                        .flat_map(|a| r.check_(a, rules).into_iter())
                         .collect();
                 }
             },
@@ -94,10 +100,7 @@ fn main() {
 
     let lines = iter.next().unwrap().lines().collect::<Vec<_>>();
     let matched = lines.iter()
-        .filter(|line| rules[0]
-            .check(line.chars(), &rules)
-            .into_iter()
-            .any(|mut v| v.next() == None))
+        .filter(|line| rules[0].check(line, &rules))
         .count();
     println!("Part 1: {}", matched);
 
@@ -109,10 +112,7 @@ fn main() {
         Rule::Chain(vec![Rule::Rule(42), Rule::Rule(31)]),
         Rule::Chain(vec![Rule::Rule(42), Rule::Rule(11), Rule::Rule(31)])]);
     let matched = lines.iter()
-        .filter(|line| rules[0]
-            .check(line.chars(), &rules)
-            .into_iter()
-            .any(|mut v| v.next() == None))
+        .filter(|line| rules[0].check(line, &rules))
         .count();
     println!("Part 2: {}", matched);
 }
