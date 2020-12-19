@@ -20,33 +20,33 @@ impl Rule {
     fn check_<I>(&self, mut iter: I, rules: &[Rule]) -> Vec<I>
         where I: Iterator<Item=char> + std::clone::Clone
     {
-        let mut out = Vec::new();
         match self {
             Rule::Char(c) => {
                 if iter.next() == Some(*c) {
-                    out.push(iter);
+                    return vec![iter];
                 }
             }
             Rule::Rule(i) => {
-                out = rules[*i].check_(iter, rules)
+                return rules[*i].check_(iter, rules)
                     .into_iter()
                     .collect()
             },
             Rule::Alt(alt) => {
-                out = alt.iter()
+                return alt.iter()
                     .flat_map(|a| a.check_(iter.clone(), rules).into_iter())
                     .collect()
             },
             Rule::Chain(cs) => {
-                out.push(iter);
+                let mut out = vec![iter];
                 for r in cs.iter() {
                     out = out.into_iter()
                         .flat_map(|a| r.check_(a, rules).into_iter())
                         .collect();
                 }
+                return out;
             },
         }
-        out
+        vec![]
     }
 }
 
