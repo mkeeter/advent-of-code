@@ -37,13 +37,10 @@ impl Rule {
                     .collect()
             },
             Rule::Chain(cs) => {
-                let mut out = vec![iter];
-                for r in cs.iter() {
-                    out = out.into_iter()
+                return cs.iter().fold(vec![iter], |out, r|
+                     out.into_iter()
                         .flat_map(|a| r.check_(a, rules).into_iter())
-                        .collect();
-                }
-                return out;
+                        .collect());
             },
         }
         vec![]
