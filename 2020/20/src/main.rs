@@ -42,7 +42,7 @@ impl Tile {
 
         let mut edges = [[0; 4]; 8];
         for i in 0..8 {
-            let img = Self::project(&image, i);
+            let img = Self::flip(&image, i);
             edges[i as usize] = Self::edges(&img);
         }
 
@@ -70,7 +70,7 @@ impl Tile {
          Self::unpack(img.iter().map(|row| row[0]))]
     }
 
-    fn project(img: &[Vec<bool>], orientation: u8) -> Vec<Vec<bool>> {
+    fn flip(img: &[Vec<bool>], orientation: u8) -> Vec<Vec<bool>> {
         let mat = MATRICES[orientation as usize];
         let mut out = img.to_owned();
         for y in 0..img.len() {
@@ -229,7 +229,7 @@ fn main() {
     for gx in xm.0..=xm.1 {
         for gy in ym.0..=ym.1 {
             let t = *sol.grid.get(&(gx, gy)).unwrap();
-            let tile = Tile::project(&tiles[t].image, sol.bind[t].unwrap());
+            let tile = Tile::flip(&tiles[t].image, sol.bind[t].unwrap());
             let x = (gx - xm.0) as usize * size;
             let y = (gy - ym.0) as usize * size;
             for sx in 0..size {
@@ -253,7 +253,7 @@ fn main() {
 
     for o in 0..8 {
         let mut monster_count = 0;
-        let flipped = Tile::project(&img, o);
+        let flipped = Tile::flip(&img, o);
         for x in 0..image_size_px {
             for y in 0..image_size_px {
                 let found = monster_img.iter().all(|(dx, dy)| {
