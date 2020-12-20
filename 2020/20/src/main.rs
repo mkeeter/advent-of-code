@@ -2,6 +2,7 @@ use std::io::Read;
 use std::collections::HashMap;
 
 use regex::Regex;
+use itertools::Itertools;
 
 // All possible rotation + flip matrices, as a 4x4 + shift
 const MATRICES: [[i32; 6]; 8] = [
@@ -41,8 +42,8 @@ impl Tile {
 
         let mut edges = [[0; 4]; 8];
         for i in 0..8 {
-            let img = Tile::project(&image, i);
-            edges[i as usize] = Tile::edges(&img);
+            let img = Self::project(&image, i);
+            edges[i as usize] = Self::edges(&img);
         }
 
         Tile { id, image, edges }
@@ -63,10 +64,10 @@ impl Tile {
 
     fn edges(img: &[Vec<bool>]) -> [u16; 4] {
         // In the same order as EDGES above: top, right, bottom, left
-        [Tile::to_u16(img[0].iter().copied()),
-         Tile::to_u16(img.iter().map(|row| row[row.len() - 1])),
-         Tile::to_u16(img[img.len() - 1].iter().copied()),
-         Tile::to_u16(img.iter().map(|row| row[0]))]
+        [Self::to_u16(img[0].iter().copied()),
+         Self::to_u16(img.iter().map(|row| row[row.len() - 1])),
+         Self::to_u16(img[img.len() - 1].iter().copied()),
+         Self::to_u16(img.iter().map(|row| row[0]))]
     }
 
     fn project(img: &[Vec<bool>], orientation: u8) -> Vec<Vec<bool>> {
@@ -89,28 +90,92 @@ impl Tile {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// A set of tiles with an acceleration structure for edge lookups
-#[derive(Debug)]
-struct Tiles {
-    tiles: Vec<Tile>,
 
-    // Edge lookup table: u16 -> (tile, orientation, edge)
-    edges: HashMap<u16, Vec<(usize, u8, u8)>>,
+#[derive(Clone, Debug)]
+struct State<'a> {
+    tiles: &'a [Tile],
+
+    // Tiles which are placed have a bound orientation here
+    bind: Vec<Option<u8>>,
+
+    // The grid contains placed tiles as indexes into bind or tiles
+    grid: HashMap<(i32, i32), usize>,
+
+    // Open tiles, along with a list of edge constraints to satisfy
+    constraints: HashMap<(i32, i32), [Option<u16>; 4]>,
+
+    // Number of remaining tiles to place
+    unplaced: usize,
 }
 
-impl Tiles {
-    fn new(tiles: Vec<Tile>) -> Tiles {
-        let mut edges: HashMap<u16, Vec<_>> = HashMap::new();
-        for (i,t) in tiles.iter().enumerate() {
-            for orientation in 0..8 {
-                for edge in 0..4 {
-                    edges.entry(t.edges[orientation][edge])
-                        .or_default()
-                        .push((i, orientation as u8, edge as u8));
+impl<'a> State<'a> {
+    fn new(tiles: &'a [Tile]) -> Self {
+        let mut out = State {
+            tiles,
+            bind: vec![None; tiles.len()],
+            grid: HashMap::new(),
+            constraints: HashMap::new(),
+            unplaced: tiles.len(),
+        };
+        // Lock tile 0 in place
+        out.place((0, 0), 0, 0);
+        out
+    }
+
+    fn place(&mut self, (x, y): (i32, i32), tile: usize, orientation: u8) {
+        assert!(self.bind[tile].is_none());
+        self.bind[tile] = Some(orientation);
+
+        assert!(!self.grid.contains_key(&(x, y)));
+        self.grid.insert((x, y), tile);
+
+        assert!(self.unplaced > 0);
+        self.unplaced -= 1;
+
+        for (e, (dx, dy)) in EDGES.iter().enumerate() {
+            let x_ = x + dx;
+            let y_ = y + dy;
+            let m = self.tiles[tile].edges[orientation as usize][e as usize];
+
+            // Confirm that the placement is valid
+            if let Some(t) = self.grid.get(&(x_, y_)) {
+                let o = self.bind[*t].unwrap() as usize;
+                assert!(m == self.tiles[*t].edges[o][(e + 2) % 4])
+            } else {
+                let s = self.constraints.entry((x_, y_))
+                    .or_default()
+                    [(e + 2) % 4].replace(m);
+                assert!(s == None);
+            }
+        }
+
+        self.constraints.remove(&(x, y));
+    }
+
+    fn run(self) -> Option<Self> {
+        if self.unplaced == 0 {
+            return Some(self);
+        }
+        for ((x, y), cs) in self.constraints.iter() {
+            for (t, tile) in self.tiles.iter().enumerate() {
+                if self.bind[t].is_some() {
+                    continue;
+                }
+                for o in 0..8 {
+                    if tile.edges[o].iter().zip(cs)
+                        .all(|(m, n)| n.is_none() || n.unwrap() == *m)
+                    {
+                        // We've found a tile to place!
+                        let mut next = self.clone();
+                        next.place((*x, *y), t, o as u8);
+                        if let Some(done) = next.run() {
+                            return Some(done);
+                        }
+                    }
                 }
             }
         }
-        Tiles { tiles, edges }
+        None
     }
 }
 
@@ -137,5 +202,17 @@ fn main() {
 
         tiles.push(Tile::new(id, iter));
     }
-    let tiles = Tiles::new(tiles);
+
+    // Solve the system
+    let sol = State::new(&tiles).run().unwrap();
+
+    let xm = sol.grid.iter().map(|p| p.0.0).minmax().into_option().unwrap();
+    let ym = sol.grid.iter().map(|p| p.0.1).minmax().into_option().unwrap();
+    let mut out = 1;
+    for x in [xm.0, xm.1].iter() {
+        for y in [ym.0, ym.1].iter() {
+            out *= tiles[*sol.grid.get(&(*x, *y)).unwrap()].id;
+        }
+    }
+    println!("Part 1: {}", out);
 }
