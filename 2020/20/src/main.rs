@@ -210,6 +210,8 @@ fn main() {
 
     let xm = sol.grid.iter().map(|p| p.0.0).minmax().into_option().unwrap();
     let ym = sol.grid.iter().map(|p| p.0.1).minmax().into_option().unwrap();
+    assert!(xm.1 - xm.0 == ym.1 - ym.0); // check for square image
+
     let mut out = 1;
     for x in [xm.0, xm.1].iter() {
         for y in [ym.0, ym.1].iter() {
@@ -218,7 +220,7 @@ fn main() {
     }
     println!("Part 1: {}", out);
 
-    assert!(xm.1 - xm.0 == ym.1 - ym.0); // check for square image
+    ////////////////////////////////////////////////////////////////////////////
     let size = tiles[0].image.len() - 2; // assume square tiles
 
     let image_size_px = size * (xm.1 - xm.0 + 1) as usize;
@@ -237,6 +239,39 @@ fn main() {
             }
         }
     }
+    const MONSTER: &str = "
+                  #
+#    ##    ##    ###
+ #  #  #  #  #  #   ";
+    let monster_img: Vec<(usize, usize)> = MONSTER.lines()
+        .skip(1)
+        .enumerate()
+        .flat_map(|(y, line)| line.chars().enumerate()
+            .filter(|(_, c)| *c == '#')
+            .map(move |(x, _)| (x, y)))
+        .collect();
 
-    Tile::print(&img);
+    for o in 0..8 {
+        let mut monster_count = 0;
+        let flipped = Tile::project(&img, o);
+        for x in 0..image_size_px {
+            for y in 0..image_size_px {
+                if monster_img.iter().all(|(dx, dy)| {
+                    let x = x + dx;
+                    let y = y + dy;
+                    x < image_size_px && y < image_size_px && flipped[y][x]
+                })
+                {
+                    monster_count += monster_img.len();
+                }
+            }
+        }
+        if monster_count > 0 {
+            let num_hash = img.iter()
+                .flat_map(|r| r.iter())
+                .filter(|c| **c)
+                .count();
+            println!("Part 2: {}", num_hash - monster_count);
+        }
+    }
 }
