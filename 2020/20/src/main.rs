@@ -49,7 +49,7 @@ impl Tile {
         Tile { id, image, edges }
     }
 
-    fn print(img: &[Vec<bool>]) {
+    fn _print(img: &[Vec<bool>]) {
         for row in img {
             for x in row {
                 print!("{}", if *x { '⬛' } else { '⬜' });
@@ -58,16 +58,16 @@ impl Tile {
         }
     }
 
-    fn to_u16<I: Iterator<Item=bool>>(iter: I) -> u16 {
+    fn unpack<I: Iterator<Item=bool>>(iter: I) -> u16 {
         iter.fold(0, |a, b| (a << 1) | (b as u16))
     }
 
     fn edges(img: &[Vec<bool>]) -> [u16; 4] {
         // In the same order as EDGES above: top, right, bottom, left
-        [Self::to_u16(img[0].iter().copied()),
-         Self::to_u16(img.iter().map(|row| row[row.len() - 1])),
-         Self::to_u16(img[img.len() - 1].iter().copied()),
-         Self::to_u16(img.iter().map(|row| row[0]))]
+        [Self::unpack(img[0].iter().copied()),
+         Self::unpack(img.iter().map(|row| row[row.len() - 1])),
+         Self::unpack(img[img.len() - 1].iter().copied()),
+         Self::unpack(img.iter().map(|row| row[0]))]
     }
 
     fn project(img: &[Vec<bool>], orientation: u8) -> Vec<Vec<bool>> {
@@ -156,7 +156,7 @@ impl<'a> State<'a> {
         if self.unplaced == 0 {
             return Some(self);
         }
-        for ((x, y), cs) in self.constraints.iter() {
+        for (&(x, y), cs) in self.constraints.iter() {
             // Check against every possible tile, which is inefficient
             // but fast enough in practice!
             for (t, tile) in self.tiles.iter().enumerate() {
@@ -165,11 +165,11 @@ impl<'a> State<'a> {
                 }
                 for o in 0..8 {
                     if tile.edges[o].iter().zip(cs)
-                        .all(|(m, n)| n.is_none() || n.unwrap() == *m)
+                        .all(|(m, n)| n.unwrap_or(*m) == *m)
                     {
                         // We've found a tile to place!
                         let mut next = self.clone();
-                        next.place((*x, *y), t, o as u8);
+                        next.place((x, y), t, o as u8);
                         if let Some(done) = next.run() {
                             return Some(done);
                         }
@@ -256,12 +256,12 @@ fn main() {
         let flipped = Tile::project(&img, o);
         for x in 0..image_size_px {
             for y in 0..image_size_px {
-                if monster_img.iter().all(|(dx, dy)| {
+                let found = monster_img.iter().all(|(dx, dy)| {
                     let x = x + dx;
                     let y = y + dy;
                     x < image_size_px && y < image_size_px && flipped[y][x]
-                })
-                {
+                });
+                if found {
                     monster_count += monster_img.len();
                 }
             }
