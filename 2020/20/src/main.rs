@@ -157,6 +157,8 @@ impl<'a> State<'a> {
             return Some(self);
         }
         for ((x, y), cs) in self.constraints.iter() {
+            // Check against every possible tile, which is inefficient
+            // but fast enough in practice!
             for (t, tile) in self.tiles.iter().enumerate() {
                 if self.bind[t].is_some() {
                     continue;
@@ -215,4 +217,26 @@ fn main() {
         }
     }
     println!("Part 1: {}", out);
+
+    assert!(xm.1 - xm.0 == ym.1 - ym.0); // check for square image
+    let size = tiles[0].image.len() - 2; // assume square tiles
+
+    let image_size_px = size * (xm.1 - xm.0 + 1) as usize;
+    let mut img = vec![vec![false; image_size_px]; image_size_px];
+
+    for gx in xm.0..=xm.1 {
+        for gy in ym.0..=ym.1 {
+            let t = *sol.grid.get(&(gx, gy)).unwrap();
+            let tile = Tile::project(&tiles[t].image, sol.bind[t].unwrap());
+            let x = (gx - xm.0) as usize * size;
+            let y = (gy - ym.0) as usize * size;
+            for sx in 0..size {
+                for sy in 0..size {
+                    img[y + sy][x + sx] = tile[sy + 1][sx + 1];
+                }
+            }
+        }
+    }
+
+    Tile::print(&img);
 }
