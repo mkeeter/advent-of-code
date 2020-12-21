@@ -37,16 +37,15 @@ fn main() {
     // Map from ingredient to matching allergen
     let mut bound: HashMap<&str, &str> = HashMap::new();
 
-    while let Some(allergen) = allergens.iter()
+    while let Some((allergen, ingredient)) = allergens.iter()
             .find(|(_a, i)| i.len() == 1)
-            .map(|(a, _i)| *a)
+            .map(|(a, i)| (*a, i.iter().next().copied().unwrap()))
     {
-        let ings: HashSet<&str> = allergens.remove(allergen).unwrap();
-        let ing: &str = ings.into_iter().next().unwrap();
+        allergens.remove(allergen).unwrap();
         for (_a, i) in allergens.iter_mut() {
-            i.remove(&ing);
+            i.remove(&ingredient);
         }
-        bound.insert(ing, allergen);
+        bound.insert(ingredient, allergen);
     }
 
     let banned: HashSet<&str> = bound.iter().map(|(k, _v)| *k).collect();
