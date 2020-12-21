@@ -29,8 +29,9 @@ fn main() {
             *ingredient_count.entry(*i).or_insert(0) += 1;
         }
         for a in algs.iter() {
-            let e = allergens.entry(a).or_insert_with(|| ings.clone());
-            *e = e.intersection(&ings).copied().collect();
+            allergens.entry(a)
+                .and_modify(|e| *e = (&*e) & (&ings))
+                .or_insert_with(|| ings.clone());
         }
     }
 
