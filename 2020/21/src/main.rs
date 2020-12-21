@@ -29,8 +29,8 @@ fn main() {
             *ingredient_count.entry(*i).or_insert(0) += 1;
         }
         for a in algs.iter() {
-            let e = allergens.entry(a).or_insert(ings.clone());
-            *e = e.intersection(&ings).map(|i| *i).collect();
+            let e = allergens.entry(a).or_insert_with(|| ings.clone());
+            *e = e.intersection(&ings).copied().collect();
         }
     }
 
@@ -54,12 +54,9 @@ fn main() {
         .filter(|(i, _n)| !banned.contains(*i))
         .map(|(_i, n)| n)
         .sum::<usize>();
-    println!("{}", out);
+    println!("Part 1: {}", out);
 
-    let mut ingredients: Vec<&str> = ingredient_count.into_iter()
-        .map(|(i, _n)| i)
-        .filter(|i| bound.contains_key(i))
-        .collect();
+    let mut ingredients: Vec<&str> = banned.into_iter().collect();
     ingredients.sort_by_key(|i| bound.get(i).unwrap());
     println!("Part 2: {}", ingredients.join(","));
 }
