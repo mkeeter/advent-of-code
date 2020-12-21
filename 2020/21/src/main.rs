@@ -7,8 +7,8 @@ fn parse_line(s: &str) -> (HashSet<&str>, HashSet<&str>) {
         .split(' ')
         .collect();
 
-    let allergens = iter.next().unwrap();
-    let allergens = allergens[0..allergens.len() - 1]
+    let allergens = iter.next().unwrap()
+        .strip_suffix(')').unwrap()
         .split(", ")
         .collect();
 
