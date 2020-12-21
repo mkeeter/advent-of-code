@@ -49,7 +49,7 @@ fn main() {
         bound.insert(ingredient, allergen);
     }
 
-    let banned: HashSet<&str> = bound.iter().map(|(k, _v)| *k).collect();
+    let banned: HashSet<&str> = bound.keys().copied().collect();
     let out = ingredient_count.iter()
         .filter(|(i, _n)| !banned.contains(*i))
         .map(|(_i, n)| n)
