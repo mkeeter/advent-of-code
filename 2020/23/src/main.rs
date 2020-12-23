@@ -68,8 +68,7 @@ fn main() {
     }
     let ring = run(&nums, 10_000_000);
 
-    print!("Part 2: ");
     let a = ring[1];
     let b = ring[a as usize];
-    println!("{} {} {}", a, b, a as u64 * b as u64);
+    println!("Part 2: {}", a as u64 * b as u64);
 }
