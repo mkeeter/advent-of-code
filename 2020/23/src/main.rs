@@ -28,6 +28,19 @@ fn step(ring: &mut[u32], n: u32) {
     ring[0] = ring[current as usize];
 }
 
+fn run(nums: &[u32], n: usize) -> Vec<u32> {
+    let mut ring = vec![0; nums.len() + 1];
+    for a in nums[0..].windows(2) {
+        ring[a[0] as usize] = a[1];
+    }
+    ring[nums[nums.len() - 1] as usize] = nums[0];  // Make circular
+    ring[0] = nums[0]; // Store the current cup in slot 0
+
+    for _i in 0..n {
+        step(&mut ring[0..], nums.len() as u32)
+    }
+    ring
+}
 
 fn main() {
     let mut input = String::new();
@@ -35,19 +48,10 @@ fn main() {
     let mut nums: Vec<u32> = input.chars()
         .map(|c| c.to_digit(10).unwrap())
         .collect();
-    nums.push(nums[0]);
 
     ////////////////////////////////////////////////////////////////////////////
     // Part 1
-    let mut ring = vec![0; 10];
-    for a in nums[0..].windows(2) {
-        ring[a[0] as usize] = a[1];
-    }
-    ring[0] = nums[0]; // Store the current cup in slot 0
-
-    for _i in 0..100 {
-        step(&mut ring[0..], 9);
-    }
+    let ring = run(&nums, 100);
 
     print!("Part 1: ");
     let mut i = ring[1];
@@ -59,22 +63,10 @@ fn main() {
 
     ////////////////////////////////////////////////////////////////////////////
     // Part 2
-    const N: usize = 1_000_000;
-    let mut ring = vec![0; N + 1];
-    nums.pop();
-    for i in 10..=N {
+    for i in 10..=1_000_000 {
         nums.push(i as u32);
     }
-    nums.push(nums[0]);
-    for a in nums[0..].windows(2) {
-        ring[a[0] as usize] = a[1];
-    }
-    println!("{:?}", ring.iter().max());
-    ring[0] = nums[0]; // Store the current cup in slot 0
-
-    for _i in 0..10_000_000 {
-        step(&mut ring[0..], N as u32);
-    }
+    let ring = run(&nums, 10_000_000);
 
     print!("Part 2: ");
     let a = ring[1];
