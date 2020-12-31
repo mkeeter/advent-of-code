@@ -42,7 +42,7 @@ fn next<I>(iter: &mut std::iter::Peekable<I>) -> Option<Token>
         })
 }
 
-fn tokenize<'a>(s: &'a str) -> impl Iterator<Item=Token> + 'a {
+fn tokenize(s: & str) -> impl Iterator<Item=Token> + '_ {
     let mut iter = s.chars().peekable();
     std::iter::from_fn(move || next(&mut iter))
 }

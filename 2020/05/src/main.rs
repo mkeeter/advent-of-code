@@ -17,7 +17,7 @@ fn main() {
         .map(|line| pos(&line.unwrap()))
         .map(|(row, col)| row * 8 + col)
         .collect::<Vec<_>>();
-    seats.sort();
+    seats.sort_unstable();
 
     println!("Part 1: {}", seats.last().expect("Empty input"));
 

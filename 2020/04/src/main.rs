@@ -18,15 +18,15 @@ fn check(c: &str) -> bool {
     let val = itr.next().unwrap();
 
     match key {
-        "byr" => val.parse().map_or(false, |v: i32| v >= 1920 && v <= 2002),
-        "iyr" => val.parse().map_or(false, |v: i32| v >= 2010 && v <= 2020),
-        "eyr" => val.parse().map_or(false, |v: i32| v >= 2020 && v <= 2030),
+        "byr" => val.parse().map_or(false, |v: i32| (1920..=2002).contains(&v)),
+        "iyr" => val.parse().map_or(false, |v: i32| (2010..=2020).contains(&v)),
+        "eyr" => val.parse().map_or(false, |v: i32| (2020..=2030).contains(&v)),
         "hgt" => HGT.captures(val).map_or(false, |c| {
             let h: i32 = c.get(1).unwrap().as_str().parse().unwrap();
             let unit = c.get(2).unwrap().as_str();
             match unit {
-                "in" => h >= 59 && h <= 76,
-                "cm" => h >= 150 && h <= 193,
+                "in" => (59..=76).contains(&h),
+                "cm" => (150..=193).contains(&h),
                 _ => panic!("Invalid height unit {}", unit),
             }
         }),

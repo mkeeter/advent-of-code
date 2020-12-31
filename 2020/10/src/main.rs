@@ -19,7 +19,7 @@ fn main() {
         .map(|line| line.unwrap().parse().unwrap())
         .collect();
     p.push(0); // the wall outlet
-    p.sort();
+    p.sort_unstable();
     let max = p.last().unwrap() + 3;
     p.push(max); // our device
 

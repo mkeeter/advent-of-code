@@ -8,7 +8,7 @@ fn main() {
                  .split('x')
                  .map(|s| usize::from_str(s).unwrap())
                  .collect::<Vec<_>>();
-            v.sort();
+            v.sort_unstable();
             (v[0], v[1], v[2]) })
         .collect::<Vec<_>>();
 
