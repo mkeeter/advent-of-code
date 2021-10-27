@@ -1,4 +1,4 @@
-Solutions to [Advent of Code](adventofcode.com) for all years (2015-2020).
+Solutions to [Advent of Code](https://adventofcode.com) for all years (2015-2020).
 
 |🗓 Year                                |🌟 Stars |🔠 Languages        |✨ Standardized |
 |---------------------------------------|---------|---------------------|--------------|
