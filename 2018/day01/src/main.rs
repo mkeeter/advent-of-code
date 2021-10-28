@@ -2,7 +2,7 @@ use std::io::{BufReader, BufRead};
 use std::fs::File;
 use std::collections::HashSet;
 
-fn parse_line(line: &String) -> i32 {
+fn parse_line(line: &str) -> i32 {
     let mut i = 0;
     let mut sign = 1;
     for c in line.chars() {
@@ -14,7 +14,7 @@ fn parse_line(line: &String) -> i32 {
             i = i * 10 + (c.to_digit(10).unwrap() as i32);
         }
     }
-    return i * sign;
+    i * sign
 }
 
 fn main() {

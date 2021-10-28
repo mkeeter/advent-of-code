@@ -28,7 +28,7 @@ named!(parse_line<CompleteByteSlice, Patch>,
               w: coord >>
               tag!("x") >>
               h: coord >>
-              (Patch { id: id, x: x, y: y, w: w, h: h})));
+              (Patch { id, x, y, w, h})));
 
 named!(parse_lines<CompleteByteSlice, Vec<Patch>>,
        many0!(do_parse!( p: parse_line >> tag!("\n") >> (p))));
