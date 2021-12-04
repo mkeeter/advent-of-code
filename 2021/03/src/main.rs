@@ -23,10 +23,7 @@ fn rating(mut nums: Vec<i32>, bits: usize, mode: bool) -> i32 {
 
 fn main() {
     let stdin = std::io::stdin();
-    let mut iter = stdin.lock()
-        .lines()
-        .map(|line| line.unwrap())
-        .peekable();
+    let mut iter = stdin.lock().lines().map(|line| line.unwrap()).peekable();
 
     let bits = iter.peek().unwrap().len();
     let nums = iter
