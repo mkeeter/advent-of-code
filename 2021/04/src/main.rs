@@ -23,15 +23,13 @@ impl Board {
         }
     }
     fn winning(&self) -> bool {
-        (0..5)
-            .flat_map(|i| {
-                [
-                    (0b0000000000000000000011111, 5),
-                    (0b0000100001000010000100001, 1),
-                ]
-                .map(|(mask, stride)| mask << (i * stride))
-            })
-            .any(|mask| self.bits & mask == mask)
+        [
+            (0b0000000000000000000011111, 5),
+            (0b0000100001000010000100001, 1),
+        ]
+        .iter()
+        .flat_map(|(mask, stride)| (0..5).map(move |i| mask << (i * stride)))
+        .any(|mask| self.bits & mask == mask)
     }
     fn score(&self) -> u32 {
         (0..25)
