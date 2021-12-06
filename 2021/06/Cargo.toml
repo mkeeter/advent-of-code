@@ -3,6 +3,3 @@ name = "day06"
 version = "0.1.0"
 authors = ["Matt Keeter <matt.j.keeter@gmail.com>"]
 edition = "2018"
-
-[dependencies]
-itertools = "0.10"
