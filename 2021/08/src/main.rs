@@ -13,11 +13,8 @@ fn solve(input: &HashSet<u8>, output: &[u8]) -> u32 {
     let mut seg_counts = [0; 7];
     input
         .iter()
-        .flat_map(|num| {
-            (0..7).filter_map(move |i| if num & (1 << i) != 0 { Some(i) } else { None })
-        })
+        .flat_map(|num| (0..7).filter(move |i| num & (1 << i) != 0))
         .for_each(|i| seg_counts[i] += 1);
-    println!("{:?}", seg_counts);
 
     let seg_b = 1 << seg_counts.iter().position(|&n| n == 6).unwrap();
     let seg_e = 1 << seg_counts.iter().position(|&n| n == 4).unwrap();
@@ -72,9 +69,7 @@ fn main() {
         .lines()
         .map(|line| {
             let line = line.unwrap();
-            println!("line {:?}", line);
             let mut iter = line.split('|').map(|chunk| {
-                println!("chunk: {:?}", chunk);
                 chunk.split_whitespace().map(|word| {
                     word.chars()
                         .map(|c| 1 << (c as u32 - 'a' as u32))
@@ -83,7 +78,6 @@ fn main() {
             });
             let inputs: HashSet<u8> = iter.next().unwrap().collect();
             let outputs: Vec<u8> = iter.next().unwrap().collect();
-            println!("{:?} {:?}", inputs, outputs);
             assert!(inputs.len() == 10);
             assert!(iter.next().is_none());
             assert!(outputs.len() == 4);
