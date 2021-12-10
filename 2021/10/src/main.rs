@@ -13,15 +13,10 @@ fn parse(s: &str) -> Result<usize, usize> {
                 stack.pop();
             }
             // Otherwise, it's an invalid closing char
-            (_, ')' | ']' | '}' | '>') => {
-                return Err(match c {
-                    ')' => 3,
-                    ']' => 57,
-                    '}' => 1197,
-                    '>' => 25137,
-                    _ => unreachable!(),
-                })
-            }
+            (_, ')') => return Err(3),
+            (_, ']') => return Err(57),
+            (_, '}') => return Err(1197),
+            (_, '>') => return Err(25137),
             _ => panic!("Invalid input {}", s),
         }
     }
