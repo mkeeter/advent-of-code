@@ -5,27 +5,28 @@ use std::io::BufRead;
 const START: u16 = 0;
 const END: u16 = 1;
 
-fn search(next: u16, path_seen: u16, allow_revisit: bool, links: &[u16], small_mask: u16) -> usize {
-    let next_mask = links[next as usize];
-    ((START + 1)..16)
-        .filter(|b| (next_mask & (1 << b)) != 0)
-        .map(|next| {
-            if next == END {
-                return 1;
-            }
-            let revisiting = (small_mask & path_seen & (1 << next)) != 0;
-            if revisiting && !allow_revisit {
-                return 0;
-            }
-            search(
-                next,
-                path_seen | (1 << next),
-                allow_revisit && !revisiting,
-                links,
-                small_mask,
-            )
-        })
-        .sum()
+struct Graph<'a> {
+    links: &'a [u16],
+    small_mask: u16,
+}
+
+impl<'a> Graph<'a> {
+    fn search(&self, next: u16, visited: u16, allow_revisit: bool) -> usize {
+        let next_mask = self.links[next as usize];
+        ((START + 1)..16)
+            .filter(|b| (next_mask & (1 << b)) != 0)
+            .map(|next| {
+                if next == END {
+                    return 1;
+                }
+                let revisiting = (self.small_mask & visited & (1 << next)) != 0;
+                if revisiting && !allow_revisit {
+                    return 0;
+                }
+                self.search(next, visited | (1 << next), allow_revisit && !revisiting)
+            })
+            .sum()
+    }
 }
 
 fn main() {
@@ -60,6 +61,11 @@ fn main() {
         links[b as usize] |= 1 << a;
     });
 
-    println!("Part 1: {}", search(START, 0, false, &links, small_mask));
-    println!("Part 2: {}", search(START, 0, true, &links, small_mask));
+    let g = Graph {
+        links: &links,
+        small_mask,
+    };
+
+    println!("Part 1: {}", g.search(START, 0, false));
+    println!("Part 2: {}", g.search(START, 0, true));
 }
