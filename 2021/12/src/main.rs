@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto;
-use std::io::Read;
+use std::io::BufRead;
 
 use smallvec::SmallVec;
 
@@ -73,11 +73,9 @@ fn main() {
         }
     };
 
-    let mut input = String::new();
-    std::io::stdin().read_to_string(&mut input).unwrap();
-
     let mut links: Vec<u16> = vec![];
-    input.lines().for_each(|line| {
+    std::io::stdin().lock().lines().for_each(|line| {
+        let line = line.unwrap();
         let mut iter = line.split('-');
         let a = room_id(iter.next().unwrap().to_string());
         let b = room_id(iter.next().unwrap().to_string());
@@ -92,12 +90,12 @@ fn main() {
     path.push(START);
     println!(
         "Part 1: {}",
-        search(&mut path, 1 << START, &links, small, &mut seen, false)
+        search(&mut path, 0, &links, small, &mut seen, false)
     );
 
     let mut seen: HashSet<Path> = HashSet::new();
     println!(
         "Part 2: {}",
-        search(&mut path, 1 << START, &links, small, &mut seen, true)
+        search(&mut path, 0, &links, small, &mut seen, true)
     );
 }
