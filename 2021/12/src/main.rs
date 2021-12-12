@@ -13,7 +13,7 @@ struct Graph<'a> {
 impl<'a> Graph<'a> {
     fn search(&self, next: u16, visited: u16, allow_revisit: bool) -> usize {
         let next_mask = self.links[next as usize];
-        ((START + 1)..16)
+        ((START + 1)..self.links.len() as u16)
             .filter(|b| (next_mask & (1 << b)) != 0)
             .map(|next| {
                 if next == END {
