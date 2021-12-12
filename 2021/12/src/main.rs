@@ -5,7 +5,7 @@ use std::io::BufRead;
 const START: u16 = 0;
 const END: u16 = 1;
 
-fn search(next: u16, path_seen: u16, links: &[u16], small_mask: u16, allow_revisit: bool) -> usize {
+fn search(next: u16, path_seen: u16, allow_revisit: bool, links: &[u16], small_mask: u16) -> usize {
     let next_mask = links[next as usize];
     ((START + 1)..16)
         .filter(|b| (next_mask & (1 << b)) != 0)
@@ -20,9 +20,9 @@ fn search(next: u16, path_seen: u16, links: &[u16], small_mask: u16, allow_revis
             search(
                 next,
                 path_seen | (1 << next),
+                allow_revisit && !revisiting,
                 links,
                 small_mask,
-                allow_revisit && !revisiting,
             )
         })
         .sum()
@@ -60,6 +60,6 @@ fn main() {
         links[b as usize] |= 1 << a;
     });
 
-    println!("Part 1: {}", search(START, 0, &links, small_mask, false));
-    println!("Part 2: {}", search(START, 0, &links, small_mask, true));
+    println!("Part 1: {}", search(START, 0, false, &links, small_mask));
+    println!("Part 2: {}", search(START, 0, true, &links, small_mask));
 }
