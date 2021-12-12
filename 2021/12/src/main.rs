@@ -1,62 +1,103 @@
 use std::collections::{HashMap, HashSet};
+use std::convert::TryInto;
 use std::io::Read;
 
-type Path<'a> = Vec<&'a str>;
+use smallvec::SmallVec;
 
-fn search<'a>(
-    path: Vec<&'a str>,
-    links: &HashMap<&'a str, Path<'a>>,
-    seen: &mut HashSet<Path<'a>>,
+const START: u16 = 0;
+const END: u16 = 1;
+
+type Path = SmallVec<[u16; 16]>;
+
+fn search(
+    path: &mut Path,
+    path_seen: u16,
+    links: &[u16],
+    small_mask: u16,
+    seen: &mut HashSet<Path>,
     allow_revisit: bool,
 ) -> usize {
     if !seen.insert(path.clone()) {
         return 0;
     }
-    if *path.last().unwrap() == "end" {
-        return 1;
-    }
-    let mut out = 0;
-    for next in links[path.last().unwrap()].iter() {
-        if *next == "start" {
-            continue;
-        }
-        let is_small = next.chars().all(|c| c.is_lowercase());
-        // something something accidentally quadratic
-        let prev_seen = is_small && path.iter().any(|p| p == next);
-        let allow_revisit = if prev_seen {
-            if !allow_revisit {
-                continue;
-            } else {
-                false
+    let next_mask = links[*path.last().unwrap() as usize];
+    (0..16)
+        .filter(|b| (next_mask & (1 << b)) != 0)
+        .map(|next| {
+            match next {
+                START => return 0,
+                END => return 1,
+                _ => (),
             }
-        } else {
-            allow_revisit
-        };
-        let mut path = path.clone();
-        path.push(next);
-        out += search(path, links, seen, allow_revisit);
-    }
-    out
+            let allow_revisit = if (small_mask & path_seen & (1 << next)) != 0 {
+                if !allow_revisit {
+                    return 0;
+                } else {
+                    false
+                }
+            } else {
+                allow_revisit
+            };
+            path.push(next);
+            let out = search(
+                path,
+                path_seen | (1 << next),
+                links,
+                small_mask,
+                seen,
+                allow_revisit,
+            );
+            path.pop();
+            out
+        })
+        .sum()
 }
 
 fn main() {
-    let mut links: HashMap<&str, Vec<&str>> = HashMap::new();
+    let mut rooms: HashMap<String, u16> = HashMap::new();
+    rooms.insert("start".to_string(), START);
+    rooms.insert("end".to_string(), END);
+
+    let mut small: u16 = 0;
+    let mut room_id = |name: String| -> u16 {
+        match rooms.get(&name) {
+            Some(r) => *r,
+            None => {
+                let out = rooms.len().try_into().unwrap();
+                if name.chars().all(|c| c.is_lowercase()) {
+                    small |= 1u16 << out;
+                }
+                rooms.insert(name, out);
+                out
+            }
+        }
+    };
 
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).unwrap();
 
+    let mut links: Vec<u16> = vec![];
     input.lines().for_each(|line| {
         let mut iter = line.split('-');
-        let a = iter.next().unwrap();
-        let b = iter.next().unwrap();
+        let a = room_id(iter.next().unwrap().to_string());
+        let b = room_id(iter.next().unwrap().to_string());
 
-        links.entry(a).or_default().push(b);
-        links.entry(b).or_default().push(a);
+        links.resize(links.len().max(a.max(b) as usize + 1), 0);
+        links[a as usize] |= 1 << b;
+        links[b as usize] |= 1 << a;
     });
 
-    let mut seen: HashSet<Vec<&str>> = HashSet::new();
-    println!("Part 1: {}", search(vec!["start"], &links, &mut seen, false));
+    let mut seen: HashSet<Path> = HashSet::new();
+    let mut path = Path::new();
+    path.push(START);
+    println!(
+        "Part 1: {}",
+        search(&mut path, 1 << START, &links, small, &mut seen, false)
+    );
 
-    let mut seen: HashSet<Vec<&str>> = HashSet::new();
-    println!("Part 2: {}", search(vec!["start"], &links, &mut seen, true));
+    let mut seen: HashSet<Path> = HashSet::new();
+    println!(
+        "Part 2: {}",
+        search(&mut path, 1 << START, &links, small, &mut seen, true)
+    );
 }

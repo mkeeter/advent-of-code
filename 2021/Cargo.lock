@@ -67,6 +67,9 @@ version = "0.1.0"
 [[package]]
 name = "day12"
 version = "0.1.0"
+dependencies = [
+ "smallvec",
+]
 
 [[package]]
 name = "either"
@@ -155,6 +158,12 @@ name = "regex-syntax"
 version = "0.6.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
+
+[[package]]
+name = "smallvec"
+version = "1.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ecab6c735a6bb4139c0caafd0cc3635748bbb3acf4550e8138122099251f309"
 
 [[package]]
 name = "structmeta"
