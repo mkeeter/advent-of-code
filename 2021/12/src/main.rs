@@ -1,26 +1,12 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::convert::TryInto;
 use std::io::BufRead;
-
-use smallvec::SmallVec;
 
 const START: u16 = 0;
 const END: u16 = 1;
 
-type Path = SmallVec<[u16; 16]>;
-
-fn search(
-    path: &mut Path,
-    path_seen: u16,
-    links: &[u16],
-    small_mask: u16,
-    seen: &mut HashSet<Path>,
-    allow_revisit: bool,
-) -> usize {
-    if !seen.insert(path.clone()) {
-        return 0;
-    }
-    let next_mask = links[*path.last().unwrap() as usize];
+fn search(next: u16, path_seen: u16, links: &[u16], small_mask: u16, allow_revisit: bool) -> usize {
+    let next_mask = links[next as usize];
     (0..16)
         .filter(|b| (next_mask & (1 << b)) != 0)
         .map(|next| {
@@ -38,16 +24,13 @@ fn search(
             } else {
                 allow_revisit
             };
-            path.push(next);
             let out = search(
-                path,
+                next,
                 path_seen | (1 << next),
                 links,
                 small_mask,
-                seen,
                 allow_revisit,
             );
-            path.pop();
             out
         })
         .sum()
@@ -85,17 +68,6 @@ fn main() {
         links[b as usize] |= 1 << a;
     });
 
-    let mut seen: HashSet<Path> = HashSet::new();
-    let mut path = Path::new();
-    path.push(START);
-    println!(
-        "Part 1: {}",
-        search(&mut path, 0, &links, small_mask, &mut seen, false)
-    );
-
-    let mut seen: HashSet<Path> = HashSet::new();
-    println!(
-        "Part 2: {}",
-        search(&mut path, 0, &links, small_mask, &mut seen, true)
-    );
+    println!("Part 1: {}", search(START, 0, &links, small_mask, false));
+    println!("Part 2: {}", search(START, 0, &links, small_mask, true));
 }
