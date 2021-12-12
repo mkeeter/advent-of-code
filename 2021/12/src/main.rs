@@ -2,18 +2,17 @@ use std::collections::HashMap;
 use std::convert::TryInto;
 use std::io::BufRead;
 
-const START: u16 = 0;
-const END: u16 = 1;
+type Room = u16;
+const START: Room = 0;
+const END: Room = 1;
 
-fn search(next: u16, path_seen: u16, links: &[u16], small_mask: u16, allow_revisit: bool) -> usize {
+fn search(next: Room, path_seen: Room, links: &[Room], small_mask: Room, allow_revisit: bool) -> usize {
     let next_mask = links[next as usize];
-    (0..16)
+    ((START + 1)..(Room::BITS as Room))
         .filter(|b| (next_mask & (1 << b)) != 0)
         .map(|next| {
-            match next {
-                START => return 0,
-                END => return 1,
-                _ => (),
+            if next == END {
+                return 1;
             }
             let revisiting = (small_mask & path_seen & (1 << next)) != 0;
             if revisiting && !allow_revisit {
@@ -31,18 +30,18 @@ fn search(next: u16, path_seen: u16, links: &[u16], small_mask: u16, allow_revis
 }
 
 fn main() {
-    let mut rooms: HashMap<String, u16> = HashMap::new();
+    let mut rooms: HashMap<String, Room> = HashMap::new();
     rooms.insert("start".to_string(), START);
     rooms.insert("end".to_string(), END);
 
-    let mut small_mask: u16 = 0;
-    let mut room_id = |name: String| -> u16 {
+    let mut small_mask: Room = 0;
+    let mut room_id = |name: String| -> Room {
         match rooms.get(&name) {
             Some(r) => *r,
             None => {
                 let out = rooms.len().try_into().unwrap();
                 if name.chars().all(|c| c.is_lowercase()) {
-                    small_mask |= 1u16 << out;
+                    small_mask |= (1 << out) as Room;
                 }
                 rooms.insert(name, out);
                 out
@@ -50,7 +49,7 @@ fn main() {
         }
     };
 
-    let mut links: Vec<u16> = vec![];
+    let mut links: Vec<Room> = vec![];
     std::io::stdin().lock().lines().for_each(|line| {
         let line = line.unwrap();
         let mut iter = line.split('-');
