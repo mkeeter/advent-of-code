@@ -58,14 +58,14 @@ fn main() {
     rooms.insert("start".to_string(), START);
     rooms.insert("end".to_string(), END);
 
-    let mut small: u16 = 0;
+    let mut small_mask: u16 = 0;
     let mut room_id = |name: String| -> u16 {
         match rooms.get(&name) {
             Some(r) => *r,
             None => {
                 let out = rooms.len().try_into().unwrap();
                 if name.chars().all(|c| c.is_lowercase()) {
-                    small |= 1u16 << out;
+                    small_mask |= 1u16 << out;
                 }
                 rooms.insert(name, out);
                 out
@@ -90,12 +90,12 @@ fn main() {
     path.push(START);
     println!(
         "Part 1: {}",
-        search(&mut path, 0, &links, small, &mut seen, false)
+        search(&mut path, 0, &links, small_mask, &mut seen, false)
     );
 
     let mut seen: HashSet<Path> = HashSet::new();
     println!(
         "Part 2: {}",
-        search(&mut path, 0, &links, small, &mut seen, true)
+        search(&mut path, 0, &links, small_mask, &mut seen, true)
     );
 }
