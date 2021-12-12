@@ -15,23 +15,17 @@ fn search(next: u16, path_seen: u16, links: &[u16], small_mask: u16, allow_revis
                 END => return 1,
                 _ => (),
             }
-            let allow_revisit = if (small_mask & path_seen & (1 << next)) != 0 {
-                if !allow_revisit {
-                    return 0;
-                } else {
-                    false
-                }
-            } else {
-                allow_revisit
-            };
-            let out = search(
+            let revisiting = (small_mask & path_seen & (1 << next)) != 0;
+            if revisiting && !allow_revisit {
+                return 0;
+            }
+            search(
                 next,
                 path_seen | (1 << next),
                 links,
                 small_mask,
-                allow_revisit,
-            );
-            out
+                allow_revisit && !revisiting,
+            )
         })
         .sum()
 }
