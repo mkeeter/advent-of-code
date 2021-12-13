@@ -34,19 +34,17 @@ fn main() {
     };
 
     println!("Part 1: {}", apply(folds[0].0, folds[0].1));
+
+    println!("Part 2:");
     for (axis, pos) in &folds[1..] {
         apply(*axis, *pos);
     }
-
-    let xmin = dots.iter().map(|d| d[0]).min().unwrap();
     let xmax = dots.iter().map(|d| d[0]).max().unwrap();
-    let ymin = dots.iter().map(|d| d[1]).min().unwrap();
     let ymax = dots.iter().map(|d| d[1]).max().unwrap();
     let dots = dots.into_iter().collect::<HashSet<_>>();
 
-    println!("Part 2:");
-    for y in ymin..=ymax {
-        for x in xmin..=xmax {
+    for y in 0..=ymax {
+        for x in 0..=xmax {
             if dots.contains(&[x, y]) {
                 print!("█");
             } else {
