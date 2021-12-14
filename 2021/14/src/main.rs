@@ -3,27 +3,26 @@ use std::io::BufRead;
 
 /// Pairs of chars are packed into a 10-bit value
 fn count(
-    start: u16,
-    num: usize,
+    pair: u16,
+    rounds: u8,
     rules: &[u8],
-    cache: &mut HashMap<(u16, usize), HashMap<u16, usize>>,
-) -> HashMap<u16, usize> {
-    if let Some(score) = cache.get(&(start, num)) {
-        return score.clone();
-    }
-    if num == 0 {
-        let mut out = HashMap::new();
-        *out.entry(start & 0x3e0).or_insert(0) += 1;
+    cache: &mut HashMap<(u16, u8), [usize; 26]>,
+) -> [usize; 26] {
+    if rounds == 0 {
+        let mut out = [0; 26];
+        out[(pair >> 5) as usize] += 1;
         return out;
+    } else if let Some(score) = cache.get(&(pair, rounds)) {
+        return *score;
     }
 
-    let a = (start & 0x3e0) | (rules[start as usize] as u16);
-    let b = (start & 0x01F) | ((rules[start as usize] as u16) << 5);
-    let mut out = count(a, num - 1, rules, cache);
-    for (k, v) in count(b, num - 1, rules, cache).into_iter() {
-        *out.entry(k).or_default() += v;
+    let a = (pair & 0b1111100000) | (rules[pair as usize] as u16);
+    let b = (pair & 0b0000011111) | ((rules[pair as usize] as u16) << 5);
+    let mut out = count(a, rounds - 1, rules, cache);
+    for (i, v) in count(b, rounds - 1, rules, cache).iter().enumerate() {
+        out[i] += v;
     }
-    cache.insert((start, num), out.clone());
+    cache.insert((pair, rounds), out);
     out
 }
 
@@ -37,31 +36,35 @@ fn main() {
     let mut rules = vec![0; 1024];
     for line in iter {
         let mut iter = line.split(" -> ");
-        let mut input = iter.next().unwrap().chars();
-        let a = (input.next().unwrap() as u32 - 'A' as u32) as u16;
-        let b = (input.next().unwrap() as u32 - 'A' as u32) as u16;
+        let mut input = iter.next().unwrap().bytes();
+        let a = (input.next().unwrap() - b'A') as u16;
+        let b = (input.next().unwrap() - b'A') as u16;
         let pair = (a << 5) | b;
 
-        let next = (iter.next().unwrap().chars().next().unwrap() as u32 - 'A' as u32) as u8;
+        let next = iter.next().unwrap().bytes().next().unwrap() - b'A';
         rules[pair as usize] = next;
     }
 
-    let input = template.bytes().zip(template.bytes().skip(1)).map(|(a, b)| {
-        (((a - b'A') as u16) << 5) | ((b - b'A') as u16)
-    }).collect::<Vec<_>>();
+    let input = template
+        .bytes()
+        .zip(template.bytes().skip(1))
+        .map(|(a, b)| (((a - b'A') as u16) << 5) | ((b - b'A') as u16))
+        .collect::<Vec<_>>();
 
-    let mut pairs: HashMap<u16, usize> = HashMap::new();
     let mut cache = HashMap::new();
-    for pair in input {
-        for (k, v) in count(pair, 40, &rules, &mut cache).into_iter() {
-            *pairs.entry(k).or_default() += v;
+    for (i, &n) in [10, 40].iter().enumerate() {
+        let mut out = [0; 26];
+        for pair in &input {
+            for (i, v) in count(*pair, n, &rules, &mut cache).iter().enumerate() {
+                out[i] += v;
+            }
         }
-    }
-    let mut out = [0; 26];
-    for (k, v) in pairs.into_iter() {
-        out[(k >> 5) as usize] += v;
-    }
-    out[(template.bytes().last().unwrap() - b'A') as usize] += 1;
+        out[(template.bytes().last().unwrap() - b'A') as usize] += 1;
 
-    println!("{}", out.iter().max().unwrap() - out.iter().filter(|v| **v > 0).min().unwrap());
+        println!(
+            "Part {}: {}",
+            i + 1,
+            out.iter().max().unwrap() - out.iter().filter(|v| **v > 0).min().unwrap()
+        );
+    }
 }
