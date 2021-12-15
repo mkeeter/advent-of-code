@@ -5,14 +5,12 @@ use std::io::BufRead;
 #[derive(Ord, PartialOrd, Eq, PartialEq)]
 struct Task {
     score: Reverse<usize>,
-    prev: (usize, usize),
     pos: (usize, usize),
 }
 
 struct Tile {
     weight: usize,
     score: Option<usize>,
-    prev: Option<(usize, usize)>,
 }
 
 fn search(map: &[Vec<u8>]) -> usize {
@@ -23,7 +21,6 @@ fn search(map: &[Vec<u8>]) -> usize {
                 .map(|weight| Tile {
                     weight: *weight as usize,
                     score: None,
-                    prev: None,
                 })
                 .collect()
         })
@@ -32,7 +29,6 @@ fn search(map: &[Vec<u8>]) -> usize {
     let mut todo = BinaryHeap::new();
     todo.push(Task {
         score: Reverse(0),
-        prev: (0, 0),
         pos: (0, 0),
     });
 
@@ -47,7 +43,6 @@ fn search(map: &[Vec<u8>]) -> usize {
             continue;
         }
         tile.score = Some(task.score.0);
-        tile.prev = Some(task.prev);
 
         for (dx, dy) in &[(-1, 0), (1, 0), (0, 1), (0, -1)] {
             let (x, y) = (x as i64 + dx, y as i64 + dy);
@@ -58,7 +53,6 @@ fn search(map: &[Vec<u8>]) -> usize {
             todo.push(Task {
                 score: Reverse(task.score.0 + map[y][x].weight),
                 pos: (x, y),
-                prev: task.pos,
             });
         }
     }
