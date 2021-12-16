@@ -77,7 +77,7 @@ impl Packet {
         self.version as u64
             + match &self.body {
                 Body::Value(_) => 0,
-                Body::Operator(ops) => ops.iter().map(|v| v.version_sum()).sum(),
+                Body::Operator(ops) => ops.iter().map(Self::version_sum).sum(),
             }
     }
     fn value(&self) -> u64 {
@@ -87,10 +87,10 @@ impl Packet {
                 *v
             }
             Body::Operator(ops) => match self.typeid {
-                0 => ops.iter().map(|op| op.value()).sum(),
-                1 => ops.iter().map(|op| op.value()).product(),
-                2 => ops.iter().map(|op| op.value()).min().unwrap(),
-                3 => ops.iter().map(|op| op.value()).max().unwrap(),
+                0 => ops.iter().map(Self::value).sum(),
+                1 => ops.iter().map(Self::value).product(),
+                2 => ops.iter().map(Self::value).min().unwrap(),
+                3 => ops.iter().map(Self::value).max().unwrap(),
                 5 => (ops[0].value() > ops[1].value()) as u64,
                 6 => (ops[0].value() < ops[1].value()) as u64,
                 7 => (ops[0].value() == ops[1].value()) as u64,
