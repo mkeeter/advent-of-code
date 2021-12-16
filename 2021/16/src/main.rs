@@ -1,20 +1,21 @@
 struct BitReader {
     pos: usize,
-    data: Vec<u64>,
+    data: Vec<u32>,
 }
 impl BitReader {
     fn read(&mut self, mut amt: usize) -> u64 {
-        let mut out = 0;
+        let mut out: u64 = 0;
         while amt > 0 {
-            let bit = 63 - (self.pos % 64);
+            let bit = 31 - (self.pos % 32);
             let size = amt.min(bit + 1);
             let shift = bit + 1 - size;
             let mask = (1 << size) - 1;
-            out = (out << size) | (self.data[self.pos / 64] >> shift) & mask;
+
+            out <<= size;
+            out |= ((self.data[self.pos / 32] as u64) >> shift) & mask;
             self.pos += size;
             amt -= size;
         }
-        println!("{}", out);
         out
     }
 }
@@ -81,7 +82,10 @@ impl Packet {
     }
     fn value(&self) -> u64 {
         match &self.body {
-            Body::Value(v) => *v,
+            Body::Value(v) => {
+                assert!(self.typeid == 4);
+                *v
+            }
             Body::Operator(ops) => match self.typeid {
                 0 => ops.iter().map(|op| op.value()).sum(),
                 1 => ops.iter().map(|op| op.value()).product(),
@@ -99,15 +103,15 @@ impl Packet {
 fn main() {
     let mut input = String::new();
     std::io::stdin().read_line(&mut input).unwrap();
-    input = input.trim().to_owned();
-    while input.len() % 16 != 0 {
-        input.push('0');
-    }
     let data = input
+        .trim()
         .as_bytes()
-        .chunks(16)
-        .map(|c| u64::from_str_radix(std::str::from_utf8(c).unwrap(), 16).unwrap())
-        .collect::<Vec<u64>>();
+        .chunks(8)
+        .map(|c| {
+            let s = std::str::from_utf8(c).unwrap();
+            u32::from_str_radix(s, 16).unwrap() << (4 * (8 - c.len()))
+        })
+        .collect::<Vec<u32>>();
     let mut reader = BitReader { pos: 0, data };
 
     let root = Packet::from(&mut reader);
