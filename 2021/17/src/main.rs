@@ -31,9 +31,9 @@ fn main() {
     std::io::stdin().read_to_string(&mut input).unwrap();
     let target: Target = input.trim().parse().unwrap();
 
-    let vx_max = target.xmax.abs().max(target.xmin.abs());
+    assert!(target.xmin > 0);
     let vy_max = target.ymax.abs().max(target.ymin.abs());
-    let out = &(-vx_max..=vx_max)
+    let out = &(0..=target.xmax)
         .flat_map(|vx| (-vy_max..=vy_max).map(move |vy| (vx, vy)))
         .filter_map(|(vx, vy)| sim(vx, vy, &target))
         .fold((0, 0), |(ymax, count), y| (ymax.max(y), count + 1));
