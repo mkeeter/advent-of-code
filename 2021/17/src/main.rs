@@ -32,8 +32,9 @@ fn main() {
     let target: Target = input.trim().parse().unwrap();
 
     assert!(target.xmin > 0);
+    let vx_min = &(0..).find(|vx| (vx * (vx + 1)) / 2 >= target.xmin).unwrap();
     let vy_max = target.ymax.abs().max(target.ymin.abs());
-    let out = &(0..=target.xmax)
+    let out = &(*vx_min..=target.xmax)
         .flat_map(|vx| (-vy_max..=vy_max).map(move |vy| (vx, vy)))
         .filter_map(|(vx, vy)| sim(vx, vy, &target))
         .fold((0, 0), |(ymax, count), y| (ymax.max(y), count + 1));
