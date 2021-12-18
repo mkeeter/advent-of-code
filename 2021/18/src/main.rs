@@ -23,7 +23,7 @@ fn parse_pair(input: &str) -> IResult<&str, (Number, Number)> {
 fn parse_value(input: &str) -> IResult<&str, Number> {
     alt((
         map(parse_num, Number::Value),
-        map(parse_pair, |(a, b)| Number::Pair(Box::new((a, b)))),
+        map(map(parse_pair, Box::new), Number::Pair)
     ))(input)
 }
 
