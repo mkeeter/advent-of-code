@@ -82,7 +82,7 @@ impl Number {
     }
     fn simplify_explode(&mut self, depth: u8) -> Output {
         match self {
-            Number::Value(_) => return Output::None,
+            Number::Value(_) => Output::None,
             Number::Pair(p) => {
                 if depth >= 4 {
                     let a = p.0.value().unwrap();
@@ -91,34 +91,32 @@ impl Number {
                     return Output::Explode(a, b);
                 }
                 match p.0.simplify_explode(depth + 1) {
-                    Output::None => (),
                     Output::Explode(a, b) => {
                         p.1.add_left(b);
-                        return Output::AddLeft(a);
+                        Output::AddLeft(a)
                     }
                     Output::AddRight(a) => {
                         p.1.add_left(a);
-                        return Output::Done;
+                        Output::Done
                     }
-                    Output::Done => return Output::Done,
-                    Output::AddLeft(a) => return Output::AddLeft(a),
-                };
-                match p.1.simplify_explode(depth + 1) {
-                    Output::None => (),
-                    Output::Explode(a, b) => {
-                        p.0.add_right(a);
-                        return Output::AddRight(b);
+                    Output::AddLeft(a) => Output::AddLeft(a),
+                    Output::Done => Output::Done,
+                    Output::None => match p.1.simplify_explode(depth + 1) {
+                        Output::Explode(a, b) => {
+                            p.0.add_right(a);
+                            Output::AddRight(b)
+                        }
+                        Output::AddLeft(a) => {
+                            p.0.add_right(a);
+                            Output::Done
+                        }
+                        Output::AddRight(a) => Output::AddRight(a),
+                        Output::Done => Output::Done,
+                        Output::None => Output::None,
                     }
-                    Output::AddLeft(a) => {
-                        p.0.add_right(a);
-                        return Output::Done;
-                    }
-                    Output::Done => return Output::Done,
-                    Output::AddRight(a) => return Output::AddRight(a),
-                };
+                }
             }
         }
-        Output::None
     }
 
     fn add_left(&mut self, a: u8) {
