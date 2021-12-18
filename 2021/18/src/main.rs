@@ -1,17 +1,16 @@
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    character::complete::one_of,
-    combinator::{map, recognize},
-    multi::many1,
+    character::complete::satisfy,
+    combinator::map,
     sequence::{delimited, separated_pair},
-    IResult,
+    AsChar, IResult,
 };
 use std::io::BufRead;
 
 fn parse_num(input: &str) -> IResult<&str, u8> {
-    map(recognize(many1(one_of("0123456789"))), |s: &str| {
-        s.parse().unwrap()
+    map(satisfy(|c| c.is_dec_digit()), |c: char| {
+        (c as u32 - '0' as u32) as u8
     })(input)
 }
 fn parse_pair(input: &str) -> IResult<&str, (Number, Number)> {
