@@ -62,14 +62,13 @@ fn align(base: &HashSet<Position>, other: &HashSet<Position>) -> Option<Alignmen
                 let alignment = Alignment { rot, offset };
                 assert_eq!(transform(o, alignment), b);
                 let mut matches = 0;
-                for &o in other {
-                    let o = transform(o, alignment);
-                    if base.contains(&o) {
-                        matches += 1;
+                for (i, &o) in other.iter().enumerate() {
+                    matches += base.contains(&transform(o, alignment)) as usize;
+                    if matches >= 12 {
+                        return Some(alignment);
+                    } else if matches + (other.len() - i) < 12 {
+                        break; // Not enough matches remaining
                     }
-                }
-                if matches >= 12 {
-                    return Some(alignment);
                 }
             }
         }
@@ -93,7 +92,6 @@ fn main() {
             data.last_mut().unwrap().insert(d);
         }
     }
-    println!("{:?}", data);
 
     let mut checked = vec![vec![false; data.len()]; data.len()];
     let mut alignments: Vec<Option<(Alignment, usize)>> = vec![None; data.len()];
@@ -106,6 +104,7 @@ fn main() {
     ));
 
     while !alignments.iter().all(|a| a.is_some()) {
+        let mut changed = false;
         for j in 0..data.len() {
             if alignments[j].is_some() {
                 continue;
@@ -117,12 +116,17 @@ fn main() {
                 checked[i][j] = true;
                 if let Some(a) = align(&data[i], &data[j]) {
                     alignments[j] = Some((a, i));
+                    changed = true;
+                    break;
                 }
             }
         }
+        if !changed {
+            panic!("Could not find new alignment");
+        }
     }
     let mut beacons = HashSet::new();
-    let mut scanner_positions = vec![];
+    let mut scanners = vec![];
     for mut i in 0..data.len() {
         let mut points = data[i].iter().cloned().collect::<Vec<_>>();
         let mut scanner_pos = [0, 0, 0];
@@ -137,14 +141,14 @@ fn main() {
         for p in points.into_iter() {
             beacons.insert(p);
         }
-        scanner_positions.push(scanner_pos);
+        scanners.push(scanner_pos);
     }
     println!("Part 1: {}", beacons.len());
 
-    let d = scanner_positions
+    let d = scanners
         .iter()
         .flat_map(|a| {
-            scanner_positions
+            scanners
                 .iter()
                 .map(move |b| (a[0] - b[0]).abs() + (a[1] - b[1]).abs() + (a[2] - b[2]).abs())
         })
