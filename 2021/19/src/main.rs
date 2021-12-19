@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::io::BufRead;
 
 const X: i8 = 1;
@@ -53,22 +53,18 @@ fn transform(pos: Position, t: Alignment) -> Position {
     [a[0] + t.offset[0], a[1] + t.offset[1], a[2] + t.offset[2]]
 }
 
-fn align(base: &HashSet<Position>, other: &HashSet<Position>) -> Option<Alignment> {
+fn align(base: &[Position], other: &[Position]) -> Option<Alignment> {
+    let mut offsets = HashMap::new();
     for &rot in &ROTATIONS {
+        offsets.clear();
         for &b in base {
             for &o in other {
                 let t = rotate(o, rot);
                 let offset = [b[0] - t[0], b[1] - t[1], b[2] - t[2]];
-                let alignment = Alignment { rot, offset };
-                assert_eq!(transform(o, alignment), b);
-                let mut matches = 0;
-                for (i, &o) in other.iter().enumerate() {
-                    matches += base.contains(&transform(o, alignment)) as usize;
-                    if matches >= 12 {
-                        return Some(alignment);
-                    } else if matches + (other.len() - i) < 12 {
-                        break; // Not enough matches remaining
-                    }
+                let entry = offsets.entry(offset).or_insert(0);
+                *entry += 1;
+                if *entry >= 12 {
+                    return Some(Alignment { rot, offset });
                 }
             }
         }
@@ -81,7 +77,7 @@ fn main() {
     for line in std::io::stdin().lock().lines() {
         let line = line.unwrap();
         if line.starts_with("---") {
-            data.push(HashSet::new());
+            data.push(Vec::new());
         } else if !line.is_empty() {
             let mut iter = line.split(',').map(|s| s.parse::<i64>().unwrap());
             let mut d = [0; 3];
@@ -89,7 +85,7 @@ fn main() {
             d[1] = iter.next().unwrap();
             d[2] = iter.next().unwrap();
             assert!(iter.next().is_none());
-            data.last_mut().unwrap().insert(d);
+            data.last_mut().unwrap().push(d);
         }
     }
 
@@ -127,8 +123,7 @@ fn main() {
     }
     let mut beacons = HashSet::new();
     let mut scanners = vec![];
-    for mut i in 0..data.len() {
-        let mut points = data[i].iter().cloned().collect::<Vec<_>>();
+    for (mut i, mut points) in data.into_iter().enumerate() {
         let mut scanner_pos = [0, 0, 0];
         while i != 0 {
             let a = alignments[i].unwrap();
