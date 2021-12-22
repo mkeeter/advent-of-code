@@ -138,35 +138,25 @@ fn main() {
             c
         })
         .collect::<Vec<Command>>();
+    assert!(commands.iter().all(|c| c.cmd == "on" || c.cmd == "off"));
 
     let mut lit: Vec<Region> = Vec::new();
-    let mut next = Vec::new();
     for cmd in commands.iter().filter(|cmd| !cmd.region.far()) {
-        next.clear();
-        for r in &lit {
-            next.extend(r.difference(&cmd.region).into_iter());
-        }
-        match cmd.cmd.as_str() {
-            "on" => next.push(cmd.region),
-            "off" => (),
-            _ => panic!("Invalid command {}", cmd),
-        }
-        std::mem::swap(&mut lit, &mut next);
+        lit = lit
+            .into_iter()
+            .flat_map(|r| r.difference(&cmd.region).into_iter())
+            .chain(std::iter::once(cmd.region).filter(|_| cmd.cmd == "on"))
+            .collect();
     }
     println!("Part 1: {}", lit.iter().map(|r| r.volume()).sum::<i64>());
 
-    lit.clear();
+    let mut lit: Vec<Region> = Vec::new();
     for cmd in commands.iter() {
-        next.clear();
-        for r in &lit {
-            next.extend(r.difference(&cmd.region).into_iter());
-        }
-        match cmd.cmd.as_str() {
-            "on" => next.push(cmd.region),
-            "off" => (),
-            _ => panic!("Invalid command {}", cmd),
-        }
-        std::mem::swap(&mut lit, &mut next);
+        lit = lit
+            .into_iter()
+            .flat_map(|r| r.difference(&cmd.region).into_iter())
+            .chain(std::iter::once(cmd.region).filter(|_| cmd.cmd == "on"))
+            .collect();
     }
     println!("Part 2: {}", lit.iter().map(|r| r.volume()).sum::<i64>());
 }
