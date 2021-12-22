@@ -140,8 +140,9 @@ fn main() {
         .collect::<Vec<Command>>();
 
     let mut lit: Vec<Region> = Vec::new();
+    let mut next = Vec::new();
     for cmd in commands.iter().filter(|cmd| !cmd.region.far()) {
-        let mut next = Vec::new();
+        next.clear();
         for r in &lit {
             next.extend(r.difference(&cmd.region).into_iter());
         }
@@ -154,9 +155,9 @@ fn main() {
     }
     println!("Part 1: {}", lit.iter().map(|r| r.volume()).sum::<i64>());
 
-    let mut lit: Vec<Region> = Vec::new();
+    lit.clear();
     for cmd in commands.iter() {
-        let mut next = Vec::new();
+        next.clear();
         for r in &lit {
             next.extend(r.difference(&cmd.region).into_iter());
         }
