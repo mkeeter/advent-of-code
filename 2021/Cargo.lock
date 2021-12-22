@@ -12,6 +12,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "arrayvec"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8da52d66c7071e2e3fa2a1e5c6d088fec47b593032b254f5e980de8ea54454d6"
+
+[[package]]
 name = "day01"
 version = "0.1.0"
 dependencies = [
@@ -109,6 +115,14 @@ version = "0.1.0"
 [[package]]
 name = "day21"
 version = "0.1.0"
+
+[[package]]
+name = "day22"
+version = "0.1.0"
+dependencies = [
+ "arrayvec",
+ "parse-display",
+]
 
 [[package]]
 name = "either"
