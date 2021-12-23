@@ -117,7 +117,7 @@ impl<const DEPTH: usize> Map<DEPTH> {
                 }
                 enqueue(x);
             }
-            for x in well_x..11 {
+            for x in well_x..self.slab.len() {
                 if self.slab[x] != 0 {
                     break;
                 }
