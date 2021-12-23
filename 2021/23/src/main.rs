@@ -44,7 +44,15 @@ impl<const DEPTH: usize> Map<DEPTH> {
             return Some(0);
         }
 
-        let mut todo = Vec::new();
+        let mut best = None;
+        let mut recurse = |m: Map<DEPTH>, energy: usize| {
+            if let Some(score) = m.explore(cache) {
+                let score = score + energy;
+                if best.is_none() || score < best.unwrap() {
+                    best = Some(score);
+                }
+            }
+        };
 
         // Moves from the slab into the well
         for (i, &c) in self.slab.iter().enumerate().filter(|(_, &c)| c != 0) {
@@ -76,7 +84,7 @@ impl<const DEPTH: usize> Map<DEPTH> {
             let dx = i.max(well_x) - i.min(well_x);
             let dy = y + 1;
 
-            todo.push((next, energy(c) * (dx + dy)));
+            recurse(next, energy(c) * (dx + dy));
         }
 
         // Moves from the wells into the slab
@@ -100,7 +108,7 @@ impl<const DEPTH: usize> Map<DEPTH> {
 
                     let dx = well_x.max(x) - well_x.min(x);
                     let dy = y + 1;
-                    todo.push((next, energy(c) * (dx + dy)));
+                    recurse(next, energy(c) * (dx + dy));
                 }
             };
             for x in (0..well_x).rev() {
@@ -116,10 +124,6 @@ impl<const DEPTH: usize> Map<DEPTH> {
                 enqueue(x);
             }
         }
-        let best = todo
-            .into_iter()
-            .filter_map(|(t, e)| t.explore(cache).map(|s| s + e))
-            .min();
         cache.insert(*self, best);
         best
     }
