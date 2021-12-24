@@ -1,72 +1,231 @@
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::io::BufRead;
 
-//include!(concat!(env!("OUT_DIR"), "/prog.rs"));
+#[derive(Clone, Eq, PartialEq)]
+enum Value {
+    Invalid,
+    RegInput(u8, u8),
+    Constant(i64),
+    Input(u8),
+    Add(Box<Value>, Box<Value>),
+    Mul(Box<Value>, Box<Value>),
+    Div(Box<Value>, Box<Value>),
+    Mod(Box<Value>, Box<Value>),
+    Eql(Box<Value>, Box<Value>),
+}
+impl Value {
+}
 
-fn main() {
-    for line in std::io::stdin().lock().lines() {
-        let line = line.unwrap();
+#[derive(Clone, Eq, PartialEq)]
+struct Register {
+    value: Value,
+    range: (i64, i64),
+}
+impl Register {
+    fn is_constant(&self) -> bool {
+        matches!(self.value, Value::Constant(_))
+    }
+}
+impl std::fmt::Debug for Register {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(f, "{:?} [{}, {}]", self.value, self.range.0, self.range.1)
+    }
+}
+impl std::fmt::Debug for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        match self {
+            Value::Invalid => panic!("Can't print Invalid"),
+            Value::Constant(c) => write!(f, "{}", c),
+            Value::Input(u) => write!(f, "Input({})", u),
+            Value::RegInput(u, i) => write!(f, "RegInput({}, {})", u, i),
+            Value::Add(a, b) => write!(f, "({:?} + {:?})", a, b),
+            Value::Mul(a, b) => write!(f, "({:?} * {:?})", a, b),
+            Value::Div(a, b) => write!(f, "({:?} / {:?})", a, b),
+            Value::Mod(a, b) => write!(f, "({:?} % {:?})", a, b),
+            Value::Eql(a, b) => write!(f, "({:?} == {:?})", a, b),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct Vm {
+    registers: [Register; 4],
+    io: HashMap<(u8, u8), (i64, i64)>,
+    index: u8,
+}
+
+impl Vm {
+    fn new() -> Self {
+        let r = Register {
+            value: Value::Constant(0),
+            range: (0, 0),
+        };
+        let mut out = Self {
+            registers: [r.clone(), r.clone(), r.clone(), r],
+            io: HashMap::new(),
+            index: 0,
+        };
+        out.reset();
+        out
+    }
+    fn reset(&mut self) {
+        for i in 0..4 {
+            self.registers[i].value = Value::RegInput(self.index, i as u8);
+            self.io.insert((self.index, i as u8), self.registers[i].range);
+        }
+    }
+    fn reg(&mut self, v: &str) -> &mut Register {
+        match v {
+            "x" => &mut self.registers[0],
+            "y" => &mut self.registers[1],
+            "z" => &mut self.registers[2],
+            "w" => &mut self.registers[3],
+            r => panic!("Invalid register {}", r),
+        }
+    }
+    fn take_reg(&mut self, v: &str) -> Register {
+        let mut out = Register {
+            value: Value::Invalid,
+            range: (0, 0),
+        };
+        std::mem::swap(&mut out, self.reg(v));
+        out
+    }
+    fn reg_or_value(&mut self, v: &str) -> Register {
+        match v {
+            "x" => self.registers[0].clone(),
+            "y" => self.registers[1].clone(),
+            "z" => self.registers[2].clone(),
+            "w" => self.registers[3].clone(),
+            i => {
+                let i = i.parse().unwrap();
+                Register {
+                    value: Value::Constant(i as i64),
+                    range: (i, i),
+                }
+            }
+        }
+    }
+    fn exec(&mut self, line: &str) {
         let mut words = line.split(' ');
         match words.next().unwrap() {
             "inp" => {
-                let reg = words.next().unwrap();
+                self.reset();
+                *self.reg(words.next().unwrap()) = Register {
+                    value: Value::Input(self.index),
+                    range: (1, 9),
+                };
+                self.index += 1;
             }
             "add" => {
-                let a = words.next().unwrap();
-                let b = words.next().unwrap();
+                let reg_a = words.next().unwrap();
+                let a = self.take_reg(reg_a);
+                let b = self.reg_or_value(words.next().unwrap());
+                *self.reg(reg_a) = if a.range == (0, 0) {
+                    b
+                } else if b.range == (0, 0) {
+                    a
+                } else {
+                    Register {
+                        value: Value::Add(Box::new(a.value), Box::new(b.value)),
+                        range: (a.range.0 + b.range.0, a.range.1 + b.range.1),
+                    }
+                }
             }
             "mul" => {
-                let a = words.next().unwrap();
-                let b = words.next().unwrap();
+                let reg_a = words.next().unwrap();
+                let a = self.take_reg(reg_a);
+                let b = self.reg_or_value(words.next().unwrap());
+                *self.reg(reg_a) = if b.range == (1, 1) {
+                    a
+                } else if b.range == (0, 0) || a.range == (0, 0) {
+                    Register {
+                        value: Value::Constant(0),
+                        range: (0, 0),
+                    }
+                } else {
+                    let range = [
+                        a.range.0 * b.range.0,
+                        a.range.0 * b.range.1,
+                        a.range.1 * b.range.0,
+                        a.range.0 * b.range.1,
+                    ];
+                    Register {
+                        value: Value::Mul(Box::new(a.value), Box::new(b.value)),
+                        range: (*range.iter().min().unwrap(), *range.iter().max().unwrap()),
+                    }
+                }
             }
             "div" => {
-                let a = words.next().unwrap();
-                let b = words.next().unwrap();
+                let reg_a = words.next().unwrap();
+                let a = self.take_reg(reg_a);
+                let b = self.reg_or_value(words.next().unwrap());
+                assert!(b.range.0 == b.range.1);
+                assert!(b.range.0 > 0);
+                *self.reg(reg_a) = if b.range == (1, 1) {
+                    a
+                } else {
+                    Register {
+                        value: Value::Div(Box::new(a.value), Box::new(b.value)),
+                        range: (a.range.0 / b.range.0, a.range.1 / b.range.1),
+                    }
+                }
             }
             "mod" => {
-                let a = words.next().unwrap();
-                let b = words.next().unwrap();
+                let reg_a = words.next().unwrap();
+                let a = self.take_reg(reg_a);
+                let b = self.reg_or_value(words.next().unwrap());
+                assert!(b.range.0 == b.range.1);
+                assert!(b.range.0 > 0);
+                assert!(a.range.0 >= 0);
+                *self.reg(reg_a) = Register {
+                    value: Value::Mod(Box::new(a.value), Box::new(b.value)),
+                    range: (0, a.range.1.min(b.range.1)),
+                };
             }
             "eql" => {
-                let a = words.next().unwrap();
-                let b = words.next().unwrap();
+                let reg_a = words.next().unwrap();
+                let a = self.take_reg(reg_a);
+                let b = self.reg_or_value(words.next().unwrap());
+                *self.reg(reg_a) = if a.range.1 < b.range.0 || a.range.0 > b.range.1 {
+                    Register {
+                        value: Value::Constant(0),
+                        range: (0, 0),
+                    }
+                } else if a.is_constant() && b.is_constant() && a.range == b.range {
+                    Register {
+                        value: Value::Constant(1),
+                        range: (1, 1),
+                    }
+                } else {
+                    Register {
+                        value: Value::Eql(Box::new(a.value), Box::new(b.value)),
+                        range: (0, 1),
+                    }
+                }
             }
             _ => panic!("Invalid instruction {}", line),
         }
-    }
-    //println!("{}", include_str!(concat!(env!("OUT_DIR"), "/prog.rs")));
-
-    /*
-    for pass in 0..14 {
-        let f = PASSES[14 - pass - 1];
-        let a = f((1, 1, 1, 1), 1);
-        let di = f((1, 1, 1, 1), 2);
-        let dy = f((1, 2, 1, 1), 1);
-        let dz = f((1, 1, 2, 1), 1);
-        let dw = f((1, 1, 1, 2), 1);
-        let dy_di = di.1 - a.1;
-        let dy_dy = dy.1 - a.1;
-        let dy_dz = dz.1 - a.1;
-        let dy_dw = dw.1 - a.1;
-        println!("{} {} {} {}", dy_di, dy_dy, dy_dz, dy_dw);
-    }
-
-    let mut states: Vec<(i64, Registers)> = vec![(0i64, (0, 0, 0, 0))];
-    for pass in 0..14 {
-        println!("Pass {}: {}", pass, states.len());
-        let f = PASSES[14 - pass - 1];
-        let mut next = HashSet::new();
-        for s in states.iter() {
-            for i in 1..=9 {
-                let out = f(s.1, i);
-                //println!("{:?} x {} => {:?}", s.1, i, out);
-                next.insert((s.0 * 10 + i as i64, out));
+        for r in &mut self.registers {
+            assert!(r.range.0 <= r.range.1);
+            if r.is_constant() {
+                assert!(r.range.0 == r.range.1);
+            }
+            if r.range.0 == r.range.1 {
+                r.value = Value::Constant(r.range.0);
             }
         }
-        // Pass 0: Y = W + 6, Z = W + 6
-        // Pass 0: Y = W + 8
-        states = next.into_iter().collect();
     }
-    println!("{:?}", states.iter().filter(|(_, i)| i.2 == 0).max_by_key(|(s, _)| s).unwrap());
-    */
+}
+
+include!(concat!(env!("OUT_DIR"), "/prog.rs"));
+
+fn main() {
+    let mut vm = Vm::new();
+    for line in std::io::stdin().lock().lines() {
+        let line = line.unwrap();
+        vm.exec(&line);
+        println!("{} => {:#?}", line, vm);
+    }
+    println!("{:?}", vm.registers[2]);
 }
