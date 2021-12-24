@@ -69,12 +69,11 @@ impl<const DEPTH: usize> Map<DEPTH> {
                 continue;
             }
 
-            let y =
-                if let Some(w) = (0..DEPTH).rev().find(|y| self.wells[w][*y] == 0) {
-                    w
-                } else {
-                    continue;
-                };
+            let y = if let Some(w) = (0..DEPTH).rev().find(|y| self.wells[w][*y] == 0) {
+                w
+            } else {
+                continue;
+            };
 
             let mut next = *self;
             next.slab[i] = 0;
