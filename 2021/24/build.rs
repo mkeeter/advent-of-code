@@ -27,9 +27,12 @@ fn main() -> Result<(), std::io::Error> {
 const PASSES: [fn(Registers, u8) -> Registers; 14] = ["
     )?;
     for i in 1..=14 {
-        writeln!(f, "    f{},", i)?;
+        writeln!(f, "    monad::f{},", i)?;
     }
-    writeln!(f, "];")?;
+    writeln!(f, "];
+#[allow(clippy::all)]
+mod monad {{
+    use super::Registers;")?;
 
     let return_str = "    return (x, y, z, w);\n}";
     for line in lines.lines() {
@@ -78,7 +81,8 @@ const PASSES: [fn(Registers, u8) -> Registers; 14] = ["
             _ => panic!("Invalid instruction {}", line),
         }
     }
-    writeln!(f, "{}", return_str)?;
+    writeln!(f, "{}
+}}", return_str)?;
 
     Ok(())
 }
