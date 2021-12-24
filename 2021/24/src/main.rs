@@ -1,10 +1,10 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::io::BufRead;
 
 #[derive(Clone, Eq, PartialEq)]
 enum Value {
     Invalid,
-    RegInput(u8, u8),
+    Register(u8),
     Constant(i64),
     Input(u8),
     Add(Box<Value>, Box<Value>),
@@ -13,8 +13,7 @@ enum Value {
     Mod(Box<Value>, Box<Value>),
     Eql(Box<Value>, Box<Value>),
 }
-impl Value {
-}
+impl Value {}
 
 #[derive(Clone, Eq, PartialEq)]
 struct Register {
@@ -37,7 +36,7 @@ impl std::fmt::Debug for Value {
             Value::Invalid => panic!("Can't print Invalid"),
             Value::Constant(c) => write!(f, "{}", c),
             Value::Input(u) => write!(f, "Input({})", u),
-            Value::RegInput(u, i) => write!(f, "RegInput({}, {})", u, i),
+            Value::Register(u) => write!(f, "Register({})", u),
             Value::Add(a, b) => write!(f, "({:?} + {:?})", a, b),
             Value::Mul(a, b) => write!(f, "({:?} * {:?})", a, b),
             Value::Div(a, b) => write!(f, "({:?} / {:?})", a, b),
@@ -50,8 +49,16 @@ impl std::fmt::Debug for Value {
 #[derive(Debug)]
 struct Vm {
     registers: [Register; 4],
-    io: HashMap<(u8, u8), (i64, i64)>,
     index: u8,
+
+    /// Input range for the current block
+    input: [(i64, i64); 4],
+}
+
+#[derive(Debug)]
+struct Block {
+    input: [(i64, i64); 4],
+    output: [Register; 4],
 }
 
 impl Vm {
@@ -62,16 +69,16 @@ impl Vm {
         };
         let mut out = Self {
             registers: [r.clone(), r.clone(), r.clone(), r],
-            io: HashMap::new(),
             index: 0,
+            input: [(0, 0); 4],
         };
         out.reset();
         out
     }
     fn reset(&mut self) {
         for i in 0..4 {
-            self.registers[i].value = Value::RegInput(self.index, i as u8);
-            self.io.insert((self.index, i as u8), self.registers[i].range);
+            self.registers[i].value = Value::Register(i as u8);
+            self.input[i] = self.registers[i].range;
         }
     }
     fn reg(&mut self, v: &str) -> &mut Register {
@@ -222,10 +229,32 @@ include!(concat!(env!("OUT_DIR"), "/prog.rs"));
 
 fn main() {
     let mut vm = Vm::new();
-    for line in std::io::stdin().lock().lines() {
+    let stdin = std::io::stdin();
+    let mut iter = stdin.lock().lines().peekable();
+    let mut blocks = vec![];
+    while let Some(line) = iter.next() {
         let line = line.unwrap();
         vm.exec(&line);
         println!("{} => {:#?}", line, vm);
+        let next = iter.peek();
+        if next.is_none() || next.as_ref().unwrap().as_ref().unwrap().starts_with("inp") {
+            blocks.push(Block {
+                input: vm.input,
+                output: vm.registers.clone(),
+            });
+        }
     }
     println!("{:?}", vm.registers[2]);
+    for b in &blocks {
+        println!("{:?}", b);
+    }
+    let last: &Block = blocks.last().unwrap();
+    let inputs = (last.input[0].0..=last.input[0].1).flat_map(move |x| {
+        (last.input[1].0..=last.input[1].1).flat_map(move |y| {
+            (last.input[2].0..=last.input[2].1).flat_map(move |z| {
+                (last.input[3].0..=last.input[3].1)
+                    .flat_map(move |w| (1..=9).map(move |i| (x, y, z, w, i)))
+            })
+        })
+    });
 }
