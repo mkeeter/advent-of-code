@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::io::BufRead;
 
 #[derive(Clone, Eq, PartialEq)]
@@ -249,26 +249,29 @@ fn main() {
             });
         }
     }
-    let mut targets: HashMap<Registers, HashSet<usize>> = HashMap::new();
+    let mut targets: HashMap<Registers, (usize, usize)> = HashMap::new();
     for (x, y, z, w, i) in blocks.last().unwrap().inputs() {
         let out = PASSES[0]((x, y, z, w), i);
         if out.2 == 0 {
-            targets.insert((x, y, z, w), vec![i as usize].into_iter().collect());
+            let e = targets.entry((x, y, z, w)).or_insert((usize::MAX, 0));
+            e.0 = e.0.min(i as usize);
+            e.1 = e.1.max(i as usize);
         }
     }
     for (i, (block, func)) in blocks.iter().rev().zip(PASSES).enumerate().skip(1) {
-        let mut next: HashMap<Registers, HashSet<usize>> = HashMap::new();
+        let mut next: HashMap<Registers, (usize, usize)> = HashMap::new();
         for (x, y, z, w, j) in block.inputs() {
             let out = func((x, y, z, w), j);
-            if let Some(k) = targets.get(&out) {
-                next.entry((x, y, z, w))
-                    .or_default()
-                    .extend(k.iter().map(|k| k + (j as usize) * 10usize.pow(i as u32)));
+            if let Some((kmin, kmax)) = targets.get(&out) {
+                let e = next.entry((x, y, z, w))
+                    .or_insert((usize::MAX, 0));
+                e.0 = e.0.min(kmin + (j as usize) * 10usize.pow(i as u32));
+                e.1 = e.1.max(kmax + (j as usize) * 10usize.pow(i as u32));
             }
         }
         targets = next;
     }
-    let models: HashSet<usize> = targets.values().flatten().cloned().collect();
-    println!("Part 1: {}", models.iter().max().unwrap());
-    println!("Part 2: {}", models.iter().min().unwrap());
+    let k = targets.values().next().unwrap();
+    println!("Part 1: {}", k.1);
+    println!("Part 2: {}", k.0);
 }
