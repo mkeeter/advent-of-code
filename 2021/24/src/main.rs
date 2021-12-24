@@ -13,17 +13,11 @@ enum Value {
     Mod(Box<Value>, Box<Value>),
     Eql(Box<Value>, Box<Value>),
 }
-impl Value {}
 
 #[derive(Clone, Eq, PartialEq)]
 struct Register {
     value: Value,
     range: (i64, i64),
-}
-impl Register {
-    fn is_constant(&self) -> bool {
-        matches!(self.value, Value::Constant(_))
-    }
 }
 impl std::fmt::Debug for Register {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
@@ -211,7 +205,7 @@ impl Vm {
                         value: Value::Constant(0),
                         range: (0, 0),
                     }
-                } else if a.is_constant() && b.is_constant() && a.range == b.range {
+                } else if a.range.0 == a.range.1 && a.range == b.range {
                     Register {
                         value: Value::Constant(1),
                         range: (1, 1),
@@ -227,8 +221,8 @@ impl Vm {
         }
         for r in &mut self.registers {
             assert!(r.range.0 <= r.range.1);
-            if r.is_constant() {
-                assert!(r.range.0 == r.range.1);
+            if let Value::Constant(v) = r.value {
+                assert!(r.range.0 == v && r.range.1 == v);
             }
             if r.range.0 == r.range.1 {
                 r.value = Value::Constant(r.range.0);
