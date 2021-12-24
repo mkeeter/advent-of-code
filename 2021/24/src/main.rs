@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::io::BufRead;
 
 #[derive(Clone, Eq, PartialEq)]
@@ -59,6 +59,18 @@ struct Vm {
 struct Block {
     input: [(i64, i64); 4],
     output: [Register; 4],
+}
+impl Block {
+    fn inputs(&self) -> impl Iterator<Item = (i64, i64, i64, i64, u8)> + '_ {
+        (self.input[0].0..=self.input[0].1).flat_map(move |x| {
+            (self.input[1].0..=self.input[1].1).flat_map(move |y| {
+                (self.input[2].0..=self.input[2].1).flat_map(move |z| {
+                    (self.input[3].0..=self.input[3].1)
+                        .flat_map(move |w| (1..=9).map(move |i| (x, y, z, w, i)))
+                })
+            })
+        })
+    }
 }
 
 impl Vm {
@@ -235,7 +247,6 @@ fn main() {
     while let Some(line) = iter.next() {
         let line = line.unwrap();
         vm.exec(&line);
-        println!("{} => {:#?}", line, vm);
         let next = iter.peek();
         if next.is_none() || next.as_ref().unwrap().as_ref().unwrap().starts_with("inp") {
             blocks.push(Block {
@@ -244,17 +255,26 @@ fn main() {
             });
         }
     }
-    println!("{:?}", vm.registers[2]);
-    for b in &blocks {
-        println!("{:?}", b);
+    let mut targets: HashMap<Registers, HashSet<usize>> = HashMap::new();
+    for (x, y, z, w, i) in blocks.last().unwrap().inputs() {
+        let out = PASSES[0]((x, y, z, w), i);
+        if out.2 == 0 {
+            targets.insert((x, y, z, w), vec![i as usize].into_iter().collect());
+        }
     }
-    let last: &Block = blocks.last().unwrap();
-    let inputs = (last.input[0].0..=last.input[0].1).flat_map(move |x| {
-        (last.input[1].0..=last.input[1].1).flat_map(move |y| {
-            (last.input[2].0..=last.input[2].1).flat_map(move |z| {
-                (last.input[3].0..=last.input[3].1)
-                    .flat_map(move |w| (1..=9).map(move |i| (x, y, z, w, i)))
-            })
-        })
-    });
+    for (i, (block, func)) in blocks.iter().rev().zip(PASSES).enumerate().skip(1) {
+        let mut next: HashMap<Registers, HashSet<usize>> = HashMap::new();
+        for (x, y, z, w, j) in block.inputs() {
+            let out = func((x, y, z, w), j);
+            if let Some(k) = targets.get(&out) {
+                next.entry((x, y, z, w))
+                    .or_default()
+                    .extend(k.iter().map(|k| k + (j as usize) * 10usize.pow(i as u32)));
+            }
+        }
+        targets = next;
+    }
+    let models: HashSet<usize> = targets.values().flatten().cloned().collect();
+    println!("Part 1: {}", models.iter().max().unwrap());
+    println!("Part 2: {}", models.iter().min().unwrap());
 }
