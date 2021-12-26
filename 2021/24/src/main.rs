@@ -99,24 +99,12 @@ fn main() {
             _ => panic!("Invalid instruction {}", line),
         }
     }
-    println!(
-        "Part 1: {}                         ",
-        state
-            .0
-            .par_iter()
-            .filter(|(k, _)| k[2] == 0)
-            .map(|(_, v)| v.1)
-            .max()
-            .unwrap()
-    );
-    println!(
-        "Part 2: {}                         ",
-        state
-            .0
-            .par_iter()
-            .filter(|(k, _)| k[2] == 0)
-            .map(|(_, v)| v.0)
-            .min()
-            .unwrap()
-    );
+    let (min, max) = state
+        .0
+        .par_iter()
+        .filter(|(k, _)| k[2] == 0)
+        .map(|(_, v)| *v)
+        .reduce(|| (usize::MAX, 0), |a, b| (a.0.min(b.0), a.1.max(b.1)));
+    println!("Part 1: {}                         ", max);
+    println!("Part 2: {}                         ", min);
 }
