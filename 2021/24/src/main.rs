@@ -1,5 +1,7 @@
-use std::io::{BufRead, Write};
 use rayon::prelude::*;
+use std::io::{BufRead, Write};
+
+type State = ([i64; 4], (usize, usize));
 
 fn reg_index(s: &str) -> usize {
     match s {
@@ -19,7 +21,7 @@ fn reg_value(s: &str, regs: &[i64]) -> i64 {
 }
 
 fn main() {
-    let mut state: Vec<([i64; 4], (usize, usize))> = vec![([0; 4], (0, 0))];
+    let mut state: Vec<State> = vec![([0; 4], (0, 0))];
 
     let lines = std::io::stdin()
         .lock()
@@ -39,76 +41,73 @@ fn main() {
 
         match words.next().unwrap() {
             "inp" => {
-                let mut next = Vec::with_capacity(state.len() * 9);
                 let r = reg_index(words.next().unwrap());
-                for (regs, (min, max)) in state.iter() {
-                    for i in 1..=9 {
-                        let mut regs = *regs;
+                state.par_sort_unstable_by_key(|k| {
+                    let mut out = k.0;
+                    out[r] = 0;
+                    out
+                });
+                let mut next: Vec<State> = Vec::with_capacity(state.len() * 9);
+                for i in 1..=9 {
+                    for (mut regs, (min, max)) in state.iter() {
                         regs[r] = i;
-                        next.push((regs, (min * 10 + i as usize, max * 10 + i as usize)));
+                        let min = min * 10 + i as usize;
+                        let max = max * 10 + i as usize;
+                        if next.last().map(|p| p.0 == regs).unwrap_or(false) {
+                            let (prev_min, prev_max) = &mut next.last_mut().unwrap().1;
+                            *prev_min = (*prev_min).min(min);
+                            *prev_max = (*prev_max).max(max);
+                        } else {
+                            next.push((regs, (min, max)));
+                        }
                     }
                 }
                 state = next;
-                state.par_sort_unstable_by_key(|k| k.0);
-                let mut i = 0;
-                let mut j = 1;
-                while j < state.len() {
-                    if state[i].0 == state[j].0 {
-                        let (imin, imax) = state[i].1;
-                        let (jmin, jmax) = state[j].1;
-                        state[i].1 = (imin.min(jmin), imax.max(jmax));
-                    } else {
-                        i += 1;
-                        state[i] = state[j];
-                    }
-                    j += 1;
-                }
-                state.resize(i + 1, ([0; 4], (0, 0)));
             }
             "add" => {
                 let ra = reg_index(words.next().unwrap());
                 let rb = words.next().unwrap();
-                for (regs, _) in state.iter_mut() {
+                state.par_iter_mut().for_each(|(regs, _)| {
                     let a = regs[ra];
                     let b = reg_value(rb, regs);
                     regs[ra] = a + b;
-                }
+                });
             }
             "mul" => {
                 let ra = reg_index(words.next().unwrap());
                 let rb = words.next().unwrap();
-                for (regs, _) in state.iter_mut() {
+                state.par_iter_mut().for_each(|(regs, _)| {
                     let a = regs[ra];
                     let b = reg_value(rb, regs);
                     regs[ra] = a * b;
-                }
+                });
             }
             "div" => {
                 let ra = reg_index(words.next().unwrap());
                 let rb = words.next().unwrap();
-                for (regs, _) in state.iter_mut() {
+                state.par_iter_mut().for_each(|(regs, _)| {
                     let a = regs[ra];
                     let b = reg_value(rb, regs);
                     regs[ra] = a / b;
-                }
+                });
             }
             "mod" => {
                 let ra = reg_index(words.next().unwrap());
                 let rb = words.next().unwrap();
-                for (regs, _) in state.iter_mut() {
+                state.par_iter_mut().for_each(|(regs, _)| {
                     let a = regs[ra];
                     let b = reg_value(rb, regs);
                     regs[ra] = a % b;
-                }
+                });
             }
             "eql" => {
                 let ra = reg_index(words.next().unwrap());
                 let rb = words.next().unwrap();
-                for (regs, _) in state.iter_mut() {
+                state.par_iter_mut().for_each(|(regs, _)| {
                     let a = regs[ra];
                     let b = reg_value(rb, regs);
                     regs[ra] = (a == b) as i64;
-                }
+                });
             }
             _ => panic!("Invalid instruction {}", line),
         }
