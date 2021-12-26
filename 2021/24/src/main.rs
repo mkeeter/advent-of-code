@@ -47,22 +47,26 @@ fn main() {
                     out[r] = 0;
                     out
                 });
-                let mut next: Vec<State> = Vec::with_capacity(state.len() * 9);
-                for i in 1..=9 {
-                    for (mut regs, (min, max)) in state.iter() {
-                        regs[r] = i;
-                        let min = min * 10 + i as usize;
-                        let max = max * 10 + i as usize;
-                        if next.last().map(|p| p.0 == regs).unwrap_or(false) {
-                            let (prev_min, prev_max) = &mut next.last_mut().unwrap().1;
-                            *prev_min = (*prev_min).min(min);
-                            *prev_max = (*prev_max).max(max);
-                        } else {
-                            next.push((regs, (min, max)));
+                state = (1..=9)
+                    .into_par_iter()
+                    .map(|i| {
+                        let mut next: Vec<State> = Vec::with_capacity(state.len());
+                        for (mut regs, (min, max)) in state.iter() {
+                            regs[r] = i;
+                            let min = min * 10 + i as usize;
+                            let max = max * 10 + i as usize;
+                            if next.last().map(|p| p.0 == regs).unwrap_or(false) {
+                                let (prev_min, prev_max) = &mut next.last_mut().unwrap().1;
+                                *prev_min = (*prev_min).min(min);
+                                *prev_max = (*prev_max).max(max);
+                            } else {
+                                next.push((regs, (min, max)));
+                            }
                         }
-                    }
-                }
-                state = next;
+                        next
+                    })
+                    .flatten()
+                    .collect();
             }
             "add" => {
                 let ra = reg_index(words.next().unwrap());
