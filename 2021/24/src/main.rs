@@ -6,7 +6,6 @@ fn main() {
     let mut state = vec![([0; 4], (0, 0))];
 
     for (f, r) in PASSES.iter().zip(INPUTS) {
-        println!("{}", state.len());
         // Clear the register that's about to be written
         state.par_iter_mut().for_each(|k| k.0[r] = 0);
 
@@ -43,6 +42,6 @@ fn main() {
         .filter(|(k, _)| k[2] == 0)
         .map(|(_, v)| *v)
         .reduce(|| (usize::MAX, 0), |a, b| (a.0.min(b.0), a.1.max(b.1)));
-    println!("Part 1: {}                         ", max);
-    println!("Part 2: {}                         ", min);
+    println!("Part 1: {}", max);
+    println!("Part 2: {}", min);
 }
