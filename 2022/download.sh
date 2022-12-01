@@ -25,7 +25,10 @@ then
         COOKIE=$(cat ~/.aoc-cookie)
         DAY_SHORT=$(echo $DAY | sed "s/^0*//g")
         echo " ⬇️   Downloading input for day $DAY_SHORT"
-        curl -s "https://adventofcode.com/$YEAR/day/$DAY_SHORT/input" --cookie "session=$COOKIE" > "$DAY/input"
+        curl -s "https://adventofcode.com/$YEAR/day/$DAY_SHORT/input" \
+            --cookie "session=$COOKIE" \
+            --user-agent "https://github.com/mkeeter/advent-of-code/blob/master/2022/download.sh by matt.j.keeter@gmail.com" \
+            > "$DAY/input"
     else
         echo " ⚠️   $YEAR-$DAY is not yet available; skipping download"
     fi
