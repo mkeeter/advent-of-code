@@ -13,6 +13,8 @@ then
     mkdir -p "$DAY/src"
     sed "s/template/day$DAY/g" template/Cargo.toml > "$DAY/Cargo.toml"
     cp template/src/main.rs "$DAY/src/"
+    cargo check -p "day$DAY"
+    git add "$DAY" Cargo.lock
 fi
 
 if [ ! -f "$DAY/input" ]
@@ -20,10 +22,10 @@ then
     # Be polite and only attempt to download available inputs
     TODAY=$(date +"%Y%m%d")
     TARGET="${YEAR}12${DAY}"
-    if [ $TODAY -ge $TARGET ]
+    if [ "$TODAY" -ge "$TARGET" ]
     then
         COOKIE=$(cat ~/.aoc-cookie)
-        DAY_SHORT=$(echo $DAY | sed "s/^0*//g")
+        DAY_SHORT=$(echo "$DAY" | sed "s/^0*//g")
         echo " ⬇️   Downloading input for day $DAY_SHORT"
         curl -s "https://adventofcode.com/$YEAR/day/$DAY_SHORT/input" \
             --cookie "session=$COOKIE" \
