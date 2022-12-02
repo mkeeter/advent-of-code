@@ -39,7 +39,9 @@ impl Move {
             | (Move::Paper, Move::Scissors)
             | (Move::Rock, Move::Paper) => 0,
             // Draw
-            _ => 3,
+            (Move::Scissors, Move::Scissors)
+            | (Move::Paper, Move::Paper)
+            | (Move::Rock, Move::Rock) => 3,
         }
     }
 }
