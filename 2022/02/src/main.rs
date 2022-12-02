@@ -8,9 +8,9 @@ enum Move {
     Scissors,
 }
 
-impl TryFrom<&str> for Move {
-    type Error = Error;
-    fn try_from(s: &str) -> Result<Self> {
+impl std::str::FromStr for Move {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self> {
         match s {
             "A" | "X" => Ok(Move::Rock),
             "B" | "Y" => Ok(Move::Paper),
@@ -53,9 +53,9 @@ enum Goal {
     Draw,
 }
 
-impl TryFrom<&str> for Goal {
-    type Error = Error;
-    fn try_from(s: &str) -> Result<Self> {
+impl std::str::FromStr for Goal {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self> {
         match s {
             "X" => Ok(Goal::Lose),
             "Y" => Ok(Goal::Draw),
@@ -102,7 +102,7 @@ fn main() -> Result<()> {
         .map(|line| -> Result<(Move, Move)> {
             let out = line
                 .split(' ')
-                .map(Move::try_from)
+                .map(str::parse)
                 .collect::<Result<Vec<Move>, _>>()?;
             if out.len() != 2 {
                 bail!("Unexpected line: {out:?}");
@@ -119,11 +119,11 @@ fn main() -> Result<()> {
             let opponent = out
                 .next()
                 .ok_or_else(|| anyhow!("Missing command"))
-                .and_then(Move::try_from)?;
-            let goal = out
+                .and_then(str::parse)?;
+            let goal: Goal = out
                 .next()
                 .ok_or_else(|| anyhow!("Missing command"))
-                .and_then(Goal::try_from)?;
+                .and_then(str::parse)?;
             if let Some(e) = out.next() {
                 bail!("Unexpected value after second char: {e}");
             }
