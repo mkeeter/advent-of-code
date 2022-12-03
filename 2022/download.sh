@@ -13,7 +13,7 @@ then
     mkdir -p "$DAY/src"
     sed "s/template/day$DAY/g" template/Cargo.toml > "$DAY/Cargo.toml"
     cp template/src/main.rs "$DAY/src/"
-    cargo check -p "day$DAY"
+    cargo check -p "day$DAY" &> /dev/null
     git add "$DAY" Cargo.lock
 fi
 
