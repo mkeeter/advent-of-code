@@ -30,7 +30,6 @@ fn run(iter: &[u64], group_size: usize) -> Result<usize> {
 }
 
 fn main() -> Result<()> {
-    let start = std::time::Instant::now();
     let lines = std::io::stdin()
         .lock()
         .lines()
