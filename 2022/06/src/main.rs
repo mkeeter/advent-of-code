@@ -12,7 +12,7 @@ fn run(masks: &[u32], size: usize) -> Result<usize> {
             }
         }
     }
-    bail!("List does not contain at least {size} items")
+    bail!("Marker not found")
 }
 
 fn main() -> Result<()> {
