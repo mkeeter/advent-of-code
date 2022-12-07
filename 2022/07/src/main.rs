@@ -83,7 +83,7 @@ fn main() -> Result<()> {
     let mut iter = std::io::stdin()
         .lock()
         .lines()
-        .skip(1)
+        .skip(1) // skip the first line, which is always "$ cd /"
         .map(Result::unwrap)
         .peekable();
 
