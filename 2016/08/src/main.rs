@@ -12,7 +12,8 @@ fn main() {
         let words = line.split(' ').collect::<Vec<_>>();
         match words[0] {
             "rect" => {
-                let xy = words[1].split('x')
+                let xy = words[1]
+                    .split('x')
                     .filter_map(|w| usize::from_str(w).ok())
                     .collect::<Vec<usize>>();
                 for x in 0..xy[0] {
@@ -20,16 +21,18 @@ fn main() {
                         screen.insert((x, y));
                     }
                 }
-            },
+            }
             "rotate" => {
-                let rc = words[2].split('=')
+                let rc = words[2]
+                    .split('=')
                     .filter_map(|w| usize::from_str(w).ok())
                     .next()
                     .unwrap();
                 let amount = usize::from_str(words[4]).unwrap();
                 match words[1] {
                     "column" => {
-                        let mut next = screen.iter()
+                        let mut next = screen
+                            .iter()
                             .copied()
                             .filter(|(x, _y)| *x != rc)
                             .collect::<HashSet<_>>();
@@ -39,9 +42,10 @@ fn main() {
                             }
                         }
                         screen = next;
-                    },
+                    }
                     "row" => {
-                        let mut next = screen.iter()
+                        let mut next = screen
+                            .iter()
                             .copied()
                             .filter(|(_x, y)| *y != rc)
                             .collect::<HashSet<_>>();

@@ -1,7 +1,7 @@
 use std::cmp::{max, Ordering};
+use std::collections::BinaryHeap;
 use std::io::BufRead;
 use std::str::FromStr;
-use std::collections::BinaryHeap;
 
 #[derive(Copy, Clone)]
 enum Spell {
@@ -57,7 +57,7 @@ macro_rules! check_boss_hp {
         if $next.boss_hp <= 0 {
             return Some($next);
         }
-    }
+    };
 }
 macro_rules! effect {
     ($timer:expr, $value:expr) => {
@@ -66,7 +66,7 @@ macro_rules! effect {
         } else {
             $timer = $value;
         }
-    }
+    };
 }
 
 impl State {
@@ -90,7 +90,7 @@ impl State {
             Spell::Drain => {
                 next.boss_hp -= 2;
                 next.your_hp += 2;
-            },
+            }
             Spell::Shield => effect!(next.shield_timer, 6),
             Spell::Poison => effect!(next.poison_timer, 6),
             Spell::Recharge => effect!(next.recharge_timer, 5),
@@ -129,11 +129,13 @@ fn main() {
         .lines()
         .map(|line| line.unwrap())
         .collect::<Vec<String>>();
-    let boss_hp = input.iter()
+    let boss_hp = input
+        .iter()
         .filter_map(|d| i32::from_str(&d.replace("Hit Points: ", "")).ok())
         .next()
         .unwrap();
-    let boss_damage = input.iter()
+    let boss_damage = input
+        .iter()
         .filter_map(|d| i32::from_str(&d.replace("Damage: ", "")).ok())
         .next()
         .unwrap();
@@ -147,13 +149,17 @@ fn main() {
         poison_timer: 0,
         recharge_timer: 0,
 
-        boss_hp, boss_damage};
+        boss_hp,
+        boss_damage,
+    };
 
-    let spells = [Spell::MagicMissile,
-                  Spell::Drain,
-                  Spell::Shield,
-                  Spell::Poison,
-                  Spell::Recharge];
+    let spells = [
+        Spell::MagicMissile,
+        Spell::Drain,
+        Spell::Shield,
+        Spell::Poison,
+        Spell::Recharge,
+    ];
 
     let mut todo = BinaryHeap::new();
     todo.push(start.clone());
@@ -162,7 +168,8 @@ fn main() {
             println!("Part 1: {}", state.spent_mana);
             break;
         }
-        spells.iter()
+        spells
+            .iter()
             .filter_map(|s| state.step(*s))
             .for_each(|n| todo.push(n));
     }
@@ -178,7 +185,8 @@ fn main() {
         if state.your_hp <= 0 {
             continue;
         }
-        spells.iter()
+        spells
+            .iter()
             .filter_map(|s| state.step(*s))
             .for_each(|n| todo.push(n));
     }

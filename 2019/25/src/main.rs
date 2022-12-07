@@ -11,7 +11,8 @@ fn fuzz(vm: &mut Vm, dir: &str) {
             output += &format!("{}", i as u8 as char);
         }
     }
-    let inv: Vec<String> = output.lines()
+    let inv: Vec<String> = output
+        .lines()
         .filter(|i| i.starts_with("- "))
         .map(|i| i.replace("- ", ""))
         .collect();

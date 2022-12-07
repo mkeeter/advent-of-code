@@ -26,7 +26,8 @@ fn parse(s: &str) -> Opcode {
 }
 
 fn main() {
-    let prog = std::io::stdin().lock()
+    let prog = std::io::stdin()
+        .lock()
         .lines()
         .map(|line| parse(&line.unwrap()))
         .collect::<Vec<Opcode>>();
@@ -37,14 +38,21 @@ fn main() {
         use Opcode::*;
         while let Some(op) = prog.get(ip as usize) {
             match op {
-                hlf(r) => { regs[*r as usize] /= 2; ip += 1 },
-                tpl(r) => { regs[*r as usize] *= 3; ip += 1 },
-                inc(r) => { regs[*r as usize] += 1; ip += 1 },
+                hlf(r) => {
+                    regs[*r as usize] /= 2;
+                    ip += 1
+                }
+                tpl(r) => {
+                    regs[*r as usize] *= 3;
+                    ip += 1
+                }
+                inc(r) => {
+                    regs[*r as usize] += 1;
+                    ip += 1
+                }
                 jmp(j) => ip += *j,
-                jie(r, j) => ip += if regs[*r as usize] % 2 == 0
-                                   { *j } else { 1 },
-                jio(r, j) => ip += if regs[*r as usize] == 1
-                                   { *j } else { 1 },
+                jie(r, j) => ip += if regs[*r as usize] % 2 == 0 { *j } else { 1 },
+                jio(r, j) => ip += if regs[*r as usize] == 1 { *j } else { 1 },
             }
         }
         (regs[1], regs[0])

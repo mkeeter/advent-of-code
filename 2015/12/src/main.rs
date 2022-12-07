@@ -1,11 +1,11 @@
-use std::io::Read;
 use json::JsonValue;
+use std::io::Read;
 
 fn part1(v: &JsonValue) -> i32 {
     match v {
         JsonValue::Number(i) => (*i).into(),
         JsonValue::Object(o) => o.iter().map(|v| part1(v.1)).sum(),
-        JsonValue::Array(a)  => a.iter().map(|v| part1(v)).sum(),
+        JsonValue::Array(a) => a.iter().map(|v| part1(v)).sum(),
         _ => 0,
     }
 }
@@ -13,13 +13,14 @@ fn part1(v: &JsonValue) -> i32 {
 fn part2(v: &JsonValue) -> i32 {
     match v {
         JsonValue::Number(i) => (*i).into(),
-        JsonValue::Object(o) =>
+        JsonValue::Object(o) => {
             if o.iter().any(|v| v.1 == "red") {
                 0
             } else {
                 o.iter().map(|v| part2(v.1)).sum()
-            },
-        JsonValue::Array(a)  => a.iter().map(|v| part2(v)).sum(),
+            }
+        }
+        JsonValue::Array(a) => a.iter().map(|v| part2(v)).sum(),
         _ => 0,
     }
 }

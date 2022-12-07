@@ -6,7 +6,7 @@ fn part1(constraints: &Vec<(char, HashSet<char>)>) {
         constraints
             .iter()
             .filter(|(a, _)| !seen.contains(a))
-            .filter(|(_, b)|  b.difference(&seen).count() == 0)
+            .filter(|(_, b)| b.difference(&seen).count() == 0)
             .map(|(a, _)| a.clone())
             .min()
     };
@@ -18,15 +18,13 @@ fn part1(constraints: &Vec<(char, HashSet<char>)>) {
     println!("Part 1: {:?}", state);
 }
 
-fn part2(constraints: &Vec<(char, HashSet<char>)>,
-         workers: usize,
-         delay: usize) {
+fn part2(constraints: &Vec<(char, HashSet<char>)>, workers: usize, delay: usize) {
     let available = |state: &String| {
         let seen = state.chars().collect::<HashSet<char>>();
         let mut out: Vec<char> = constraints
             .iter()
             .filter(|(a, _)| !seen.contains(a))
-            .filter(|(_, b)|  b.difference(&seen).count() == 0)
+            .filter(|(_, b)| b.difference(&seen).count() == 0)
             .map(|(a, _)| a.clone())
             .collect();
         out.sort();
@@ -50,7 +48,8 @@ fn part2(constraints: &Vec<(char, HashSet<char>)>,
         }
 
         // Record which tasks are being worked on
-        let working_on = tasks.iter()
+        let working_on = tasks
+            .iter()
             .filter_map(|t| *t)
             .map(|(target, _)| target)
             .collect::<HashSet<char>>();
@@ -83,21 +82,31 @@ fn main() {
         .lines()
         .map(|p| p.split(' '))
         .map(|itr| itr.skip(1))
-        .map(|mut itr| { (itr.next().unwrap(), itr.skip(5).next().unwrap()) })
-        .map(|(a, b)| { (a.chars().next().unwrap(),
-                         b.chars().next().unwrap()) })
+        .map(|mut itr| (itr.next().unwrap(), itr.skip(5).next().unwrap()))
+        .map(|(a, b)| (a.chars().next().unwrap(), b.chars().next().unwrap()))
         .collect::<Vec<(char, char)>>();
 
-    let prereqs = constraints.iter().map(|p| p.0.clone())
-                             .collect::<HashSet<char>>();
-    let tasks = constraints.iter().map(|p| p.1.clone())
-                             .collect::<HashSet<char>>();
-    let constraints = tasks.union(&prereqs)
-         .map(|t| (*t, constraints.iter()
-                                  .filter(|c| c.1 == *t)
-                                  .map(|c| c.0)
-                                  .collect::<HashSet<char>>()))
-         .collect::<Vec<(char, HashSet<char>)>>();
+    let prereqs = constraints
+        .iter()
+        .map(|p| p.0.clone())
+        .collect::<HashSet<char>>();
+    let tasks = constraints
+        .iter()
+        .map(|p| p.1.clone())
+        .collect::<HashSet<char>>();
+    let constraints = tasks
+        .union(&prereqs)
+        .map(|t| {
+            (
+                *t,
+                constraints
+                    .iter()
+                    .filter(|c| c.1 == *t)
+                    .map(|c| c.0)
+                    .collect::<HashSet<char>>(),
+            )
+        })
+        .collect::<Vec<(char, HashSet<char>)>>();
 
     part1(&constraints);
     part2(&constraints, 5, 60);

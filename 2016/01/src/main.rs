@@ -1,24 +1,36 @@
-use std::io::{self, Read};
 use std::collections::HashSet;
+use std::io::{self, Read};
 
 fn main() {
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer).unwrap();
 
-    let mut x : i32 = 0;
-    let mut y : i32 = 0;
-    let mut dir : i32 = 0;
+    let mut x: i32 = 0;
+    let mut y: i32 = 0;
+    let mut dir: i32 = 0;
     let vecs = [[0, 1], [-1, 0], [0, -1], [1, 0]];
 
     let mut visited = HashSet::new();
-    visited.insert((0,0));
+    visited.insert((0, 0));
 
     let mut p2 = None;
     for cmd in buffer.split(',') {
         let trimmed = cmd.trim();
         dir = match trimmed.as_bytes()[0] as char {
-            'R' => if dir == 0 { 3 } else { dir - 1 },
-            'L' => if dir == 3 { 0 } else { dir + 1 },
+            'R' => {
+                if dir == 0 {
+                    3
+                } else {
+                    dir - 1
+                }
+            }
+            'L' => {
+                if dir == 3 {
+                    0
+                } else {
+                    dir + 1
+                }
+            }
             _ => panic!("OMG"),
         };
 

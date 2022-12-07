@@ -1,10 +1,11 @@
+use itertools::*;
 use std::collections::HashMap;
 use std::io::BufRead;
 use std::str::FromStr;
-use itertools::*;
 
 fn main() {
-    let sues = std::io::stdin().lock()
+    let sues = std::io::stdin()
+        .lock()
         .lines()
         .map(|line| {
             line.unwrap()
@@ -17,19 +18,20 @@ fn main() {
         .collect::<Vec<HashMap<String, usize>>>();
 
     let known = [
-            ("children", 3),
-            ("cats", 7),
-            ("samoyeds", 2),
-            ("pomeranians", 3),
-            ("akitas", 0),
-            ("vizslas", 0),
-            ("goldfish", 5),
-            ("trees", 3),
-            ("cars", 2),
-            ("perfumes", 1)
-        ].iter()
-        .map(|(k, v)| ((*k).to_string(), *v))
-        .collect::<HashMap<String, usize>>();
+        ("children", 3),
+        ("cats", 7),
+        ("samoyeds", 2),
+        ("pomeranians", 3),
+        ("akitas", 0),
+        ("vizslas", 0),
+        ("goldfish", 5),
+        ("trees", 3),
+        ("cars", 2),
+        ("perfumes", 1),
+    ]
+    .iter()
+    .map(|(k, v)| ((*k).to_string(), *v))
+    .collect::<HashMap<String, usize>>();
 
     'part1: for s in sues.iter() {
         for k in known.iter() {

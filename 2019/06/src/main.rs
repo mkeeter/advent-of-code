@@ -26,7 +26,7 @@ impl Orbits {
             parents: Vec::new(),
             distances: Vec::new(),
         };
-        for (k,v) in parents.iter() {
+        for (k, v) in parents.iter() {
             let k = out.index(k);
             let v = out.index(v);
             out.parents[k] = Some(v);
@@ -67,26 +67,28 @@ impl Orbits {
     fn transfer(&self, a: &str, b: &str) -> usize {
         let a = *self.names.get(a).unwrap();
         let b = *self.names.get(b).unwrap();
-        let c = *self._parents_of(a)
+        let c = *self
+            ._parents_of(a)
             .intersection(&self._parents_of(b))
             .max_by_key(|o| self.distances[**o].unwrap())
             .unwrap();
 
-        self.distances[a].unwrap() +
-        self.distances[b].unwrap() -
-        2*self.distances[c].unwrap() - 2
+        self.distances[a].unwrap() + self.distances[b].unwrap() - 2 * self.distances[c].unwrap() - 2
     }
 }
 
 fn main() {
-    let parents = std::io::stdin().lock().lines()
+    let parents = std::io::stdin()
+        .lock()
+        .lines()
         .map(|line| line.unwrap())
         .map(|line| {
             let mut itr = line.split(')');
             let orbitee = itr.next().unwrap().to_owned();
             let orbiter = itr.next().unwrap().to_owned();
-            (orbiter, orbitee) })
-        .collect::<HashMap<_,_>>();
+            (orbiter, orbitee)
+        })
+        .collect::<HashMap<_, _>>();
 
     let mut orbits = Orbits::new(&parents);
     println!("Part 1: {}", orbits.checksum());

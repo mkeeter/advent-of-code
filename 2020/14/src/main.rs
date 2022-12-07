@@ -1,11 +1,12 @@
+use regex::Regex;
 use std::collections::HashMap;
 use std::io::BufRead;
-use regex::Regex;
 
 type Memory = HashMap<u64, u64>;
 fn run<F, G, T>(lines: &[String], decode: F, write: G) -> u64
-    where F: Fn(&str) -> T,
-          G: Fn(u64, u64, &T, &mut Memory),
+where
+    F: Fn(&str) -> T,
+    G: Fn(u64, u64, &T, &mut Memory),
 {
     let imem = Regex::new(r#"^mem\[(\d+)\] = (\d+)$"#).unwrap();
     let imask = Regex::new(r#"^mask = ([01X]{36})$"#).unwrap();
@@ -43,8 +44,7 @@ fn decode_set_clear(s: &str) -> (u64, u64) {
     (set, clear)
 }
 
-fn write_set_clear(val: u64, addr: u64, (set, clear): &(u64, u64),
-                   mem: &mut Memory) {
+fn write_set_clear(val: u64, addr: u64, (set, clear): &(u64, u64), mem: &mut Memory) {
     mem.insert(addr, (val | set) & (!clear));
 }
 
@@ -55,20 +55,23 @@ fn decode_multi(s: &str) -> Vec<(usize, char)> {
 }
 
 fn write_multi<D: ?Sized>(val: u64, addr: u64, mask: &D, mem: &mut Memory)
-    where D: AsRef<[(usize, char)]>
+where
+    D: AsRef<[(usize, char)]>,
 {
     let mask = mask.as_ref();
     match mask.get(0) {
-        None => { mem.insert(addr, val); },
+        None => {
+            mem.insert(addr, val);
+        }
         Some((i, c)) => match c {
             '0' => write_multi(val, addr, &mask[1..], mem),
             '1' => write_multi(val, addr | (1 << (35 - i)), &mask[1..], mem),
             'X' => {
                 write_multi(val, addr | (1 << (35 - i)), &mask[1..], mem);
                 write_multi(val, addr & (!(1 << (35 - i))), &mask[1..], mem);
-            },
+            }
             _ => panic!("Invalid mask char: {}", c),
-        }
+        },
     };
 }
 

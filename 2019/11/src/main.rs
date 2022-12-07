@@ -1,5 +1,5 @@
-use std::io::Read;
 use std::collections::HashMap;
+use std::io::Read;
 use std::str::FromStr;
 
 use vm::Vm;
@@ -7,7 +7,7 @@ use vm::Vm;
 fn paint(input: &str, s: bool) -> HashMap<(i32, i32), bool> {
     let mut vm = Vm::from_str(&input).unwrap();
 
-    let mut panels : HashMap<(i32, i32), bool> = HashMap::new();
+    let mut panels: HashMap<(i32, i32), bool> = HashMap::new();
     panels.insert((0, 0), s);
 
     let mut pos = (0, 0);
@@ -21,13 +21,13 @@ fn paint(input: &str, s: bool) -> HashMap<(i32, i32), bool> {
             None => break,
             Some(rot) => {
                 if rot == 0 {
-                    dir = (-dir.1,  dir.0);
+                    dir = (-dir.1, dir.0);
                 } else {
-                    dir = ( dir.1, -dir.0);
+                    dir = (dir.1, -dir.0);
                 }
                 pos.0 += dir.0;
                 pos.1 += dir.1;
-            },
+            }
         }
     }
     panels
@@ -41,17 +41,13 @@ fn main() {
 
     println!("Part 2:");
     let p = paint(&input, true);
-    let (xmin, xmax, ymin, ymax) = p.keys()
-        .fold((std::i32::MAX, std::i32::MIN,
-               std::i32::MAX, std::i32::MIN),
-        |(xmin, xmax, ymin, ymax), (x, y)| {
-            (xmin.min(*x), xmax.max(*x),
-             ymin.min(*y), ymax.max(*y))});
+    let (xmin, xmax, ymin, ymax) = p.keys().fold(
+        (std::i32::MAX, std::i32::MIN, std::i32::MAX, std::i32::MIN),
+        |(xmin, xmax, ymin, ymax), (x, y)| (xmin.min(*x), xmax.max(*x), ymin.min(*y), ymax.max(*y)),
+    );
     for y in (ymin..=ymax).rev() {
         for x in xmin..=xmax {
-            let c = p.get(&(x, y))
-                .cloned()
-                .unwrap_or(false);
+            let c = p.get(&(x, y)).cloned().unwrap_or(false);
             if c {
                 print!("█");
             } else {

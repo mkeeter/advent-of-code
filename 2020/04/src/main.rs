@@ -1,14 +1,13 @@
-use std::io::Read;
 use std::collections::HashSet;
+use std::io::Read;
 
-use regex::Regex;
 use lazy_static::lazy_static;
+use regex::Regex;
 
 fn check(c: &str) -> bool {
     lazy_static! {
         static ref HCL: Regex = Regex::new("^#[a-f0-9]{6}$").unwrap();
-        static ref ECL: HashSet<&'static str> = "amb blu brn gry grn hzl oth"
-            .split(' ').collect();
+        static ref ECL: HashSet<&'static str> = "amb blu brn gry grn hzl oth".split(' ').collect();
         static ref PID: Regex = Regex::new("^[0-9]{9}$").unwrap();
         static ref HGT: Regex = Regex::new("^([0-9]+)(cm|in)$").unwrap();
     }
@@ -18,9 +17,15 @@ fn check(c: &str) -> bool {
     let val = itr.next().unwrap();
 
     match key {
-        "byr" => val.parse().map_or(false, |v: i32| (1920..=2002).contains(&v)),
-        "iyr" => val.parse().map_or(false, |v: i32| (2010..=2020).contains(&v)),
-        "eyr" => val.parse().map_or(false, |v: i32| (2020..=2030).contains(&v)),
+        "byr" => val
+            .parse()
+            .map_or(false, |v: i32| (1920..=2002).contains(&v)),
+        "iyr" => val
+            .parse()
+            .map_or(false, |v: i32| (2010..=2020).contains(&v)),
+        "eyr" => val
+            .parse()
+            .map_or(false, |v: i32| (2020..=2030).contains(&v)),
         "hgt" => HGT.captures(val).map_or(false, |c| {
             let h: i32 = c.get(1).unwrap().as_str().parse().unwrap();
             let unit = c.get(2).unwrap().as_str();
@@ -50,7 +55,9 @@ fn valid2(s: &str) -> bool {
 
 fn main() {
     let mut input = String::new();
-    std::io::stdin().read_to_string(&mut input).expect("Failed to read input");
+    std::io::stdin()
+        .read_to_string(&mut input)
+        .expect("Failed to read input");
 
     let lines: Vec<&str> = input.split("\n\n").collect();
     let p1 = lines.iter().filter(|s| valid1(*s)).count();

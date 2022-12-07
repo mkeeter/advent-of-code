@@ -3,10 +3,12 @@ fn main() {
     std::io::stdin().read_line(&mut input).unwrap();
     let input = input.trim().to_string();
 
-    let hashes = || std::iter::successors(Some(1), |i| Some(i + 1))
-        .map(|i| input.clone() + &i.to_string())
-        .map(md5::compute)
-        .filter(|m| m[0] == 0 && m[1] == 0 && m[2] >> 4 == 0);
+    let hashes = || {
+        std::iter::successors(Some(1), |i| Some(i + 1))
+            .map(|i| input.clone() + &i.to_string())
+            .map(md5::compute)
+            .filter(|m| m[0] == 0 && m[1] == 0 && m[2] >> 4 == 0)
+    };
 
     let part1 = hashes()
         .take(8)

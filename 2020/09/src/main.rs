@@ -1,10 +1,12 @@
-use std::io::BufRead;
 use std::cmp::Ordering;
+use std::io::BufRead;
 
 const LOOKBACK: usize = 25;
 
 fn main() {
-    let p = std::io::stdin().lock().lines()
+    let p = std::io::stdin()
+        .lock()
+        .lines()
         .map(|line| line.unwrap().parse().unwrap())
         .collect::<Vec<u64>>();
 
@@ -12,9 +14,12 @@ fn main() {
     buf.copy_from_slice(&p[0..LOOKBACK]);
 
     let mut target = 0;
-    for (i,n) in p[LOOKBACK..].iter().enumerate() {
-        if buf.iter().enumerate().any(|(j, a)| buf[j..].iter()
-                                 .any(|b| a + b == *n)) {
+    for (i, n) in p[LOOKBACK..].iter().enumerate() {
+        if buf
+            .iter()
+            .enumerate()
+            .any(|(j, a)| buf[j..].iter().any(|b| a + b == *n))
+        {
             buf[i % LOOKBACK] = *n;
         } else {
             target = *n;

@@ -1,9 +1,10 @@
-use std::io::{self, Read};
 use regex::Regex;
-use std::collections::{HashMap, HashSet, VecDeque};
 use std::cmp::min;
+use std::collections::{HashMap, HashSet, VecDeque};
+use std::io::{self, Read};
 
-#[macro_use] extern crate itertools;
+#[macro_use]
+extern crate itertools;
 
 // Bounds represent a region with the bounds
 //   x + y + z <= bounds[0]
@@ -20,16 +21,14 @@ impl Bounds {
         let (x, y, z) = pt;
         let mut out = [0; 8];
         for i in 0..8 {
-            out[i] = r + x * Self::sign(i, 0)
-                       + y * Self::sign(i, 1)
-                       + z * Self::sign(i, 2);
+            out[i] = r + x * Self::sign(i, 0) + y * Self::sign(i, 1) + z * Self::sign(i, 2);
         }
         Bounds(out)
     }
 
     fn sign(i: usize, axis: usize) -> i64 {
         if i & (1 << axis) != 0 {
-             1
+            1
         } else {
             -1
         }
@@ -41,9 +40,9 @@ impl Bounds {
 
     fn contains(&self, pt: &(i64, i64, i64)) -> bool {
         let (x, y, z) = pt;
-        (0..8).all(|i| x * Self::sign(i, 0)
-                     + y * Self::sign(i, 1)
-                     + z * Self::sign(i, 2) <= self.0[i])
+        (0..8).all(|i| {
+            x * Self::sign(i, 0) + y * Self::sign(i, 1) + z * Self::sign(i, 2) <= self.0[i]
+        })
     }
 
     fn is_empty(&self) -> bool {
@@ -79,12 +78,21 @@ impl Bounds {
                 // Work around integer discrepencies by
                 // including multiple choices if a coordinate
                 // isn't an even division of 4.
-                let xs = if x % 4 == 0 { vec![x / 4] }
-                         else { vec![x / 4, (x + 3) / 4] };
-                let ys = if y % 4 == 0 { vec![y / 4] }
-                         else { vec![y / 4, (y + 3) / 4] };
-                let zs = if z % 4 == 0 { vec![z / 4] }
-                         else { vec![z / 4, (z + 3) / 4] };
+                let xs = if x % 4 == 0 {
+                    vec![x / 4]
+                } else {
+                    vec![x / 4, (x + 3) / 4]
+                };
+                let ys = if y % 4 == 0 {
+                    vec![y / 4]
+                } else {
+                    vec![y / 4, (y + 3) / 4]
+                };
+                let zs = if z % 4 == 0 {
+                    vec![z / 4]
+                } else {
+                    vec![z / 4, (z + 3) / 4]
+                };
 
                 iproduct!(xs.iter(), ys.iter(), zs.iter())
                     .filter(|(&x, &y, &z)| self.contains(&(x, y, z)))
@@ -106,22 +114,24 @@ fn main() {
 
     let pts = buffer
         .lines()
-        .map(|line| re.captures_iter(line)
+        .map(|line| {
+            re.captures_iter(line)
                 .map(|i| str::parse::<i64>(&i[1]).unwrap())
-                .collect::<Vec<i64>>())
+                .collect::<Vec<i64>>()
+        })
         .map(|v| ((v[0], v[1], v[2]), v[3]))
         .collect::<Vec<((i64, i64, i64), i64)>>();
 
     let ((x, y, z), r) = pts.iter().max_by_key(|pt| pt.1).unwrap();
-    let n = pts.iter()
-        .filter(|(pt, _)| (pt.0 - x).abs() +
-                          (pt.1 - y).abs() +
-                          (pt.2 - z).abs() <= *r)
+    let n = pts
+        .iter()
+        .filter(|(pt, _)| (pt.0 - x).abs() + (pt.1 - y).abs() + (pt.2 - z).abs() <= *r)
         .count();
     println!("Part 1: {}", n);
 
     ////////////////////////////////////////////////////////////////////////////
-    let bounds = pts.iter()
+    let bounds = pts
+        .iter()
         .map(|(pt, r)| Bounds::from_pt(pt, *r))
         .collect::<Vec<_>>();
 
@@ -146,10 +156,9 @@ fn main() {
     let mut best_score = 0;
     let mut best_dist = std::i64::MAX;
     for (x, y, z) in test_points.iter() {
-        let n = pts.iter()
-            .filter(|(pt, r)| (pt.0 - x).abs() +
-                              (pt.1 - y).abs() +
-                              (pt.2 - z).abs() <= *r)
+        let n = pts
+            .iter()
+            .filter(|(pt, r)| (pt.0 - x).abs() + (pt.1 - y).abs() + (pt.2 - z).abs() <= *r)
             .count();
 
         let dist = x + y + z;

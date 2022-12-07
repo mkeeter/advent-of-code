@@ -5,14 +5,18 @@ fn main() {
     let mut iter = stdin.lock().lines();
 
     let t: i64 = iter.next().unwrap().unwrap().parse().unwrap();
-    let buses = iter.next().unwrap().unwrap()
+    let buses = iter
+        .next()
+        .unwrap()
+        .unwrap()
         .split(',')
         .enumerate()
         .filter_map(|(i, s)| s.parse().ok().map(|b| (i as i64, b)))
         .map(|(i, b): (i64, i64)| (b, (b - i).rem_euclid(b)))
         .collect::<Vec<_>>();
 
-    let p1 = buses.iter()
+    let p1 = buses
+        .iter()
         .map(|i| ((i.0 - t).rem_euclid(i.0), i.0))
         .min()
         .unwrap();

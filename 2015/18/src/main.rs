@@ -9,11 +9,19 @@ type Point = (i32, i32);
 fn step(g: HashSet<Point>) -> HashSet<Point> {
     iproduct!(0..SIZE, 0..SIZE)
         .filter(|&(x, y)| {
-            let neighbors = [(0, 1), (0, -1), (1, 0), (-1, 0),
-                             (1, 1), (1, -1), (-1, 1), (-1, -1)]
-                .iter()
-                .filter(|(dx, dy)| g.contains(&((x + dx), (y + dy))))
-                .count();
+            let neighbors = [
+                (0, 1),
+                (0, -1),
+                (1, 0),
+                (-1, 0),
+                (1, 1),
+                (1, -1),
+                (-1, 1),
+                (-1, -1),
+            ]
+            .iter()
+            .filter(|(dx, dy)| g.contains(&((x + dx), (y + dy))))
+            .count();
             if g.contains(&(x, y)) {
                 neighbors == 2 || neighbors == 3
             } else {

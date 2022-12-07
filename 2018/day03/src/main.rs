@@ -1,9 +1,11 @@
 use std::str::FromStr;
 
-#[macro_use] extern crate nom;
+#[macro_use]
+extern crate nom;
 use nom::types::CompleteByteSlice;
 
-#[macro_use] extern crate itertools;
+#[macro_use]
+extern crate itertools;
 
 #[derive(Clone, Debug)]
 struct Patch {
@@ -11,7 +13,7 @@ struct Patch {
     x: usize,
     y: usize,
     w: usize,
-    h: usize
+    h: usize,
 }
 
 named!(coord<CompleteByteSlice, usize>,
@@ -46,13 +48,12 @@ fn main() {
     }
 
     let doubled = iproduct!(0..SIZE, 0..SIZE)
-        .filter(|(x, y)| grid[*x][*y] >= 2).count();
+        .filter(|(x, y)| grid[*x][*y] >= 2)
+        .count();
     println!("Number of double-claimed tiles: {}", doubled);
 
     for patch in patches.iter() {
-        if iproduct!(0..patch.w, 0..patch.h)
-            .all(|(i, j)| grid[patch.x + i][patch.y + j] == 1)
-        {
+        if iproduct!(0..patch.w, 0..patch.h).all(|(i, j)| grid[patch.x + i][patch.y + j] == 1) {
             println!("Found target with id #{}", patch.id);
         }
     }

@@ -23,8 +23,7 @@ fn decode(s: &str) -> usize {
 }
 
 fn encode(s: &str) -> usize {
-    s.matches('"').count() +
-    s.matches('\\').count() + 2
+    s.matches('"').count() + s.matches('\\').count() + 2
 }
 
 fn main() {
@@ -34,14 +33,10 @@ fn main() {
         .map(|line| line.unwrap())
         .collect::<Vec<String>>();
 
-    let score: usize = words.iter()
-        .map(|line| decode(&line))
-        .sum();
+    let score: usize = words.iter().map(|line| decode(&line)).sum();
     println!("Part 1: {}", score);
 
-    let score: usize = words.iter()
-        .map(|line| encode(&line))
-        .sum();
+    let score: usize = words.iter().map(|line| encode(&line)).sum();
     println!("Part 2: {}", score);
 }
 

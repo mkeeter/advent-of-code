@@ -31,8 +31,7 @@ fn main() {
             // Confirm that we're still on the map
             .filter(|&(_dir, x, y)| x >= 0 && y >= 0 && x < 4 && y < 4)
             // Accumulate in our vecdeque
-            .for_each(|(dir, x, y)| todo.push_back(
-                    (x, y, format!("{}{}", path, dir))))
+            .for_each(|(dir, x, y)| todo.push_back((x, y, format!("{}{}", path, dir))))
     }
     println!("Part 2: {}", longest);
 }

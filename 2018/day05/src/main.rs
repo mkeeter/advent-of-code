@@ -14,20 +14,26 @@ fn fully_react(mut polymer: Vec<u8>) -> usize {
         //s.truncate(80);
         //println!("{}\n", s);
 
-        let next = polymer.iter().zip(polymer.iter().skip(1))
-                   .position(|(a, b)| reacts(*a, *b));
+        let next = polymer
+            .iter()
+            .zip(polymer.iter().skip(1))
+            .position(|(a, b)| reacts(*a, *b));
 
         match next {
-            Some(i) => { polymer.remove(i); polymer.remove(i); },
-            None => { break }
+            Some(i) => {
+                polymer.remove(i);
+                polymer.remove(i);
+            }
+            None => break,
         }
     }
     return polymer.len();
 }
 
 fn main() {
-    let polymer = include_bytes!("../input").iter()
-        .filter(|c| (**c as char).is_alphabetic() )
+    let polymer = include_bytes!("../input")
+        .iter()
+        .filter(|c| (**c as char).is_alphabetic())
         .map(|c| c.clone())
         .collect::<Vec<u8>>();
 
@@ -37,7 +43,8 @@ fn main() {
     let mut best = None;
     for c in b'A'..(b'Z' + 1) {
         let c = c as char;
-        let mut shorter = polymer.iter()
+        let mut shorter = polymer
+            .iter()
             .filter(|e| (**e as char).to_ascii_uppercase() != c)
             .map(|p| p.clone())
             .collect::<Vec<u8>>();

@@ -1,7 +1,7 @@
-use std::io::BufRead;
+use core::f32::consts::PI;
 use std::cmp::min;
 use std::collections::{HashMap, HashSet};
-use core::f32::consts::PI;
+use std::io::BufRead;
 
 fn reduce((i, j): (i32, i32)) -> (i32, i32) {
     if i == 0 {
@@ -11,7 +11,7 @@ fn reduce((i, j): (i32, i32)) -> (i32, i32) {
     } else {
         for q in 2..=min(i.abs(), j.abs()) {
             if i % q == 0 && j % q == 0 {
-                return reduce((i / q, j / q))
+                return reduce((i / q, j / q));
             }
         }
         (i, j)
@@ -19,23 +19,27 @@ fn reduce((i, j): (i32, i32)) -> (i32, i32) {
 }
 
 fn main() {
-    let asteroids = std::io::stdin().lock()
+    let asteroids = std::io::stdin()
+        .lock()
         .lines()
         .map(|line| line.unwrap())
         .enumerate()
-        .flat_map(|(y, line)| line.chars()
-             .enumerate()
-             .filter(|(_x, c)| *c != '.')
-             .map(|(x, _c)| (x as i32, y as i32))
-             .collect::<Vec<_>>())
+        .flat_map(|(y, line)| {
+            line.chars()
+                .enumerate()
+                .filter(|(_x, c)| *c != '.')
+                .map(|(x, _c)| (x as i32, y as i32))
+                .collect::<Vec<_>>()
+        })
         .collect::<HashSet<(i32, i32)>>();
 
     let mut best = 0;
     let mut pos = (0, 0);
     for a in asteroids.iter() {
-        let seen = asteroids.iter()
+        let seen = asteroids
+            .iter()
             .filter(|&b| a != b)
-            .map(|b| { reduce((b.0 - a.0, b.1 - a.1)) })
+            .map(|b| reduce((b.0 - a.0, b.1 - a.1)))
             .collect::<HashSet<_>>();
         if seen.len() > best {
             pos = *a;
@@ -61,10 +65,8 @@ fn main() {
         }
         let mut targets = seen
             .into_iter()
-            .map(|((dx, dy), (_distance, pos))|
-                 ((dx as f32).atan2(-dy as f32), *pos))
-            .map(|(angle, pos)|
-                ((angle + 2f32 * PI) % (2f32 * PI), pos) )
+            .map(|((dx, dy), (_distance, pos))| ((dx as f32).atan2(-dy as f32), *pos))
+            .map(|(angle, pos)| ((angle + 2f32 * PI) % (2f32 * PI), pos))
             .collect::<Vec<_>>();
         targets.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
 

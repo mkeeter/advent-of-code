@@ -23,27 +23,28 @@ impl FromStr for Action {
             "swap" => match words[1] {
                 "position" => Ok(SwapPosition(
                     usize::from_str(words[2]).unwrap(),
-                    usize::from_str(words[5]).unwrap())),
+                    usize::from_str(words[5]).unwrap(),
+                )),
                 "letter" => Ok(SwapLetter(
                     words[2].chars().next().unwrap(),
-                    words[5].chars().next().unwrap())),
+                    words[5].chars().next().unwrap(),
+                )),
                 _ => Err(()),
-            }
+            },
             "rotate" => match words[1] {
-                "left" => Ok(RotateLeft(
-                    usize::from_str(words[2]).unwrap())),
-                "right" => Ok(RotateRight(
-                    usize::from_str(words[2]).unwrap())),
-                "based" => Ok(RotateLetter(
-                    words[6].chars().next().unwrap())),
+                "left" => Ok(RotateLeft(usize::from_str(words[2]).unwrap())),
+                "right" => Ok(RotateRight(usize::from_str(words[2]).unwrap())),
+                "based" => Ok(RotateLetter(words[6].chars().next().unwrap())),
                 _ => Err(()),
             },
             "reverse" => Ok(Reverse(
                 usize::from_str(words[2]).unwrap(),
-                usize::from_str(words[4]).unwrap())),
+                usize::from_str(words[4]).unwrap(),
+            )),
             "move" => Ok(Move(
                 usize::from_str(words[2]).unwrap(),
-                usize::from_str(words[5]).unwrap())),
+                usize::from_str(words[5]).unwrap(),
+            )),
             _ => Err(()),
         }
     }
@@ -56,10 +57,7 @@ struct Word(Vec<char>);
 
 impl Word {
     fn find(&self, c: char) -> usize {
-        self.0.iter()
-            .enumerate()
-            .find(|a| *a.1 == c)
-            .unwrap().0
+        self.0.iter().enumerate().find(|a| *a.1 == c).unwrap().0
     }
 
     fn apply(&mut self, a: Action) {
@@ -69,24 +67,24 @@ impl Word {
                 let cb = self.0[ib];
                 self.0[ia] = cb;
                 self.0[ib] = ca;
-            },
+            }
             SwapLetter(ca, cb) => {
                 let ia = self.find(ca);
                 let ib = self.find(cb);
                 self.0[ia] = cb;
                 self.0[ib] = ca;
-            },
+            }
             RotateLeft(n) => {
                 self.0.rotate_left(n);
-            },
+            }
             RotateRight(n) => {
                 self.0.rotate_right(n);
-            },
+            }
             RotateLetter(c) => {
                 let i = self.find(c);
                 let rot = (1 + i + (i >= 4) as usize) % self.0.len();
                 self.0.rotate_right(rot);
-            },
+            }
             Reverse(ia, ib) => {
                 for i in 0..((ib - ia + 1) / 2) {
                     let ca = self.0[ia + i];
@@ -107,13 +105,13 @@ impl Word {
             // These are reversible actions
             SwapPosition(_, _) | SwapLetter(_, _) | Reverse(_, _) => {
                 self.apply(a);
-            },
+            }
             RotateLeft(n) => {
                 self.0.rotate_right(n);
-            },
+            }
             RotateRight(n) => {
                 self.0.rotate_left(n);
-            },
+            }
             RotateLetter(c) => {
                 // Search for every possible rotation
                 // and find the one which matches
@@ -126,7 +124,7 @@ impl Word {
                     }
                     self.0.rotate_left(1);
                 }
-            },
+            }
             Move(ia, ib) => {
                 let c = self.0.remove(ib);
                 self.0.insert(ia, c);
@@ -136,7 +134,8 @@ impl Word {
 }
 
 fn main() {
-    let input = std::io::stdin().lock()
+    let input = std::io::stdin()
+        .lock()
         .lines()
         .filter_map(|line| Action::from_str(&line.unwrap()).ok())
         .collect::<Vec<Action>>();

@@ -1,21 +1,22 @@
-use std::collections::{VecDeque, HashSet};
+use std::collections::{HashSet, VecDeque};
 use std::io::Read;
 
-fn run(itr: impl Iterator<Item=String>) -> usize
-{
+fn run(itr: impl Iterator<Item = String>) -> usize {
     let mut itr = itr
         .map(|s| s.chars().collect::<Vec<_>>())
         .enumerate()
         .map(|(n, s)| {
-             let triple = s.windows(3)
-                 .filter(|w| w.iter().all(|&c| c == w[0]))
-                 .map(|w| w[0])
-                 .next();
-             let quintics = s.windows(5)
-                 .filter(|w| w.iter().all(|&c| c == w[0]))
-                 .map(|w| w[0])
-                 .collect::<HashSet<char>>();
-             (n, triple, quintics)
+            let triple = s
+                .windows(3)
+                .filter(|w| w.iter().all(|&c| c == w[0]))
+                .map(|w| w[0])
+                .next();
+            let quintics = s
+                .windows(5)
+                .filter(|w| w.iter().all(|&c| c == w[0]))
+                .map(|w| w[0])
+                .collect::<HashSet<char>>();
+            (n, triple, quintics)
         });
 
     let mut q = VecDeque::new();
@@ -51,8 +52,8 @@ fn main() {
 
     let hashes = (0..)
         .map(|i| input.to_string() + &i.to_string())
-        .filter_map(|s| std::iter::successors(Some(s),
-                |s| Some(format!("{:x}", md5::compute(s))))
-            .nth(2017));
+        .filter_map(|s| {
+            std::iter::successors(Some(s), |s| Some(format!("{:x}", md5::compute(s)))).nth(2017)
+        });
     println!("Part 2: {}", run(hashes));
 }

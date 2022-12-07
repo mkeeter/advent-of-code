@@ -1,8 +1,7 @@
-use std::io::Read;
-use std::collections::HashMap;
 use std::cmp::Ordering;
+use std::collections::HashMap;
+use std::io::Read;
 use std::str::FromStr;
-
 
 use vm::Vm;
 
@@ -10,8 +9,11 @@ const DRAW_GAME: bool = false;
 
 fn get_pixel_with(vm: &mut Vm, input: i64) -> Option<(i64, i64, i64)> {
     if let Some(x) = vm.run_until_with(input) {
-        Some((x, vm.run_until_with(input).unwrap(),
-                 vm.run_until_with(input).unwrap()))
+        Some((
+            x,
+            vm.run_until_with(input).unwrap(),
+            vm.run_until_with(input).unwrap(),
+        ))
     } else {
         None
     }
@@ -25,14 +27,17 @@ fn draw(tiles: &HashMap<(i64, i64), i64>) {
 
     for y in ymin..=ymax {
         for x in xmin..=xmax {
-            println!("{}", match tiles.get(&(x, y)).unwrap_or(&0) {
-                0 => ' ',
-                1 => '█',
-                2 => '▒',
-                3 => '▔',
-                4 => '●',
-                _ => unreachable!(),
-            });
+            println!(
+                "{}",
+                match tiles.get(&(x, y)).unwrap_or(&0) {
+                    0 => ' ',
+                    1 => '█',
+                    2 => '▒',
+                    3 => '▔',
+                    4 => '●',
+                    _ => unreachable!(),
+                }
+            );
         }
         println!();
     }
@@ -76,11 +81,11 @@ fn main() {
 
             input = match ball_x.cmp(&paddle_x) {
                 Ordering::Less => -1,
-                Ordering::Greater =>  1,
+                Ordering::Greater => 1,
                 Ordering::Equal => 0,
             };
 
-            if redraw && DRAW_GAME{
+            if redraw && DRAW_GAME {
                 draw(&tiles);
             }
         }

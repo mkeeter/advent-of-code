@@ -1,5 +1,5 @@
-use std::io::Read;
 use std::cmp::min;
+use std::io::Read;
 
 fn cumsum(input: &[i32]) -> Vec<i32> {
     let mut output = vec![0; input.len() + 1];
@@ -31,7 +31,8 @@ fn main() {
     let mut s = String::new();
     std::io::stdin().read_to_string(&mut s).unwrap();
 
-    let mut input = s.chars()
+    let mut input = s
+        .chars()
         .filter_map(|c| char::to_digit(c, 10))
         .map(|i| i as i32)
         .collect::<Vec<i32>>();
@@ -50,7 +51,8 @@ fn main() {
     println!();
 
     let size = input.len();
-    let mut input = s.chars()
+    let mut input = s
+        .chars()
         .filter_map(|c| char::to_digit(c, 10))
         .map(|i| i as i32)
         .cycle()

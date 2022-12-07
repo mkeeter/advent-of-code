@@ -1,7 +1,7 @@
+use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::io::BufRead;
 use std::str::FromStr;
-use std::collections::HashSet;
-use std::cmp::Ordering;
 
 use num::Integer;
 use smallvec::SmallVec;
@@ -15,9 +15,7 @@ struct Axis(SmallVec<[State; 4]>);
 
 impl Axis {
     fn from_array(input: &[Vec<i32>], i: usize) -> Axis {
-        Axis(input.iter()
-            .map(|p| State { pos: p[i], vel: 0 })
-            .collect())
+        Axis(input.iter().map(|p| State { pos: p[i], vel: 0 }).collect())
     }
 
     fn step(&mut self) {
@@ -27,11 +25,11 @@ impl Axis {
                     Ordering::Less => {
                         self.0[i].vel += 1;
                         self.0[j].vel -= 1;
-                    },
+                    }
                     Ordering::Greater => {
                         self.0[i].vel -= 1;
                         self.0[j].vel += 1;
-                    },
+                    }
                     _ => (),
                 }
             }
@@ -62,25 +60,36 @@ impl Axis {
 }
 
 fn main() {
-    let input = std::io::stdin().lock().lines()
+    let input = std::io::stdin()
+        .lock()
+        .lines()
         .map(|line| line.unwrap())
         .map(|line| line.replace(|c| !char::is_numeric(c) && c != '-', " "))
-        .map(|line| line.split(' ')
-                 .filter_map(|i| i32::from_str(i).ok())
-                 .collect::<Vec<i32>>())
+        .map(|line| {
+            line.split(' ')
+                .filter_map(|i| i32::from_str(i).ok())
+                .collect::<Vec<i32>>()
+        })
         .collect::<Vec<Vec<i32>>>();
 
-    let mut axes = [Axis::from_array(&input, 0),
-                    Axis::from_array(&input, 1),
-                    Axis::from_array(&input, 2)];
+    let mut axes = [
+        Axis::from_array(&input, 0),
+        Axis::from_array(&input, 1),
+        Axis::from_array(&input, 2),
+    ];
 
     for a in axes.iter_mut() {
         a.run(1000);
     }
     let energy: i32 = (0..input.len())
-        .map(|i| axes.iter().map(|a| a.0[i].pos.abs()).sum::<i32>() *
-                 axes.iter().map(|a| a.0[i].vel.abs()).sum::<i32>())
+        .map(|i| {
+            axes.iter().map(|a| a.0[i].pos.abs()).sum::<i32>()
+                * axes.iter().map(|a| a.0[i].vel.abs()).sum::<i32>()
+        })
         .sum();
     println!("Part 1: {}", energy);
-    println!("Part 2: {}", axes.iter_mut().fold(1, |acc, a| acc.lcm(&a.cycle())));
+    println!(
+        "Part 2: {}",
+        axes.iter_mut().fold(1, |acc, a| acc.lcm(&a.cycle()))
+    );
 }

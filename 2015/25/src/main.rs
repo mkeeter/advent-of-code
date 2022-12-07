@@ -23,9 +23,11 @@ fn main() {
     });
 
     #[allow(clippy::inconsistent_digit_grouping)]
-    let d = std::iter::successors(Some(2015_11_25_u64),
+    let d = std::iter::successors(
+        Some(2015_11_25_u64),
         #[allow(clippy::unreadable_literal)]
-        |&i| { Some((i * 252533) % 33554393) });
+        |&i| Some((i * 252533) % 33554393),
+    );
 
     let i = pos.zip(d).last().unwrap().1;
     println!("Part 1: {:?}", i);

@@ -1,6 +1,6 @@
+use itertools::iproduct;
 use std::collections::HashSet;
 use std::io::BufRead;
-use itertools::iproduct;
 
 const SIZE: i32 = 5;
 const CENTER: i32 = SIZE / 2;
@@ -70,7 +70,8 @@ fn main() {
     let mut seen = HashSet::new();
     let mut world: Map = input.clone();
     loop {
-        let w = world.iter()
+        let w = world
+            .iter()
             .fold(0, |acc, (x, y)| acc | (1 << (x + y * SIZE)));
         if !seen.insert(w) {
             println!("Part 1: {}", w);
@@ -89,9 +90,7 @@ fn main() {
             .collect();
     }
 
-    let mut world = RecursiveMap(input.iter()
-        .map(|&(x, y)| (x, y, 0))
-        .collect());
+    let mut world = RecursiveMap(input.iter().map(|&(x, y)| (x, y, 0)).collect());
 
     for i in 0..200 {
         world = RecursiveMap(
@@ -102,7 +101,8 @@ fn main() {
                     let is_bug = world.0.contains(&(x, y, z));
                     nearby_bugs == 1 || (nearby_bugs == 2 && !is_bug)
                 })
-            .collect());
+                .collect(),
+        );
     }
     println!("Part 2: {}", world.0.len());
 }

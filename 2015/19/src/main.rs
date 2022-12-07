@@ -1,5 +1,5 @@
-use std::collections::{HashSet, BinaryHeap};
 use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashSet};
 use std::io::BufRead;
 
 #[derive(PartialEq, Eq)]
@@ -22,8 +22,7 @@ impl PartialOrd for Molecule {
     }
 }
 
-fn react(mol: &str, lhs: &str, rhs: &str) -> HashSet<String>
-{
+fn react(mol: &str, lhs: &str, rhs: &str) -> HashSet<String> {
     let parts = mol.split(lhs).collect::<Vec<_>>();
     let mut out = HashSet::new();
     for i in 0..(parts.len() - 1) {

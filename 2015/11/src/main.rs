@@ -19,19 +19,19 @@ fn next(pw: Password) -> Password {
 }
 
 fn check(pw: Password) -> bool {
-    pw.windows(3)   // Three increasing characters
+    pw.windows(3) // Three increasing characters
         .any(|w| w[1] == w[0] + 1 && w[2] == w[1] + 1)
-    &&
-    !pw.iter()      // No characters from the blacklist
-        .any(|&c| c == b'i' || c == b'o' || c == b'l')
-    &&
-    pw.windows(2)   // Two non-overlapping pairs
-        .enumerate()
-        .filter(|w| w.1[0] == w.1[1])
-        .map(|i| i.0)
-        .collect::<Vec<usize>>()
-        .windows(2)
-        .any(|q| q[1] - q[0] > 1)
+        && !pw
+            .iter() // No characters from the blacklist
+            .any(|&c| c == b'i' || c == b'o' || c == b'l')
+        && pw
+            .windows(2) // Two non-overlapping pairs
+            .enumerate()
+            .filter(|w| w.1[0] == w.1[1])
+            .map(|i| i.0)
+            .collect::<Vec<usize>>()
+            .windows(2)
+            .any(|q| q[1] - q[0] > 1)
 }
 
 fn main() {
@@ -42,8 +42,7 @@ fn main() {
         pw[i] = c as u8;
     }
 
-    let mut itr = std::iter::successors(Some(pw), |c| Some(next(*c)))
-        .filter(|p| check(*p));
+    let mut itr = std::iter::successors(Some(pw), |c| Some(next(*c))).filter(|p| check(*p));
 
     for i in 1..=2 {
         print!("Part {}: ", i);

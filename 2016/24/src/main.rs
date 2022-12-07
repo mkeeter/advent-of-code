@@ -1,12 +1,13 @@
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::BufRead;
-use std::collections::{HashSet, HashMap, VecDeque};
 
 use itertools::*;
 
-fn search(tiles: &HashSet<(usize, usize)>,
-          targets: &HashMap<(usize, usize), char>,
-          start: (usize, usize)) -> HashMap<char, usize>
-{
+fn search(
+    tiles: &HashSet<(usize, usize)>,
+    targets: &HashMap<(usize, usize), char>,
+    start: (usize, usize),
+) -> HashMap<char, usize> {
     let mut todo = VecDeque::new();
     let mut seen = HashSet::new();
 
@@ -55,29 +56,32 @@ fn main() {
         }
     }
 
-    let p1 = targets.values()
+    let p1 = targets
+        .values()
         .filter(|c| **c != '0')
         .permutations(targets.len() - 1)
         .map(|s| {
-            distances[&('0', *s[0])] +
-            s.windows(2)
-                .map(|w| distances[&(*w[0], *w[1])])
-                .sum::<usize>() })
+            distances[&('0', *s[0])]
+                + s.windows(2)
+                    .map(|w| distances[&(*w[0], *w[1])])
+                    .sum::<usize>()
+        })
         .min()
         .unwrap();
     println!("Part 1: {}", p1);
 
-    let p2 = targets.values()
+    let p2 = targets
+        .values()
         .filter(|c| **c != '0')
         .permutations(targets.len() - 1)
         .map(|s| {
-            distances[&('0', *s[0])] +
-            s.windows(2)
-                .map(|w| distances[&(*w[0], *w[1])])
-                .sum::<usize>() +
-            distances[&(*s[s.len() - 1], '0')] })
+            distances[&('0', *s[0])]
+                + s.windows(2)
+                    .map(|w| distances[&(*w[0], *w[1])])
+                    .sum::<usize>()
+                + distances[&(*s[s.len() - 1], '0')]
+        })
         .min()
         .unwrap();
     println!("Part 2: {}", p2);
-
 }

@@ -1,12 +1,13 @@
-use std::str::FromStr;
 use std::collections::HashMap;
 use std::io::BufRead;
+use std::str::FromStr;
 
 fn main() {
     let mut nodes = HashMap::new();
     for line in std::io::stdin().lock().lines() {
         let line = line.unwrap();
-        let i = line.replace('T', "")
+        let i = line
+            .replace('T', "")
             .replace("-x", " ")
             .replace("-y", " ")
             .split(' ')
@@ -51,9 +52,11 @@ fn main() {
     //      .   a single hole (completely empty node)
     //      #   our target data
     //      0   the node to which we should bring the data
-    let hole = nodes.iter()
+    let hole = nodes
+        .iter()
         .find(|(_pos, (_size, used, _avail))| *used == 0)
-        .unwrap().0;
+        .unwrap()
+        .0;
 
     let steps =
         // First, walk the hole left to (0, hole.1),

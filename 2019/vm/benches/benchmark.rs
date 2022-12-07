@@ -1,6 +1,6 @@
+use criterion::{criterion_group, criterion_main, Criterion};
 use std::str::FromStr;
 use vm::Vm;
-use criterion::{criterion_group, criterion_main, Criterion};
 
 pub fn sum_of_primes(c: &mut Criterion) {
     let mut vm = Vm::from_str(include_str!("sum-of-primes")).unwrap();
@@ -64,13 +64,13 @@ pub fn factor_large_composite(c: &mut Criterion) {
     c.bench_function(&format!("factor {}", i), |b| b.iter(f));
 }
 
-criterion_group!{
+criterion_group! {
     name = fast;
     config = Criterion::default();
     targets = isqrt,
               divmod,
 }
-criterion_group!{
+criterion_group! {
     name = slow;
     config = Criterion::default().sample_size(10);
     targets = sum_of_primes,

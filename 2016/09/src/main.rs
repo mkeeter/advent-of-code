@@ -22,11 +22,10 @@ impl Chunk {
                     b /= 10;
                 }
                 len
-            },
+            }
         }
     }
 }
-
 
 fn parse(mut s: String) -> Vec<Chunk> {
     let mut out = Vec::new();
@@ -38,9 +37,7 @@ fn parse(mut s: String) -> Vec<Chunk> {
         let j = marker.find(')').unwrap();
         let mut next = marker.split_off(j);
 
-        let mut itr = marker
-            .split('x')
-            .filter_map(|i| usize::from_str(i).ok());
+        let mut itr = marker.split('x').filter_map(|i| usize::from_str(i).ok());
         let size = itr.next().unwrap();
         let repeat = itr.next().unwrap();
         out.push(Chunk::Marker(size, repeat));
@@ -62,7 +59,7 @@ fn expand(s: &[Chunk], recurse: bool) -> usize {
         match s[i] {
             Chars(s) => {
                 out += s;
-            },
+            }
             Marker(size, repeat) => {
                 let mut size: usize = size;
                 let mut tmp = Vec::new();
@@ -77,18 +74,19 @@ fn expand(s: &[Chunk], recurse: bool) -> usize {
                             } else {
                                 tmp.push(Chars(s));
                             }
-                        },
-                        Marker(a,b) => {
+                        }
+                        Marker(a, b) => {
                             tmp.push(Marker(a, b));
                         }
                     }
                     size -= s[i].len();
                 }
-                out += repeat * if recurse {
-                    expand(&tmp, recurse)
-                } else {
-                    tmp.iter().map(|c| c.len()).sum::<usize>()
-                };
+                out += repeat
+                    * if recurse {
+                        expand(&tmp, recurse)
+                    } else {
+                        tmp.iter().map(|c| c.len()).sum::<usize>()
+                    };
             }
         }
         i += 1;

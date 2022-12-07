@@ -1,5 +1,5 @@
 extern crate nalgebra as na;
-use na::{Vector2, Matrix2};
+use na::{Matrix2, Vector2};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
@@ -15,11 +15,11 @@ impl Cart {
         Cart {
             pt: Vector2::new(x as i32, y as i32),
             dir: match c {
-                '>' => Vector2::new( 1,  0),
-                '<' => Vector2::new(-1,  0),
-                '^' => Vector2::new( 0, -1),
-                'v' => Vector2::new( 0,  1),
-                 _  => panic!("invalid cart character"),
+                '>' => Vector2::new(1, 0),
+                '<' => Vector2::new(-1, 0),
+                '^' => Vector2::new(0, -1),
+                'v' => Vector2::new(0, 1),
+                _ => panic!("invalid cart character"),
             },
             turn: 0,
             id: 0,
@@ -34,18 +34,20 @@ fn main() {
     include_str!("../input")
         .lines()
         .enumerate()
-        .map(|(y, line)| line
-             .chars()
-             .enumerate()
-             .map(|(x, c)| {
-                 let x = x as i32;
-                 let y = y as i32;
-                 match c {
-                     '\\' | '/' | '+'       => drop(tracks.insert((x, y), c)),
-                     '>'  | '<' | '^' | 'v' => carts.push(Cart::new(x, y, c)),
-                     _ => (),
-                 };
-             }).for_each(drop))
+        .map(|(y, line)| {
+            line.chars()
+                .enumerate()
+                .map(|(x, c)| {
+                    let x = x as i32;
+                    let y = y as i32;
+                    match c {
+                        '\\' | '/' | '+' => drop(tracks.insert((x, y), c)),
+                        '>' | '<' | '^' | 'v' => carts.push(Cart::new(x, y, c)),
+                        _ => (),
+                    };
+                })
+                .for_each(drop)
+        })
         .for_each(drop);
 
     for (i, c) in carts.iter_mut().enumerate() {
@@ -67,8 +69,7 @@ fn main() {
             positions.remove(&c.pt);
             c.pt += c.dir;
             if let Some(j) = positions.get(&c.pt) {
-                println!("Carts {} and {} crashed at {},{}",
-                         c.id, *j, c.pt.x, c.pt.y);
+                println!("Carts {} and {} crashed at {},{}", c.id, *j, c.pt.x, c.pt.y);
                 crashed.insert(c.id);
                 crashed.insert(*j);
             }
@@ -82,18 +83,19 @@ fn main() {
                     '+' => {
                         c.turn = (c.turn + 1) % 3;
                         match c.turn % 3 {
-                            1 => Matrix2::new(0,  1, -1, 0),
-                            2 => Matrix2::new(1,  0,  0, 1),
-                            0 => Matrix2::new(0, -1,  1, 0),
+                            1 => Matrix2::new(0, 1, -1, 0),
+                            2 => Matrix2::new(1, 0, 0, 1),
+                            0 => Matrix2::new(0, -1, 1, 0),
                             _ => panic!("oh no"),
                         }
-                    },
+                    }
                     _ => panic!("oh no"),
                 } * c.dir;
             }
         }
 
-        carts = carts.into_iter()
+        carts = carts
+            .into_iter()
             .filter(|c| !crashed.contains(&c.id))
             .collect();
     }

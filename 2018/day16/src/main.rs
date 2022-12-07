@@ -7,13 +7,22 @@ struct Registers([usize; 4]);
 #[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 enum Op {
-    addr, addi,
-    mulr, muli,
-    banr, bani,
-    borr, bori,
-    setr, seti,
-    gtir, gtri, gtrr,
-    eqir, eqri, eqrr,
+    addr,
+    addi,
+    mulr,
+    muli,
+    banr,
+    bani,
+    borr,
+    bori,
+    setr,
+    seti,
+    gtir,
+    gtri,
+    gtrr,
+    eqir,
+    eqri,
+    eqrr,
 }
 
 use crate::Op::*;
@@ -43,15 +52,14 @@ impl Op {
     }
 }
 
-
 #[derive(Debug)]
 struct MachineCode([usize; 4]);
 
 impl MachineCode {
     fn eval(&self, s: &Registers, map: &HashMap<usize, Op>) -> Registers {
         map.get(&self.0[0])
-           .expect("Could not find opcode")
-           .eval(s, self.0[1], self.0[2], self.0[3])
+            .expect("Could not find opcode")
+            .eval(s, self.0[1], self.0[2], self.0[3])
     }
 }
 
@@ -59,12 +67,20 @@ fn main() {
     let input = include_str!("../input");
     let re = Regex::new(r"(\d+)").unwrap();
 
-    let lines = input.lines()
-        .map(|line| re
-             .captures_iter(line)
-             .filter_map(|i| str::parse::<usize>(&i[1]).ok())
-             .collect::<Vec<usize>>())
-        .map(|v| if v.len() == 4 { Some([v[0], v[1], v[2], v[3]]) } else { None })
+    let lines = input
+        .lines()
+        .map(|line| {
+            re.captures_iter(line)
+                .filter_map(|i| str::parse::<usize>(&i[1]).ok())
+                .collect::<Vec<usize>>()
+        })
+        .map(|v| {
+            if v.len() == 4 {
+                Some([v[0], v[1], v[2], v[3]])
+            } else {
+                None
+            }
+        })
         .collect::<Vec<Option<[usize; 4]>>>();
 
     let mut table: HashMap<usize, HashSet<Op>> = HashMap::new();
@@ -77,9 +93,10 @@ fn main() {
 
             let op_num = machine_code.0[0];
             let mut matches = HashSet::new();
-            for op in &[addr, addi, mulr, muli, banr, bani, borr, bori,
-                        setr, seti, gtir, gtri, gtrr, eqir, eqri, eqrr]
-            {
+            for op in &[
+                addr, addi, mulr, muli, banr, bani, borr, bori, setr, seti, gtir, gtri, gtrr, eqir,
+                eqri, eqrr,
+            ] {
                 let mut map = HashMap::new();
                 map.insert(op_num, *op);
                 let out = machine_code.eval(&initial_state, &map);
@@ -90,10 +107,9 @@ fn main() {
             }
             geq3 += (matches.len() >= 3) as usize;
 
-            table.entry(op_num)
-                .and_modify(|t| *t = t.intersection(&matches)
-                                      .cloned()
-                                      .collect())
+            table
+                .entry(op_num)
+                .and_modify(|t| *t = t.intersection(&matches).cloned().collect())
                 .or_insert(matches);
 
         // The last chunk is longer, and contains a program to execute

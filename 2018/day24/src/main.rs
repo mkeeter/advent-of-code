@@ -1,15 +1,25 @@
-#[macro_use] extern crate nom;
+#[macro_use]
+extern crate nom;
 use nom::types::CompleteStr;
-use std::str::FromStr;
-use std::collections::{HashSet, HashMap};
-use std::io::{self, Read};
 use std::cmp::min;
+use std::collections::{HashMap, HashSet};
+use std::io::{self, Read};
+use std::str::FromStr;
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Debug)]
-enum Flavor { Cold, Bludgeoning, Radiation, Slashing, Fire }
+enum Flavor {
+    Cold,
+    Bludgeoning,
+    Radiation,
+    Slashing,
+    Fire,
+}
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-enum Team { Immune, Infection }
+enum Team {
+    Immune,
+    Infection,
+}
 
 #[derive(Debug, Clone)]
 struct Army {
@@ -47,27 +57,27 @@ named!(usize_<CompleteStr, usize>,
                 usize::from_str(s.0)));
 
 named!(properties<CompleteStr, (HashSet<Flavor>, HashSet<Flavor>)>,
-    map!(
-    opt!(do_parse!(
-        tag_s!("(") >>
-        props: many0!(do_parse!(opt!(tag_s!("; ")) >> p: property >> (p))) >>
-        tag_s!(") ") >>
-        (props))),
-    |props| {
-        let mut weak = HashSet::new();
-        let mut immune = HashSet::new();
-        for (p, f) in props.unwrap_or(Vec::new()).iter() {
-            let h = match p {
-                'i' => &mut immune,
-                'w' => &mut weak,
-                 _  => unreachable!(),
-            };
-            for f in f {
-                h.insert(f.clone());
-            }
+map!(
+opt!(do_parse!(
+    tag_s!("(") >>
+    props: many0!(do_parse!(opt!(tag_s!("; ")) >> p: property >> (p))) >>
+    tag_s!(") ") >>
+    (props))),
+|props| {
+    let mut weak = HashSet::new();
+    let mut immune = HashSet::new();
+    for (p, f) in props.unwrap_or(Vec::new()).iter() {
+        let h = match p {
+            'i' => &mut immune,
+            'w' => &mut weak,
+             _  => unreachable!(),
+        };
+        for f in f {
+            h.insert(f.clone());
         }
-        (weak, immune)
-    }));
+    }
+    (weak, immune)
+}));
 
 named!(property<CompleteStr, (char, Vec<Flavor>)>,
        do_parse!(
@@ -84,30 +94,29 @@ named!(flavor<CompleteStr, Flavor>,
             value!(Flavor::Fire, tag_s!("fire"))));
 
 named_args!(parse_line(team: Team)<CompleteStr, Army>,
-    do_parse!(count: usize_ >>
-              tag_s!(" units each with ") >>
-              hp: usize_ >>
-              tag_s!(" hit points ") >>
-              properties: properties >>
-              tag_s!("with an attack that does ") >>
-              damage: usize_ >>
-              tag_s!(" ") >>
-              damage_type: flavor >>
-              tag_s!(" damage at initiative ") >>
-              initiative: usize_ >>
-              (Army {
-                    team: team,
-                    units: count,
-                    hp: hp,
-                    damage: damage,
-                    damage_type: damage_type,
-                    initiative: initiative,
-                    weak: properties.0,
-                    immune: properties.1,
-              })));
+do_parse!(count: usize_ >>
+          tag_s!(" units each with ") >>
+          hp: usize_ >>
+          tag_s!(" hit points ") >>
+          properties: properties >>
+          tag_s!("with an attack that does ") >>
+          damage: usize_ >>
+          tag_s!(" ") >>
+          damage_type: flavor >>
+          tag_s!(" damage at initiative ") >>
+          initiative: usize_ >>
+          (Army {
+                team: team,
+                units: count,
+                hp: hp,
+                damage: damage,
+                damage_type: damage_type,
+                initiative: initiative,
+                weak: properties.0,
+                immune: properties.1,
+          })));
 
 fn run(armies: &Vec<Army>, boost: usize) -> Vec<Army> {
-
     let mut armies: Vec<Army> = armies.iter().cloned().collect();
     for a in armies.iter_mut() {
         if a.team == Team::Immune {
@@ -119,13 +128,13 @@ fn run(armies: &Vec<Army>, boost: usize) -> Vec<Army> {
         let mut order = (0..armies.len()).collect::<Vec<usize>>();
 
         // Target selection phase
-        order.sort_by_key(
-            |&i| (armies[i].effective_power(), armies[i].initiative));
+        order.sort_by_key(|&i| (armies[i].effective_power(), armies[i].initiative));
         let mut attacks = HashMap::new();
         let mut targeted = HashSet::new();
         for i in order.iter().rev() {
             let a = &armies[*i];
-            armies.iter()
+            armies
+                .iter()
                 .enumerate()
                 .filter(|(j, b)| b.team != a.team && !targeted.contains(j))
                 .map(|(j, b)| (j, b, b.damage_from(a)))
@@ -174,8 +183,12 @@ fn main() {
         } else if line == "Infection:" {
             current_team = Some(Team::Infection);
         } else if line.len() > 0 {
-            armies.push(parse_line(CompleteStr(line), current_team.unwrap())
-                        .ok().unwrap().1);
+            armies.push(
+                parse_line(CompleteStr(line), current_team.unwrap())
+                    .ok()
+                    .unwrap()
+                    .1,
+            );
         }
     }
 

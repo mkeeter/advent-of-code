@@ -1,24 +1,29 @@
-#[macro_use] extern crate itertools;
+#[macro_use]
+extern crate itertools;
 
-use std::io::{self, Read};
 use std::cmp::min;
+use std::io::{self, Read};
 
 fn main() {
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer).unwrap();
-    let pts = buffer.lines().map(
-        |line| line.split(',').map(
-            |word| word.parse::<i64>().unwrap())
-        .collect::<Vec<_>>())
-    .collect::<Vec<_>>();
+    let pts = buffer
+        .lines()
+        .map(|line| {
+            line.split(',')
+                .map(|word| word.parse::<i64>().unwrap())
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
 
-    let edges = iproduct!(pts.iter().enumerate(),
-                          pts.iter().enumerate())
-        .filter(|((_, a), (_, b))|
-                a.iter()
-                 .zip(b.iter())
-                 .map(|(a, b)| (a - b).abs())
-                 .sum::<i64>() <= 3)
+    let edges = iproduct!(pts.iter().enumerate(), pts.iter().enumerate())
+        .filter(|((_, a), (_, b))| {
+            a.iter()
+                .zip(b.iter())
+                .map(|(a, b)| (a - b).abs())
+                .sum::<i64>()
+                <= 3
+        })
         .map(|((i, _), (j, _))| (i, j))
         .filter(|(i, j)| i != j)
         .collect::<Vec<_>>();

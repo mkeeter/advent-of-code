@@ -17,7 +17,10 @@ fn part1() {
         b = (b + recipes[b] + 1) % recipes.len();
     }
 
-    let sol = recipes[N..N + 10].iter().map(|i| i.to_string()).collect::<String>();
+    let sol = recipes[N..N + 10]
+        .iter()
+        .map(|i| i.to_string())
+        .collect::<String>();
     println!("Part 1: {}", sol);
 }
 
@@ -27,14 +30,16 @@ fn part2() {
     let mut b = 1;
 
     let target = "939601"
-            .chars()
-            .map(|d| d.to_digit(10).unwrap())
-            .map(|i| i as usize)
-            .collect::<Vec<usize>>();
+        .chars()
+        .map(|d| d.to_digit(10).unwrap())
+        .map(|i| i as usize)
+        .collect::<Vec<usize>>();
 
     let check_tail = |recipes: &Vec<usize>| -> bool {
-        recipes.len() >= target.len() &&
-        recipes[recipes.len() - target.len()..].iter().eq(target.iter())
+        recipes.len() >= target.len()
+            && recipes[recipes.len() - target.len()..]
+                .iter()
+                .eq(target.iter())
     };
 
     loop {

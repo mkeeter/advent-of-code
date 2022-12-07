@@ -53,11 +53,14 @@ impl Program {
     }
 }
 
-
 fn main() {
-    let p = Program(std::io::stdin().lock().lines()
-        .map(|line| Program::parse_line(&line.unwrap()))
-        .collect::<Vec<_>>());
+    let p = Program(
+        std::io::stdin()
+            .lock()
+            .lines()
+            .map(|line| Program::parse_line(&line.unwrap()))
+            .collect::<Vec<_>>(),
+    );
 
     let p1 = p.run().unwrap_err();
     println!("Part 1: {}", p1);

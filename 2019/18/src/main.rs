@@ -1,6 +1,6 @@
+use smallvec::{smallvec, SmallVec};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::BufRead;
-use std::collections::{HashSet, HashMap, VecDeque};
-use smallvec::{SmallVec, smallvec};
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -43,12 +43,13 @@ fn explore(x: i32, y: i32, map: &Map) -> Vec<Edge> {
         // Found a key :D
         if char::is_lowercase(c) && (tx != x || ty != y) {
             let key = 1 << ((c as u8) - b'a') as u32;
-            found.push( Edge {
+            found.push(Edge {
                 target_x: tx,
                 target_y: ty,
                 required_keys: keys,
                 new_key: key,
-                steps: step });
+                steps: step,
+            });
 
         // Found a wall :(
         } else if c == '#' {
@@ -67,29 +68,28 @@ fn explore(x: i32, y: i32, map: &Map) -> Vec<Edge> {
     found
 }
 
-fn solve(state: State, target: u32, edges: &Edges, cache: &mut Cache) -> u32
-{
+fn solve(state: State, target: u32, edges: &Edges, cache: &mut Cache) -> u32 {
     if state.keys == target {
         return 0;
     } else if let Some(c) = cache.get(&state) {
         return *c;
     }
 
-    let r = state.bots.iter()
+    let r = state
+        .bots
+        .iter()
         .enumerate()
-        .flat_map(|(i, b)| edges.get(&(b.0, b.1))
-            .unwrap()
-            .iter()
-            .map(move |e| (i, e)))
-        .filter(|(_i, e)|
-            (e.required_keys & state.keys) == e.required_keys &&
-            (e.new_key & state.keys) == 0)
+        .flat_map(|(i, b)| edges.get(&(b.0, b.1)).unwrap().iter().map(move |e| (i, e)))
+        .filter(|(_i, e)| {
+            (e.required_keys & state.keys) == e.required_keys && (e.new_key & state.keys) == 0
+        })
         .map(|(i, e)| {
-             let mut next = state.clone();
-             next.bots[i].0 = e.target_x;
-             next.bots[i].1 = e.target_y;
-             next.keys |= e.new_key;
-             e.steps + solve(next, target, edges, cache) })
+            let mut next = state.clone();
+            next.bots[i].0 = e.target_x;
+            next.bots[i].1 = e.target_y;
+            next.keys |= e.new_key;
+            e.steps + solve(next, target, edges, cache)
+        })
         .min()
         .unwrap();
 
@@ -98,7 +98,8 @@ fn solve(state: State, target: u32, edges: &Edges, cache: &mut Cache) -> u32
 }
 
 fn build_graph(bots: &Bots, tiles: &Map) -> Edges {
-    tiles.iter()
+    tiles
+        .iter()
         .filter(|(_k, v)| char::is_lowercase(**v))
         .map(|(k, _v)| k)
         .chain(bots.iter())
@@ -142,7 +143,8 @@ fn main() {
     }
 
     // We're now running four bots simultaneously
-    let bots = [(1, 1), (1, -1), (-1, 1), (-1, -1)].iter()
+    let bots = [(1, 1), (1, -1), (-1, 1), (-1, -1)]
+        .iter()
         .map(|(dx, dy)| (start.0 + dx, start.1 + dy))
         .collect();
 

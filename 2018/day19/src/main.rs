@@ -6,13 +6,22 @@ struct Registers([usize; 6]);
 #[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 enum Op {
-    addr, addi,
-    mulr, muli,
-    banr, bani,
-    borr, bori,
-    setr, seti,
-    gtir, gtri, gtrr,
-    eqir, eqri, eqrr,
+    addr,
+    addi,
+    mulr,
+    muli,
+    banr,
+    bani,
+    borr,
+    bori,
+    setr,
+    seti,
+    gtir,
+    gtri,
+    gtrr,
+    eqir,
+    eqri,
+    eqrr,
 }
 use crate::Op::*;
 
@@ -90,7 +99,12 @@ fn main() {
                 let a = str::parse::<usize>(words[1]).unwrap();
                 let b = str::parse::<usize>(words[2]).unwrap();
                 let c = str::parse::<usize>(words[3]).unwrap();
-                Some(Instruction { op: op, a: a, b: b, c: c})
+                Some(Instruction {
+                    op: op,
+                    a: a,
+                    b: b,
+                    c: c,
+                })
             }
         })
         .collect::<Vec<Instruction>>();
@@ -124,5 +138,4 @@ fn main() {
     let t = state.0[2];
     let out: usize = (1..=t).filter(|i| t % i == 0).sum();
     println!("Part 2: {}", out);
-
 }

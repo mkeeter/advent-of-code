@@ -1,12 +1,12 @@
+use std::collections::HashSet;
+use std::collections::VecDeque;
 use std::io::{self, Read};
 use std::iter;
-use std::collections::VecDeque;
-use std::collections::HashSet;
 
 #[derive(PartialEq, Copy, Clone, Debug)]
 enum Race {
     Elf,
-    Goblin
+    Goblin,
 }
 
 #[derive(PartialEq, Copy, Clone)]
@@ -25,18 +25,30 @@ enum Tile {
 impl Tile {
     fn from_char(c: char) -> Tile {
         match c {
-            'E' => Tile::Creature(Creature { race: Race::Elf, hp: 200 }),
-            'G' => Tile::Creature(Creature { race: Race::Goblin, hp: 200 }),
+            'E' => Tile::Creature(Creature {
+                race: Race::Elf,
+                hp: 200,
+            }),
+            'G' => Tile::Creature(Creature {
+                race: Race::Goblin,
+                hp: 200,
+            }),
             '#' => Tile::Wall,
             '.' => Tile::Floor,
-             _  => unimplemented!(),
+            _ => unimplemented!(),
         }
     }
 
     fn to_char(&self) -> char {
         match self {
-            Tile::Creature(Creature { race: Race::Elf, hp: _ }) => 'E',
-            Tile::Creature(Creature { race: Race::Goblin, hp: _ }) => 'G',
+            Tile::Creature(Creature {
+                race: Race::Elf,
+                hp: _,
+            }) => 'E',
+            Tile::Creature(Creature {
+                race: Race::Goblin,
+                hp: _,
+            }) => 'G',
             Tile::Floor => '.',
             Tile::Wall => '#',
         }
@@ -61,8 +73,10 @@ impl Tile {
     }
 }
 
-struct State(Vec<Vec<Tile>>, /* Game board */
-             usize           /* Elf power */);
+struct State(
+    Vec<Vec<Tile>>, /* Game board */
+    usize,          /* Elf power */
+);
 
 enum StepResult {
     Continue,
@@ -78,18 +92,19 @@ enum FightResult {
 
 impl State {
     fn from_string(buffer: &String, elf_power: usize) -> State {
-        State(buffer
+        State(
+            buffer
                 .lines()
-                .map(|line| line
-                     .chars()
-                     .map(Tile::from_char)
-                     .collect())
+                .map(|line| line.chars().map(Tile::from_char).collect())
                 .collect(),
-            elf_power)
+            elf_power,
+        )
     }
 
     fn find(&self, p: impl Fn(&Tile) -> bool) -> Vec<(usize, usize)> {
-        let mut out = self.0.iter()
+        let mut out = self
+            .0
+            .iter()
             .enumerate()
             .flat_map(|(y, row)| iter::repeat(y).zip(row.iter().enumerate()))
             .filter(|(_, (_, tile))| p(*tile))
@@ -102,10 +117,14 @@ impl State {
 
     fn print(&self) {
         for line in self.0.iter() {
-            line.iter().map(|t| print!("{}", Tile::to_char(t))).for_each(drop);
+            line.iter()
+                .map(|t| print!("{}", Tile::to_char(t)))
+                .for_each(drop);
             print!("  ");
-            line.iter().filter_map(|t| t.to_creature())
-                .map(|c| print!("{}, ", c.hp)).for_each(drop);
+            line.iter()
+                .filter_map(|t| t.to_creature())
+                .map(|c| print!("{}, ", c.hp))
+                .for_each(drop);
             print!("\n");
         }
     }
@@ -131,11 +150,10 @@ impl State {
         vec![vec![t; self.0[0].len()]; self.0.len()]
     }
 
-    fn neighbors(y: usize, x: usize) -> impl Iterator<Item=(usize, usize)>
-    {
-        [(0, 1), (0, -1), (1, 0), (-1, 0)].iter()
-            .map(move |(dy, dx)| ((y as i32 + dy) as usize,
-                                  (x as i32 + dx) as usize))
+    fn neighbors(y: usize, x: usize) -> impl Iterator<Item = (usize, usize)> {
+        [(0, 1), (0, -1), (1, 0), (-1, 0)]
+            .iter()
+            .map(move |(dy, dx)| ((y as i32 + dy) as usize, (x as i32 + dx) as usize))
     }
 
     fn try_attack(&mut self, y: usize, x: usize) -> FightResult {
@@ -157,7 +175,8 @@ impl State {
 
             let c = self.0[y][x].to_mut_creature().unwrap();
             c.hp = c.hp.saturating_sub(attack_power);
-            if c.hp == 0 { // DEAD
+            if c.hp == 0 {
+                // DEAD
                 self.0[y][x] = Tile::Floor;
                 return FightResult::Killed(y, x);
             }
@@ -176,16 +195,14 @@ impl State {
 
         // Otherwise, pick out enemies and move towards them
         let race = self.0[y][x].to_creature().unwrap().race;
-        let enemies = self.find(|tile| tile
-                                .to_creature()
-                                .map(|c| c.race != race)
-                                .unwrap_or(false));
+        let enemies = self.find(|tile| tile.to_creature().map(|c| c.race != race).unwrap_or(false));
         if enemies.is_empty() {
             return StepResult::Finished;
         }
 
         let distance = self.flood(y, x);
-        let reachable = enemies.into_iter()
+        let reachable = enemies
+            .into_iter()
             .flat_map(|(y, x)| State::neighbors(y, x))
             .filter(|(y, x)| self.0[*y][*x] == Tile::Floor)
             .filter_map(|(y, x)| distance[y][x].map(|d| (y, x, d)))
@@ -194,13 +211,11 @@ impl State {
             return StepResult::Continue;
         }
 
-        let min_distance = *reachable.iter()
-            .map(|(_, _, d)| d)
-            .min()
-            .unwrap();
+        let min_distance = *reachable.iter().map(|(_, _, d)| d).min().unwrap();
 
         // This is where we're trying to move to.
-        let target = reachable.into_iter()
+        let target = reachable
+            .into_iter()
             .filter(|(_, _, d)| *d == min_distance)
             .min()
             .map(|(y, x, _)| (y, x))
@@ -226,7 +241,8 @@ impl State {
         }
         let next_pos = State::neighbors(y, x)
             .filter(|(y, x)| path[*y][*x])
-            .min().unwrap();
+            .min()
+            .unwrap();
         self.0[next_pos.0][next_pos.1] = self.0[y][x].clone();
         self.0[y][x] = Tile::Floor;
 
@@ -238,7 +254,8 @@ impl State {
     }
 
     fn creatures(&self) -> Vec<Creature> {
-        self.find(|t| t.is_creature()).iter()
+        self.find(|t| t.is_creature())
+            .iter()
             .map(|(y, x)| self.0[*y][*x].to_creature().unwrap())
             .cloned()
             .collect()
@@ -268,15 +285,16 @@ impl State {
     }
 }
 
-fn main()
-{
+fn main() {
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer).unwrap();
     State::from_string(&buffer, 0).print();
 
     for elf_power in 3.. {
         let mut state = State::from_string(&buffer, elf_power);
-        let initial_elf_count = state.creatures().into_iter()
+        let initial_elf_count = state
+            .creatures()
+            .into_iter()
             .filter(|c| c.race == Race::Elf)
             .count();
 
@@ -284,16 +302,21 @@ fn main()
         while !state.step() {
             time += 1;
         }
-        let hp = state.creatures().into_iter()
-            .map(|c| c.hp)
-            .sum::<usize>();
+        let hp = state.creatures().into_iter().map(|c| c.hp).sum::<usize>();
 
-        let elf_count = state.creatures().into_iter()
+        let elf_count = state
+            .creatures()
+            .into_iter()
             .filter(|c| c.race == Race::Elf)
             .count();
 
-        println!("At elf power {}, ended at time {} with hp {}, outcome: {}",
-                 elf_power, time, hp, time * hp);
+        println!(
+            "At elf power {}, ended at time {} with hp {}, outcome: {}",
+            elf_power,
+            time,
+            hp,
+            time * hp
+        );
         if initial_elf_count == elf_count {
             println!("  FLAWLESS ELF VICTORY!");
             state.print();

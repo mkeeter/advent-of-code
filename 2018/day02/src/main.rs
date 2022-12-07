@@ -15,8 +15,12 @@ fn part1() {
             chars.insert(c, value);
         }
         let values = chars.values().collect::<HashSet<&i32>>();
-        if values.contains(&2) { has2 += 1; }
-        if values.contains(&3) { has3 += 1; }
+        if values.contains(&2) {
+            has2 += 1;
+        }
+        if values.contains(&3) {
+            has3 += 1;
+        }
     }
     println!("Has 2: {}, Has 3: {}, mult: {}", has2, has3, has2 * has3);
 }
@@ -27,10 +31,14 @@ fn part2() {
     for a in f.lines() {
         for b in f.lines() {
             if a.chars().zip(b.chars()).filter(|(a, b)| a != b).count() == 1 {
-                println!("{}", a.chars().zip(b.chars())
-                                .filter(|(a, b)| a == b)
-                                .map(|(a, _)| a)
-                                .collect::<String>());
+                println!(
+                    "{}",
+                    a.chars()
+                        .zip(b.chars())
+                        .filter(|(a, b)| a == b)
+                        .map(|(a, _)| a)
+                        .collect::<String>()
+                );
             }
         }
     }

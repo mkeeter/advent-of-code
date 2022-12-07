@@ -1,10 +1,15 @@
 use std::io::BufRead;
 use std::str::FromStr;
 
-enum Cmd { On, Off, Toggle }
+enum Cmd {
+    On,
+    Off,
+    Toggle,
+}
 
 fn main() {
-    let input = std::io::stdin().lock()
+    let input = std::io::stdin()
+        .lock()
         .lines()
         .map(|line| {
             let line = line.unwrap();
@@ -17,10 +22,11 @@ fn main() {
             } else {
                 panic!("Invalid line {}", line);
             };
-            let nums = line.replace(",", " ")
-                        .split(' ')
-                        .filter_map(|s| usize::from_str(s).ok())
-                        .collect::<Vec<_>>();
+            let nums = line
+                .replace(",", " ")
+                .split(' ')
+                .filter_map(|s| usize::from_str(s).ok())
+                .collect::<Vec<_>>();
             (cmd, nums)
         })
         .collect::<Vec<_>>();
@@ -39,10 +45,7 @@ fn main() {
         }
     }
 
-    let lit = grid.iter()
-        .flat_map(|g| g.iter())
-        .filter(|b| **b)
-        .count();
+    let lit = grid.iter().flat_map(|g| g.iter()).filter(|b| **b).count();
     println!("Part 1: {}", lit);
 
     let mut grid = vec![vec![0; 1000]; 1000];
@@ -59,8 +62,6 @@ fn main() {
         }
     }
 
-    let brightness = grid.iter()
-        .flat_map(|g| g.iter())
-        .sum::<i32>();
+    let brightness = grid.iter().flat_map(|g| g.iter()).sum::<i32>();
     println!("Part 2: {}", brightness);
 }

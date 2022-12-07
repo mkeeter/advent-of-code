@@ -1,5 +1,5 @@
-use std::io::BufRead;
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::io::BufRead;
 
 fn main() {
     let mut tiles = HashMap::new();
@@ -9,22 +9,21 @@ fn main() {
         }
     }
 
-    let get = |x: i32, y: i32| { *tiles.get(&(x, y)).unwrap_or(&'#') };
+    let get = |x: i32, y: i32| *tiles.get(&(x, y)).unwrap_or(&'#');
 
-    let mut portals = tiles.iter()
+    let mut portals = tiles
+        .iter()
         .filter(|(_k, v)| **v == '.')
-        .flat_map(|(k, _v)| [(0, 1), (0, -1), (1, 0), (-1, 0)]
-                  .iter()
-                  .map(move |d| (*k, *d)))
+        .flat_map(|(k, _v)| {
+            [(0, 1), (0, -1), (1, 0), (-1, 0)]
+                .iter()
+                .map(move |d| (*k, *d))
+        })
         .filter_map(|((x, y), (dx, dy))| {
-            let a = get(x +   dx, y +   dy);
-            let b = get(x + 2*dx, y + 2*dy);
+            let a = get(x + dx, y + dy);
+            let b = get(x + 2 * dx, y + 2 * dy);
             if char::is_uppercase(a) && char::is_uppercase(b) {
-                let key = if dx < 0 || dy < 0 {
-                    [b, a]
-                } else {
-                    [a, b]
-                };
+                let key = if dx < 0 || dy < 0 { [b, a] } else { [a, b] };
                 Some((key, (x, y), (x + dx, y + dy)))
             } else {
                 None

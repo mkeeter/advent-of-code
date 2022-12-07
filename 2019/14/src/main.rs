@@ -5,15 +5,16 @@ use std::io::{BufRead, Write};
 use std::process::{Command, Stdio};
 use std::str::FromStr;
 
-fn parse(s: &str) -> Vec<(i32, String)>
-{
-    let words = s.replace(|c| !char::is_alphanumeric(c), " ")
+fn parse(s: &str) -> Vec<(i32, String)> {
+    let words = s
+        .replace(|c| !char::is_alphanumeric(c), " ")
         .split(' ')
         .filter(|s| !s.is_empty())
         .map(|s| s.to_owned())
         .collect::<Vec<String>>();
 
-    let mut mols = words.chunks(2)
+    let mut mols = words
+        .chunks(2)
         .map(|c| (i32::from_str(&c[0]).unwrap(), c[1].clone()))
         .collect::<Vec<(i32, String)>>();
 
@@ -23,11 +24,13 @@ fn parse(s: &str) -> Vec<(i32, String)>
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let eqns = std::io::stdin().lock().lines()
+    let eqns = std::io::stdin()
+        .lock()
+        .lines()
         .map(|line| parse(&line.unwrap()))
         .collect::<Vec<_>>();
 
-    let mut sums : HashMap<&str, Vec<(usize, i32)>> = HashMap::new();
+    let mut sums: HashMap<&str, Vec<(usize, i32)>> = HashMap::new();
     for (i, inputs) in eqns.iter().enumerate() {
         for (count, name) in inputs {
             sums.entry(&name).or_default().push((i, *count))
@@ -58,14 +61,18 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Build up a string which marks that all variables are integers
     let mut integers = String::new();
-    writeln!(&mut integers, "Integer
+    writeln!(
+        &mut integers,
+        "Integer
   ore_in
-  fuel_out")?;
+  fuel_out"
+    )?;
     for i in 0..eqns.len() {
         writeln!(&mut integers, "  eqn{}", i)?;
     }
 
-    let solver = || Command::new("glpsol")
+    let solver = || {
+        Command::new("glpsol")
             .arg("--lp")
             .arg("/dev/stdin")
             .arg("--output")
@@ -73,7 +80,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .spawn()
-            .expect("Failed to spawn solver");
+            .expect("Failed to spawn solver")
+    };
 
     // Part 1
     let mut subprocess = solver();
@@ -91,7 +99,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 
-////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////
 
     // Part 2
     let mut subprocess = solver();

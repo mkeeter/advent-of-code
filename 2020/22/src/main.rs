@@ -1,9 +1,12 @@
+use std::cmp::Ordering;
 use std::collections::{HashSet, VecDeque};
 use std::io::Read;
-use std::cmp::Ordering;
 
 #[derive(Debug)]
-enum Winner { PlayerA, PlayerB }
+enum Winner {
+    PlayerA,
+    PlayerB,
+}
 type Deck = VecDeque<u8>;
 
 fn score(deck: Deck) -> u32 {
@@ -15,7 +18,8 @@ fn score(deck: Deck) -> u32 {
 }
 
 fn play<F>(mut deck_a: Deck, mut deck_b: Deck, check: F) -> (Winner, u32)
-    where F: Fn(u8, u8, &Deck, &Deck) -> Winner
+where
+    F: Fn(u8, u8, &Deck, &Deck) -> Winner,
 {
     let mut seen: HashSet<(Deck, Deck)> = HashSet::new();
 
@@ -31,11 +35,11 @@ fn play<F>(mut deck_a: Deck, mut deck_b: Deck, check: F) -> (Winner, u32)
             Winner::PlayerA => {
                 deck_a.push_back(a);
                 deck_a.push_back(b);
-            },
+            }
             Winner::PlayerB => {
                 deck_b.push_back(b);
                 deck_b.push_back(a);
-            },
+            }
         }
     }
 
@@ -68,11 +72,14 @@ fn main() {
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).unwrap();
 
-    let decks = input.split("\n\n")
-        .map(|deck| deck.lines()
-            .skip(1)
-            .map(|i| i.parse().unwrap())
-            .collect::<Deck>())
+    let decks = input
+        .split("\n\n")
+        .map(|deck| {
+            deck.lines()
+                .skip(1)
+                .map(|i| i.parse().unwrap())
+                .collect::<Deck>()
+        })
         .collect::<Vec<_>>();
 
     let p1 = play(decks[0].clone(), decks[1].clone(), check_normal).1;

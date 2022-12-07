@@ -1,22 +1,35 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 
 fn main() {
-    let input = include_str!("../input").lines().map(
-        |line| line.chars().filter(|&c| c == '#' || c == '.')
-                    .map(|c| c == '#').collect::<Vec<bool>>())
+    let input = include_str!("../input")
+        .lines()
+        .map(|line| {
+            line.chars()
+                .filter(|&c| c == '#' || c == '.')
+                .map(|c| c == '#')
+                .collect::<Vec<bool>>()
+        })
         .collect::<Vec<Vec<bool>>>();
 
-    let mut state = input[0].iter()
+    let mut state = input[0]
+        .iter()
         .enumerate()
         .filter(|p| *p.1)
         .map(|p| p.0 as i64)
         .collect::<HashSet<i64>>();
 
-    let table = input[2..].iter()
-        .map(|v| (v[5], v[..5].iter()
-             .enumerate()
-             .map(|(i, &b)| if b { 1 << i } else { 0 })
-             .fold(0, |a, b| a | b)))
+    let table = input[2..]
+        .iter()
+        .map(|v| {
+            (
+                v[5],
+                v[..5]
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &b)| if b { 1 << i } else { 0 })
+                    .fold(0, |a, b| a | b),
+            )
+        })
         .filter(|p| p.0)
         .map(|p| p.1)
         .collect::<HashSet<i64>>();
@@ -43,14 +56,16 @@ fn main() {
             println!("Found cycle from {:?} to {:?}", j, i);
             assert!(*j == i - 1);
             assert!(offset - *prev_offset == 1);
-            println!("Final score estimated at {}",
-                     score + ((N - i) * state.len()) as i64);
+            println!(
+                "Final score estimated at {}",
+                score + ((N - i) * state.len()) as i64
+            );
         }
         seen.insert(key, (i, offset));
 
         let next = (start..=end)
             .filter(|j| {
-                let k = ((j-2)..=(j+2))
+                let k = ((j - 2)..=(j + 2))
                     .enumerate()
                     .filter(|(_, p)| state.contains(p))
                     .map(|(i, _)| (1 << i))

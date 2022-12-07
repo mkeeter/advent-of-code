@@ -15,9 +15,11 @@ enum Action {
 
 impl Action {
     fn new(s: &str) -> Action {
-        let i = s.split(' ')
+        let i = s
+            .split(' ')
             .filter_map(|i| i128::from_str(i).ok())
-            .next().unwrap_or(0);
+            .next()
+            .unwrap_or(0);
         if s.starts_with("cut") {
             Action::Cut(i)
         } else if s.starts_with("deal with increment") {
@@ -46,15 +48,16 @@ fn apply((a, b): Transform, (c, d): Transform, deck_size: i128) -> Transform {
 }
 
 fn main() {
-    let actions = std::io::stdin().lock()
+    let actions = std::io::stdin()
+        .lock()
         .lines()
         .map(|line| Action::new(&line.unwrap()))
         .collect::<Vec<Action>>();
 
     let build = |deck_size: i128| {
-        actions.iter()
-            .fold((1, 0), |acc, action|
-                  apply(acc, action.math(deck_size), deck_size))
+        actions.iter().fold((1, 0), |acc, action| {
+            apply(acc, action.math(deck_size), deck_size)
+        })
     };
 
     let deck_size: i128 = 10007;

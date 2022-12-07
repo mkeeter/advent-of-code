@@ -11,10 +11,10 @@ fn run(mut traps: HashSet<i32>, rows: usize, cols: usize) -> usize {
             let left = traps.contains(&(x - 1));
             let center = traps.contains(&x);
             let right = traps.contains(&(x + 1));
-            let is_trap =  (left && center && !right) ||
-                           (center && right && !left) ||
-                           (left && !right && !center) ||
-                           (right && !left && !center);
+            let is_trap = (left && center && !right)
+                || (center && right && !left)
+                || (left && !right && !center)
+                || (right && !left && !center);
             if is_trap {
                 next.insert(x);
             }
@@ -29,7 +29,8 @@ fn main() {
     std::io::stdin().read_to_string(&mut input).unwrap();
     let input = input.trim();
 
-    let traps = input.chars()
+    let traps = input
+        .chars()
         .enumerate()
         .filter(|&(_i, b)| b == '^')
         .map(|(i, _b)| i as i32)

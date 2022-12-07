@@ -1,4 +1,5 @@
-#[macro_use] extern crate itertools;
+#[macro_use]
+extern crate itertools;
 use std::env;
 
 fn power(x: i64, y: i64, serial: i64) -> i64 {
@@ -14,8 +15,10 @@ fn power(x: i64, y: i64, serial: i64) -> i64 {
 fn main() {
     const SIZE: usize = 300;
     let mut grid = [[0; SIZE]; SIZE];
-    let serial_number = std::env::args().nth(1)
-        .expect("Must provide serial number as argument").parse()
+    let serial_number = std::env::args()
+        .nth(1)
+        .expect("Must provide serial number as argument")
+        .parse()
         .expect("Serial number must be parseable as an integer");
 
     for x in 0..SIZE {
@@ -35,8 +38,7 @@ fn main() {
     }
 
     let score = |x: usize, y: usize, r: usize| {
-        grid[x + r][y + r] + grid[x][y] -
-        grid[x][y + r] - grid[x + r][y]
+        grid[x + r][y + r] + grid[x][y] - grid[x][y + r] - grid[x + r][y]
     };
 
     let best_score = |r: usize| {
@@ -47,5 +49,11 @@ fn main() {
     };
 
     println!("{:?}", best_score(3));
-    println!("{:?}", (1..SIZE).map(|r| best_score(r)).max_by_key(|p| p.0).unwrap());
+    println!(
+        "{:?}",
+        (1..SIZE)
+            .map(|r| best_score(r))
+            .max_by_key(|p| p.0)
+            .unwrap()
+    );
 }

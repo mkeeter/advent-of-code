@@ -1,4 +1,4 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::io::Read;
 
 fn run(mut s: &str) -> (i32, i32) {
@@ -11,8 +11,8 @@ fn run(mut s: &str) -> (i32, i32) {
             "se" => (&s[2..], (1, -1)),
             "sw" => (&s[2..], (0, -1)),
             _ => match &s[..1] {
-                "e" => (&s[1..], ( 1,  0)),
-                "w" => (&s[1..], (-1,  0)),
+                "e" => (&s[1..], (1, 0)),
+                "w" => (&s[1..], (-1, 0)),
                 _ => panic!("Invalid s: {}", s),
             },
         };
@@ -37,24 +37,18 @@ fn main() {
     }
     println!("Part 1: {}", black.len());
 
-    const NEIGHBORS: [(i32, i32); 6] = [
-        ( 0,  1), ( 0, -1),
-        ( 1,  0), (-1,  0),
-        (-1,  1), ( 1, -1)];
+    const NEIGHBORS: [(i32, i32); 6] = [(0, 1), (0, -1), (1, 0), (-1, 0), (-1, 1), (1, -1)];
     for _i in 0..100 {
         let mut count: HashMap<(i32, i32), usize> = HashMap::new();
-        black.iter()
-            .flat_map(|(x, y)| NEIGHBORS.iter()
-                .map(move |(dx, dy)| (x + dx, y + dy)))
+        black
+            .iter()
+            .flat_map(|(x, y)| NEIGHBORS.iter().map(move |(dx, dy)| (x + dx, y + dy)))
             .for_each(|(x, y)| {
-                count.entry((x, y))
-                    .and_modify(|i| *i += 1)
-                    .or_insert(1);
-                });
-        black = count.into_iter()
-            .filter(|((x, y), n)|
-                (black.contains(&(*x, *y)) && !(*n == 0 || *n > 2)) ||
-                *n == 2)
+                count.entry((x, y)).and_modify(|i| *i += 1).or_insert(1);
+            });
+        black = count
+            .into_iter()
+            .filter(|((x, y), n)| (black.contains(&(*x, *y)) && !(*n == 0 || *n > 2)) || *n == 2)
             .map(|(pos, _n)| pos)
             .collect();
     }

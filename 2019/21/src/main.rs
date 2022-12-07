@@ -6,7 +6,7 @@ use std::str::FromStr;
 use vm::Vm;
 
 use z3::ast::Ast;
-use z3::ast::{BV, Bool};
+use z3::ast::{Bool, BV};
 
 fn test(mut vm: Vm, plan: &str, speed: &str) -> Result<i64, Vec<char>> {
     // Feed the plan and the speed into the VM
@@ -27,12 +27,13 @@ fn test(mut vm: Vm, plan: &str, speed: &str) -> Result<i64, Vec<char>> {
             return Ok(i);
         }
     }
-    Err(line.split('\n')
+    Err(line
+        .split('\n')
         .rev()
         .nth(2)
         .unwrap()
         .chars()
-        .map(|c| if c == '@' { '.' } else { c } )
+        .map(|c| if c == '@' { '.' } else { c })
         .collect::<Vec<char>>())
 }
 
@@ -113,7 +114,7 @@ impl<'ctx> Solver<'ctx> {
         }
     }
 
-    fn eval(&mut self, scan: u16) -> z3::ast::Bool<'ctx>  {
+    fn eval(&mut self, scan: u16) -> z3::ast::Bool<'ctx> {
         if let Some(b) = self.cache.get(&scan) {
             return b.clone();
         }
@@ -125,8 +126,7 @@ impl<'ctx> Solver<'ctx> {
         // Build set of scanner values
         let mut sensors = Vec::new();
         for i in 0..self.range {
-            sensors.push(Bool::from_bool(&self.ctx,
-                (scan & (1 << i)) != 0));
+            sensors.push(Bool::from_bool(&self.ctx, (scan & (1 << i)) != 0));
         }
 
         for i in 0..self.instructions {
@@ -153,26 +153,31 @@ impl<'ctx> Solver<'ctx> {
             self.solver.assert(&lhs_val._eq(&v));
 
             // Assign RHS based on one of the two output registers
-            self.solver.assert(&rhs_val._eq(&out_dest.ite(&t_prev, &j_prev)));
+            self.solver
+                .assert(&rhs_val._eq(&out_dest.ite(&t_prev, &j_prev)));
 
             // Calculate output
             self.solver.assert(&out_val._eq(
-                    /* AND opcode = 0 */
-                    &op._eq(&BV::from_u64(&self.ctx, 0, self.op_bits))
-                        .ite(&lhs_val.and(&[&rhs_val]),
+                /* AND opcode = 0 */
+                &op._eq(&BV::from_u64(&self.ctx, 0, self.op_bits)).ite(
+                    &lhs_val.and(&[&rhs_val]),
                     /* NOT opcode = 1 */
-                    &op._eq(&BV::from_u64(&self.ctx, 1, self.op_bits))
-                        .ite(&lhs_val.not(),
-                    /* OR opcode = 2 */
-                    &lhs_val.or(&[&rhs_val])))));
+                    &op._eq(&BV::from_u64(&self.ctx, 1, self.op_bits)).ite(
+                        &lhs_val.not(),
+                        /* OR opcode = 2 */
+                        &lhs_val.or(&[&rhs_val]),
+                    ),
+                ),
+            ));
 
             // Assign output to either the T or J register
             // - If out_dest is set, then store in T
             // - Otherwise, store in J
             self.solver.assert(&t._eq(&out_dest.ite(&out_val, &t_prev)));
-            self.solver.assert(&j._eq(&out_dest.not().ite(&out_val, &j_prev)));
+            self.solver
+                .assert(&j._eq(&out_dest.not().ite(&out_val, &j_prev)));
 
-            t_prev  = t;
+            t_prev = t;
             j_prev = j;
         }
         self.cache.insert(scan, j_prev.clone());
@@ -182,7 +187,8 @@ impl<'ctx> Solver<'ctx> {
     fn append(&mut self, d: &[char]) {
         let mut jumped_at = Vec::new();
         for i in 0..d.len() {
-            let scan = d[(i + 1)..min(d.len(), i + 1 + self.range )].iter()
+            let scan = d[(i + 1)..min(d.len(), i + 1 + self.range)]
+                .iter()
                 .enumerate()
                 .filter(|(_j, c)| **c == '#')
                 .fold(0, |acc, (j, _c)| acc | (1 << j));
@@ -217,12 +223,9 @@ impl<'ctx> Solver<'ctx> {
         // Convert from solver model values to an instruction string
         let mut tape = String::new();
         for i in 0..self.instructions {
-            let op = model.eval(&self.ops[i]).unwrap()
-                .as_u64().unwrap();
-            let in_src = model.eval(&self.in_srcs[i]).unwrap()
-                .as_u64().unwrap() as usize;
-            let out_dest = model.eval(&self.out_dests[i]).unwrap()
-                .as_bool().unwrap();
+            let op = model.eval(&self.ops[i]).unwrap().as_u64().unwrap();
+            let in_src = model.eval(&self.in_srcs[i]).unwrap().as_u64().unwrap() as usize;
+            let out_dest = model.eval(&self.out_dests[i]).unwrap().as_bool().unwrap();
 
             let op = match op {
                 0 => "AND",

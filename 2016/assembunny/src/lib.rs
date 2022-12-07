@@ -3,7 +3,7 @@ use std::str::FromStr;
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 enum Value {
     Lit(i32),
-    Reg(usize)
+    Reg(usize),
 }
 
 impl Value {
@@ -57,7 +57,8 @@ impl FromStr for Instruction {
         }
 
         let op = op.unwrap();
-        let args = itr.filter_map(|v| Value::from_str(v).ok())
+        let args = itr
+            .filter_map(|v| Value::from_str(v).ok())
             .collect::<Vec<_>>();
         match op {
             "cpy" => Ok(cpy(args[0], args[1])),
@@ -83,10 +84,15 @@ pub struct Vm {
 impl FromStr for Vm {
     type Err = ();
     fn from_str(s: &str) -> Result<Self, ()> {
-        let instructions = s.lines()
+        let instructions = s
+            .lines()
             .filter_map(|line| Instruction::from_str(&line).ok())
             .collect::<Vec<_>>();
-        Ok(Vm { instructions, ip: 0, regs: [0; 4] })
+        Ok(Vm {
+            instructions,
+            ip: 0,
+            regs: [0; 4],
+        })
     }
 }
 
@@ -94,7 +100,7 @@ impl Vm {
     fn get(&self, v: Value) -> i32 {
         match v {
             Value::Lit(i) => i,
-            Value::Reg(r) => self.regs[r]
+            Value::Reg(r) => self.regs[r],
         }
     }
 
@@ -104,69 +110,60 @@ impl Vm {
     fn peephole(&mut self, start: i32, end: i32) -> bool {
         use Value::*;
         match self.instructions[start as usize..=end as usize] {
-            [cpy(Reg(a), Reg(b)),
-             inc(Reg(c)),
-             dec(Reg(b1)),
-             jnz(Reg(b2), Lit(-2)),
-             dec(Reg(d)),
-             jnz(Reg(d1), Lit(-5))] if b == b1 && b == b2 && d == d1 &&
-                                       a != b && a != c && a != d &&
-                                       b != c && b != d && c != d => {
+            [cpy(Reg(a), Reg(b)), inc(Reg(c)), dec(Reg(b1)), jnz(Reg(b2), Lit(-2)), dec(Reg(d)), jnz(Reg(d1), Lit(-5))]
+                if b == b1
+                    && b == b2
+                    && d == d1
+                    && a != b
+                    && a != c
+                    && a != d
+                    && b != c
+                    && b != d
+                    && c != d =>
+            {
                 self.regs[c] += self.regs[a] * self.regs[d];
                 self.regs[b] = 0;
                 self.regs[d] = 0;
                 self.ip += 1;
                 true
-            },
+            }
 
-            [cpy(Lit(a), Reg(b)),
-             inc(Reg(c)),
-             dec(Reg(b1)),
-             jnz(Reg(b2), Lit(-2)),
-             dec(Reg(d)),
-             jnz(Reg(d1), Lit(-5))] if b == b1 && b == b2 && d == d1 &&
-                                       b != c && b != d && c != d => {
+            [cpy(Lit(a), Reg(b)), inc(Reg(c)), dec(Reg(b1)), jnz(Reg(b2), Lit(-2)), dec(Reg(d)), jnz(Reg(d1), Lit(-5))]
+                if b == b1 && b == b2 && d == d1 && b != c && b != d && c != d =>
+            {
                 self.regs[c] += a * self.regs[d];
                 self.regs[b] = 0;
                 self.regs[d] = 0;
                 self.ip += 1;
                 true
-            },
+            }
 
-            [inc(Reg(a)),
-             dec(Reg(b)),
-             jnz(Reg(b1), Lit(-2))] if b == b1 && a != b => {
+            [inc(Reg(a)), dec(Reg(b)), jnz(Reg(b1), Lit(-2))] if b == b1 && a != b => {
                 self.regs[a] += self.regs[b];
                 self.regs[b] = 0;
                 self.ip += 1;
                 true
             }
 
-            [dec(Reg(a)),
-             inc(Reg(b)),
-             jnz(Reg(a1), Lit(-2))] if a == a1 && a != b => {
+            [dec(Reg(a)), inc(Reg(b)), jnz(Reg(a1), Lit(-2))] if a == a1 && a != b => {
                 self.regs[b] += self.regs[a];
                 self.regs[a] = 0;
                 self.ip += 1;
                 true
             }
 
-            [jnz(Reg(a), Lit(2)),
-             jnz(Lit(1), Lit(4)),
-             dec(Reg(b)),
-             dec(Reg(a1)),
-             jnz(Lit(1), Lit(-4))] if a != b && a == a1 => {
-                 self.regs[b] -= self.regs[a];
-                 self.regs[a] = 0;
-                 self.ip += 1;
-                 true
+            [jnz(Reg(a), Lit(2)), jnz(Lit(1), Lit(4)), dec(Reg(b)), dec(Reg(a1)), jnz(Lit(1), Lit(-4))]
+                if a != b && a == a1 =>
+            {
+                self.regs[b] -= self.regs[a];
+                self.regs[a] = 0;
+                self.ip += 1;
+                true
             }
 
-            [jnz(Reg(a), Lit(2)),
-             jnz(Lit(1), Lit(6)),
-             dec(Reg(a1)),
-             dec(Reg(b)),
-             jnz(Reg(b1), Lit(-4))] if a == a1 && b == b1 && a != b => {
+            [jnz(Reg(a), Lit(2)), jnz(Lit(1), Lit(6)), dec(Reg(a1)), dec(Reg(b)), jnz(Reg(b1), Lit(-4))]
+                if a == a1 && b == b1 && a != b =>
+            {
                 if self.regs[a] < self.regs[b] {
                     self.regs[b] -= self.regs[a];
                     self.regs[a] = 0;
@@ -179,9 +176,7 @@ impl Vm {
                 true
             }
 
-            _ => {
-                false
-            },
+            _ => false,
         }
     }
 
@@ -193,7 +188,7 @@ impl Vm {
                 }
                 self.ip += 1;
                 None
-            },
+            }
             inc(a) => {
                 if let Some(a) = a.reg() {
                     self.regs[a] += 1;

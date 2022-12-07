@@ -38,16 +38,16 @@ fn main() {
     };
 
     print!("Part 1: ");
-    run(concat!("1 2 3\n",
-                "4 5 6\n",
-                "7 8 9"));
+    run(concat!("1 2 3\n", "4 5 6\n", "7 8 9"));
     println!();
 
     print!("Part 2: ");
-    run(concat!("    1    \n",
-                "  2 3 4  \n",
-                "5 6 7 8 9\n",
-                "  A B C  \n",
-                "    D    "));
+    run(concat!(
+        "    1    \n",
+        "  2 3 4  \n",
+        "5 6 7 8 9\n",
+        "  A B C  \n",
+        "    D    "
+    ));
     println!();
 }

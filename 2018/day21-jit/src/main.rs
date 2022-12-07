@@ -1,19 +1,19 @@
 extern crate inkwell;
 
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::{self, Read};
-use std::collections::{HashSet, VecDeque, HashMap};
 
-use inkwell::OptimizationLevel;
-use inkwell::AddressSpace;
-use inkwell::context::Context;
-use inkwell::execution_engine::JitFunction;
-use inkwell::targets::{InitializationConfig, Target};
-use inkwell::IntPredicate;
-use inkwell::values::{FunctionValue, PointerValue, PhiValue, IntValue};
-use inkwell::types::{IntType, PointerType};
 use inkwell::basic_block::BasicBlock;
 use inkwell::builder::Builder;
+use inkwell::context::Context;
+use inkwell::execution_engine::JitFunction;
 use inkwell::module::Module;
+use inkwell::targets::{InitializationConfig, Target};
+use inkwell::types::{IntType, PointerType};
+use inkwell::values::{FunctionValue, IntValue, PhiValue, PointerValue};
+use inkwell::AddressSpace;
+use inkwell::IntPredicate;
+use inkwell::OptimizationLevel;
 
 #[derive(Debug, Eq, PartialEq)]
 struct Registers([usize; 6]);
@@ -31,7 +31,10 @@ enum Op {
 }
 
 #[derive(Eq, PartialEq, Debug)]
-enum Source { Register, Immediate }
+enum Source {
+    Register,
+    Immediate,
+}
 
 use crate::Op::*;
 use crate::Source::*;
@@ -91,12 +94,12 @@ unsafe extern "C" fn callback(reg: *const i64) -> bool {
     }
 }
 
-fn build_setup_block(context: &Context,
-                     module: &Module,
-                     builder: &Builder,
-                     i64_type: IntType) ->
-    (BasicBlock, PointerValue, Vec<PointerValue>)
-{
+fn build_setup_block(
+    context: &Context,
+    module: &Module,
+    builder: &Builder,
+    i64_type: IntType,
+) -> (BasicBlock, PointerValue, Vec<PointerValue>) {
     println!("Creating function block");
 
     // Here is our JITted function, which takes no arguments and returns void
@@ -119,11 +122,11 @@ fn build_setup_block(context: &Context,
             let r = builder.build_int_to_ptr(
                 reg_ptr,
                 i64_type.ptr_type(AddressSpace::Generic),
-                &format!("reg{}", i));
+                &format!("reg{}", i),
+            );
             builder.build_store(r, i64_type.const_zero());
             reg.push(r);
-            reg_ptr = builder.build_int_add(reg_ptr, reg_offset,
-                                            &format!("reg_{}_addr_int", i));
+            reg_ptr = builder.build_int_add(reg_ptr, reg_offset, &format!("reg_{}_addr_int", i));
         }
         reg
     };
@@ -134,15 +137,16 @@ fn build_setup_block(context: &Context,
 ////////////////////////////////////////////////////////////////////////////////
 
 // IR generator for cases when all of the jumps are safe
-fn build_safe_ir(context: &Context,
-                 module: &Module,
-                 builder: &Builder,
-                 i64_type: IntType,
+fn build_safe_ir(
+    context: &Context,
+    module: &Module,
+    builder: &Builder,
+    i64_type: IntType,
 
-                 cb_func: FunctionValue,
-                 tape: &Vec<Instruction>,
-                 ip_reg: usize)
-{
+    cb_func: FunctionValue,
+    tape: &Vec<Instruction>,
+    ip_reg: usize,
+) {
     let (setup_block, reg_array, reg) = build_setup_block(context, module, builder, i64_type);
 
     struct Block {
@@ -157,16 +161,20 @@ fn build_safe_ir(context: &Context,
     let mut instruction_blocks: Vec<Block> = Vec::new();
     for i in 0..tape.len() {
         let b = context.insert_basic_block_after(
-                if i == 0 { &setup_block }
-                else {  &instruction_blocks.last().unwrap().block },
-                &format!("i{}", i));
+            if i == 0 {
+                &setup_block
+            } else {
+                &instruction_blocks.last().unwrap().block
+            },
+            &format!("i{}", i),
+        );
         builder.position_at_end(&b);
 
         let mut block = Block {
             phi: Vec::new(),
             input: Vec::new(),
             output: Vec::new(),
-            block: b
+            block: b,
         };
         for j in 0..6 {
             if j == ip_reg {
@@ -185,16 +193,15 @@ fn build_safe_ir(context: &Context,
     }
 
     // Finally, the exit block is at the end of our instructions
-    let exit_block = context.insert_basic_block_after(
-        &instruction_blocks.last().unwrap().block, "exit");
+    let exit_block =
+        context.insert_basic_block_after(&instruction_blocks.last().unwrap().block, "exit");
     builder.position_at_end(&exit_block);
     let mut exit_phi = Vec::new();
     for j in 0..6 {
         if j != ip_reg {
             let phi = builder.build_phi(i64_type, &format!("r{}_exit", j));
             if tape.len() == 0 {
-                phi.add_incoming(&[(&i64_type.const_int(0, false),
-                                    &setup_block)]);
+                phi.add_incoming(&[(&i64_type.const_int(0, false), &setup_block)]);
             }
             exit_phi.push(phi);
         }
@@ -203,7 +210,11 @@ fn build_safe_ir(context: &Context,
     builder.position_at_end(&setup_block);
     builder.build_call(cb_func, &[reg_array.into()], "first_call");
     builder.build_unconditional_branch(
-        instruction_blocks.get(0).map(|b| &b.block).unwrap_or(&exit_block));
+        instruction_blocks
+            .get(0)
+            .map(|b| &b.block)
+            .unwrap_or(&exit_block),
+    );
 
     println!("  Writing instruction");
     for (i, line) in tape.iter().enumerate() {
@@ -211,11 +222,11 @@ fn build_safe_ir(context: &Context,
 
         let a = match line.op.1 {
             Source::Immediate => i64_type.const_int(line.a as u64, false),
-            Source::Register  => instruction_blocks[i].input[line.a],
+            Source::Register => instruction_blocks[i].input[line.a],
         };
         let b = match line.op.2 {
             Source::Immediate => i64_type.const_int(line.b as u64, false),
-            Source::Register  => instruction_blocks[i].input[line.b],
+            Source::Register => instruction_blocks[i].input[line.b],
         };
 
         let name = format!("r{}_{}_", line.c, i);
@@ -226,34 +237,38 @@ fn build_safe_ir(context: &Context,
             Or => builder.build_or(a, b, &name),
             Set => a,
             Gt => builder.build_int_z_extend(
-                    builder.build_int_compare(IntPredicate::UGT, a, b, ""),
-                    i64_type, &name),
+                builder.build_int_compare(IntPredicate::UGT, a, b, ""),
+                i64_type,
+                &name,
+            ),
             Eq => builder.build_int_z_extend(
-                    builder.build_int_compare(IntPredicate::EQ, a, b, ""),
-                    i64_type, &name),
+                builder.build_int_compare(IntPredicate::EQ, a, b, ""),
+                i64_type,
+                &name,
+            ),
         };
         instruction_blocks[i].output[line.c] = value;
 
         let get = |t: usize, prev: &BasicBlock| -> &BasicBlock {
-            let (phi, block) = instruction_blocks.get(t)
+            let (phi, block) = instruction_blocks
+                .get(t)
                 .map(|b| (&b.phi, &b.block))
                 .unwrap_or((&exit_phi, &exit_block));
 
-                let mut k = 0;
-                for j in 0..6 {
-                    if j != ip_reg {
-                        phi[k].add_incoming(&[(&instruction_blocks[i].output[j], prev)]);
-                        k += 1;
-                    }
+            let mut k = 0;
+            for j in 0..6 {
+                if j != ip_reg {
+                    phi[k].add_incoming(&[(&instruction_blocks[i].output[j], prev)]);
+                    k += 1;
                 }
-                block
+            }
+            block
         };
 
         // Build an optional jump block if this is a jumpy instruction
         let jump_block = if line.c == ip_reg {
-            let jb = context.insert_basic_block_after(
-                &instruction_blocks[i].block,
-                &format!("i{}_jmp", i));
+            let jb = context
+                .insert_basic_block_after(&instruction_blocks[i].block, &format!("i{}_jmp", i));
             builder.position_at_end(&jb);
 
             // If this is a fixed jump (from seti), then only add that target.
@@ -269,11 +284,12 @@ fn build_safe_ir(context: &Context,
             } else if line.op.0 == Add {
                 println!("    Found one-or-two jump at {}", i);
                 let eq = builder.build_int_compare(
-                    IntPredicate::EQ, value,
+                    IntPredicate::EQ,
+                    value,
                     i64_type.const_int((i + 1) as u64, false),
-                    &format!("cmp_{}_{}", i, i + 1));
-                builder.build_conditional_branch(eq, get(i + 2, &jb),
-                                                     get(i + 1, &jb));
+                    &format!("cmp_{}_{}", i, i + 1),
+                );
+                builder.build_conditional_branch(eq, get(i + 2, &jb), get(i + 1, &jb));
             }
             builder.position_at_end(&instruction_blocks[i].block);
             Some(jb)
@@ -283,7 +299,8 @@ fn build_safe_ir(context: &Context,
 
         // If there's an indirect jump, then head there after the optional
         // callback (with a check to see if the callback requested an exit)
-        let next = jump_block.as_ref()
+        let next = jump_block
+            .as_ref()
             .unwrap_or_else(|| get(i + 1, &instruction_blocks[i].block));
         if line.breakpoint {
             for j in 0..6 {
@@ -298,7 +315,8 @@ fn build_safe_ir(context: &Context,
             builder.build_conditional_branch(
                 *cb_result.as_int_value(),
                 get(tape.len(), &instruction_blocks[i].block),
-                next);
+                next,
+            );
         } else {
             builder.build_unconditional_branch(next);
         }
@@ -310,11 +328,9 @@ fn build_safe_ir(context: &Context,
     let mut k = 0;
     for j in 0..6 {
         if j == ip_reg {
-            builder.build_store(reg[j],
-                                i64_type.const_int(tape.len() as u64, false));
+            builder.build_store(reg[j], i64_type.const_int(tape.len() as u64, false));
         } else {
-            builder.build_store(reg[j],
-                                exit_phi[k].as_basic_value().into_int_value());
+            builder.build_store(reg[j], exit_phi[k].as_basic_value().into_int_value());
             k += 1;
         }
     }
@@ -325,31 +341,34 @@ fn build_safe_ir(context: &Context,
 ////////////////////////////////////////////////////////////////////////////////
 
 // IR generator for cases where jumps can't be proven safe
-fn build_unsafe_ir(context: &Context,
-                   module: &Module,
-                   builder: &Builder,
-                   i64_type: IntType,
+fn build_unsafe_ir(
+    context: &Context,
+    module: &Module,
+    builder: &Builder,
+    i64_type: IntType,
 
-                   cb_func: FunctionValue,
-                   tape: &Vec<Instruction>,
-                   ip_reg: usize)
-{
+    cb_func: FunctionValue,
+    tape: &Vec<Instruction>,
+    ip_reg: usize,
+) {
     let (setup_block, reg_array, reg) = build_setup_block(context, module, builder, i64_type);
 
     // Each instruction gets one i block, plus an optional j block
     println!("  Creating instruction blocks");
     let mut instruction_blocks = Vec::new();
     for i in 0..tape.len() {
-        instruction_blocks.push(
-            context.insert_basic_block_after(
-                if i == 0 { &setup_block }
-                else {  instruction_blocks.last().unwrap() },
-                &format!("i{}", i)));
+        instruction_blocks.push(context.insert_basic_block_after(
+            if i == 0 {
+                &setup_block
+            } else {
+                instruction_blocks.last().unwrap()
+            },
+            &format!("i{}", i),
+        ));
     }
 
     // Finally, the exit block is at the end of our instructions
-    let exit_block = context.insert_basic_block_after(
-        instruction_blocks.last().unwrap(), "exit");
+    let exit_block = context.insert_basic_block_after(instruction_blocks.last().unwrap(), "exit");
 
     builder.build_call(cb_func, &[reg_array.into()], "first_call");
     builder.build_unconditional_branch(&instruction_blocks[0]);
@@ -362,13 +381,11 @@ fn build_unsafe_ir(context: &Context,
         builder.build_store(reg[ip_reg], i64_type.const_int(i as u64, false));
         let a = match line.op.1 {
             Source::Immediate => i64_type.const_int(line.a as u64, false),
-            Source::Register  => *builder.build_load(reg[line.a], "a")
-                                         .as_int_value()
+            Source::Register => *builder.build_load(reg[line.a], "a").as_int_value(),
         };
         let b = match line.op.2 {
             Source::Immediate => i64_type.const_int(line.b as u64, false),
-            Source::Register  => *builder.build_load(reg[line.b], "b")
-                                         .as_int_value()
+            Source::Register => *builder.build_load(reg[line.b], "b").as_int_value(),
         };
 
         let value = match line.op.0 {
@@ -378,11 +395,15 @@ fn build_unsafe_ir(context: &Context,
             Or => builder.build_or(a, b, ""),
             Set => a,
             Gt => builder.build_int_z_extend(
-                    builder.build_int_compare(IntPredicate::UGT, a, b, ""),
-                    i64_type, ""),
+                builder.build_int_compare(IntPredicate::UGT, a, b, ""),
+                i64_type,
+                "",
+            ),
             Eq => builder.build_int_z_extend(
-                    builder.build_int_compare(IntPredicate::EQ, a, b, ""),
-                    i64_type, ""),
+                builder.build_int_compare(IntPredicate::EQ, a, b, ""),
+                i64_type,
+                "",
+            ),
         };
         builder.build_store(reg[line.c], value);
 
@@ -431,26 +452,30 @@ fn build_unsafe_ir(context: &Context,
             // Create the blocks themselves
             let mut jump_blocks = VecDeque::new();
             for j in target_list.iter() {
-                jump_blocks.push_back(
-                    context.insert_basic_block_after(
-                        if *j == target_list[0] {
-                            &instruction_blocks[i]
-                        } else {
-                            jump_blocks.back().unwrap()
-                        },
-                        &format!("i{}j{}", i, j)));
+                jump_blocks.push_back(context.insert_basic_block_after(
+                    if *j == target_list[0] {
+                        &instruction_blocks[i]
+                    } else {
+                        jump_blocks.back().unwrap()
+                    },
+                    &format!("i{}j{}", i, j),
+                ));
             }
             // Build the logic within each block
             for j in 0..target_list.len() {
                 builder.position_at_end(&jump_blocks[j]);
                 let t = target_list[j];
                 let eq = builder.build_int_compare(
-                    IntPredicate::EQ, ip, i64_type.const_int(t as u64, false),
-                    &format!("cmp_{}_{}", i, t));
-                builder.build_conditional_branch(eq,
+                    IntPredicate::EQ,
+                    ip,
+                    i64_type.const_int(t as u64, false),
+                    &format!("cmp_{}_{}", i, t),
+                );
+                builder.build_conditional_branch(
+                    eq,
                     &instruction_blocks[t],
-                    jump_blocks.get(j + 1)
-                               .unwrap_or(&exit_block));
+                    jump_blocks.get(j + 1).unwrap_or(&exit_block),
+                );
             }
             builder.position_at_end(&instruction_blocks[i]);
             Some(jump_blocks.pop_front().unwrap())
@@ -460,17 +485,16 @@ fn build_unsafe_ir(context: &Context,
 
         // If there's an indirect jump, then head there after the optional
         // callback (with a check to see if the callback requested an exit)
-        let next = jump_table_block.as_ref().unwrap_or(
-            instruction_blocks.get(i + 1).unwrap_or(
-            &exit_block));
+        let next = jump_table_block
+            .as_ref()
+            .unwrap_or(instruction_blocks.get(i + 1).unwrap_or(&exit_block));
         if line.breakpoint {
             let cb_result = builder
                 .build_call(cb_func, &[reg_array.into()], "cb_call")
                 .try_as_basic_value()
                 .left()
                 .unwrap();
-            builder.build_conditional_branch(
-                *cb_result.as_int_value(), &exit_block, next);
+            builder.build_conditional_branch(*cb_result.as_int_value(), &exit_block, next);
         } else {
             builder.build_unconditional_branch(next);
         }
@@ -481,7 +505,6 @@ fn build_unsafe_ir(context: &Context,
     builder.position_at_end(&exit_block);
     builder.build_call(cb_func, &[reg_array.into()], "final_call");
     builder.build_return(None);
-
 }
 
 fn main() -> Result<(), Box<std::error::Error>> {
@@ -503,12 +526,21 @@ fn main() -> Result<(), Box<std::error::Error>> {
                 let b = str::parse::<usize>(words[2]).unwrap();
                 let c = str::parse::<usize>(words[3]).unwrap();
                 let bp = *words.get(4).unwrap_or(&"") == "#break";
-                Some(Instruction { op: op, a: a, b: b, c: c, breakpoint: bp})
+                Some(Instruction {
+                    op: op,
+                    a: a,
+                    b: b,
+                    c: c,
+                    breakpoint: bp,
+                })
             }
         })
         .collect::<Vec<Instruction>>();
-    println!("  Found {} instructions with {} breakpoints", tape.len(),
-             tape.iter().filter(|i| i.breakpoint).count());
+    println!(
+        "  Found {} instructions with {} breakpoints",
+        tape.len(),
+        tape.iter().filter(|i| i.breakpoint).count()
+    );
 
     let mut unsafe_landing_zones = HashSet::new();
     let mut jumps = HashMap::new();
@@ -522,10 +554,12 @@ fn main() -> Result<(), Box<std::error::Error>> {
             } else if line.op.0 == Add && line.op.2 == Immediate {
                 println!("Found jump from {} to {}", i, i + line.a + 1);
                 t.insert(i + line.a + 1);
-            } else if line.op.0 == Add && line.op.2 == Register && i > 0 &&
-                (tape[i - 1].op.0 == Eq || tape[i - 1].op.0 == Gt) &&
-                ((line.b == ip_reg && line.a == tape[i - 1].c) ||
-                 (line.a == ip_reg && line.b == tape[i - 1].c))
+            } else if line.op.0 == Add
+                && line.op.2 == Register
+                && i > 0
+                && (tape[i - 1].op.0 == Eq || tape[i - 1].op.0 == Gt)
+                && ((line.b == ip_reg && line.a == tape[i - 1].c)
+                    || (line.a == ip_reg && line.b == tape[i - 1].c))
             {
                 println!("Found jump from {} to {} or {}", i, i + 1, i + 2);
                 t.insert(i + 1);
@@ -541,8 +575,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
     }
     println!("{:?}\n{:?}\n", unsafe_landing_zones, jumps);
     let jump_targets = jumps.values().flat_map(|i| i).cloned().collect();
-    let proved_safe =
-        unsafe_landing_zones.intersection(&jump_targets).count() == 0;
+    let proved_safe = unsafe_landing_zones.intersection(&jump_targets).count() == 0;
 
     println!("Building JIT engine");
     Target::initialize_native(&InitializationConfig::default())?;
@@ -550,26 +583,32 @@ fn main() -> Result<(), Box<std::error::Error>> {
     let context = Context::create();
     let module = context.create_module("cb");
     let builder = context.create_builder();
-    let execution_engine = module.create_jit_execution_engine(
-        OptimizationLevel::Aggressive)?;
+    let execution_engine = module.create_jit_execution_engine(OptimizationLevel::Aggressive)?;
 
     let i64_type = context.i64_type();
 
     //  Install our global callback into the system
     let i1_type = context.custom_width_int_type(1);
     let cb_type = i1_type.fn_type(
-        &[i64_type.array_type(6).ptr_type(AddressSpace::Generic).into()], false);
+        &[i64_type
+            .array_type(6)
+            .ptr_type(AddressSpace::Generic)
+            .into()],
+        false,
+    );
     let cb_func = module.add_function("cb", cb_type, None);
     execution_engine.add_global_mapping(&cb_func, callback as usize);
 
     if !proved_safe {
         println!("Cannot prove program safe; generating inefficient IR");
-        build_unsafe_ir(&context, &module, &builder, i64_type,
-                        cb_func, &tape, ip_reg);
+        build_unsafe_ir(
+            &context, &module, &builder, i64_type, cb_func, &tape, ip_reg,
+        );
     } else {
         println!("Proved program safe; generating efficient IR");
-        build_safe_ir(&context, &module, &builder, i64_type,
-                      cb_func, &tape, ip_reg);
+        build_safe_ir(
+            &context, &module, &builder, i64_type, cb_func, &tape, ip_reg,
+        );
     }
     module.print_to_stderr();
 

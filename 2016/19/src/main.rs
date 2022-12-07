@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
-use std::str::FromStr;
 use std::io::Read;
+use std::str::FromStr;
 
 fn main() {
     let mut input = String::new();
@@ -25,11 +25,12 @@ fn main() {
     let mut robbers = VecDeque::new();
     let mut victims = VecDeque::new();
     for i in 0..count {
-        if i < count/2 {
+        if i < count / 2 {
             &mut robbers
         } else {
             &mut victims
-        }.push_back((i + 1, 1));
+        }
+        .push_back((i + 1, 1));
     }
     for i in 1..count {
         let robber = robbers.pop_front().unwrap();

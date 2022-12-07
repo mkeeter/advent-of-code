@@ -2,10 +2,13 @@ use std::io::BufRead;
 use std::str::FromStr;
 
 fn main() {
-    let input = std::io::stdin().lock()
+    let input = std::io::stdin()
+        .lock()
         .lines()
         .map(|line| {
-            let v = line.unwrap().split(' ')
+            let v = line
+                .unwrap()
+                .split(' ')
                 .filter_map(|i| usize::from_str(i).ok())
                 .collect::<Vec<usize>>();
             (v[0], v[1], v[2])

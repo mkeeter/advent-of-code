@@ -1,5 +1,5 @@
-use std::io::{self, Read};
 use std::collections::HashSet;
+use std::io::{self, Read};
 
 #[derive(Debug, Eq, PartialEq)]
 struct Registers([usize; 6]);
@@ -7,13 +7,22 @@ struct Registers([usize; 6]);
 #[allow(non_camel_case_types)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 enum Op {
-    addr, addi,
-    mulr, muli,
-    banr, bani,
-    borr, bori,
-    setr, seti,
-    gtir, gtri, gtrr,
-    eqir, eqri, eqrr,
+    addr,
+    addi,
+    mulr,
+    muli,
+    banr,
+    bani,
+    borr,
+    bori,
+    setr,
+    seti,
+    gtir,
+    gtri,
+    gtrr,
+    eqir,
+    eqri,
+    eqrr,
 }
 use crate::Op::*;
 
@@ -91,8 +100,7 @@ fn part2() {
             if v2 < 256 {
                 break;
             }
-            v2 = (0..).skip_while(|i| (i + 1) * 256 <= v2)
-                      .next().unwrap();
+            v2 = (0..).skip_while(|i| (i + 1) * 256 <= v2).next().unwrap();
         }
 
         if !seen.insert(v3) {
@@ -121,7 +129,12 @@ fn main() {
                 let a = str::parse::<usize>(words[1]).unwrap();
                 let b = str::parse::<usize>(words[2]).unwrap();
                 let c = str::parse::<usize>(words[3]).unwrap();
-                Some(Instruction { op: op, a: a, b: b, c: c})
+                Some(Instruction {
+                    op: op,
+                    a: a,
+                    b: b,
+                    c: c,
+                })
             }
         })
         .collect::<Vec<Instruction>>();

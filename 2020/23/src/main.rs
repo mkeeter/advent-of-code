@@ -1,6 +1,6 @@
 use std::io::Read;
 
-fn step(ring: &mut[u32], n: u32) {
+fn step(ring: &mut [u32], n: u32) {
     let current = ring[0];
 
     let a = ring[current as usize];
@@ -33,7 +33,7 @@ fn run(nums: &[u32], n: usize) -> Vec<u32> {
     for a in nums[0..].windows(2) {
         ring[a[0] as usize] = a[1];
     }
-    ring[nums[nums.len() - 1] as usize] = nums[0];  // Make circular
+    ring[nums[nums.len() - 1] as usize] = nums[0]; // Make circular
     ring[0] = nums[0]; // Store the current cup in slot 0
 
     for _i in 0..n {
@@ -45,9 +45,7 @@ fn run(nums: &[u32], n: usize) -> Vec<u32> {
 fn main() {
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).unwrap();
-    let mut nums: Vec<u32> = input.chars()
-        .map(|c| c.to_digit(10).unwrap())
-        .collect();
+    let mut nums: Vec<u32> = input.chars().map(|c| c.to_digit(10).unwrap()).collect();
 
     ////////////////////////////////////////////////////////////////////////////
     // Part 1

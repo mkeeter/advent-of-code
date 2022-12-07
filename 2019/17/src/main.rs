@@ -1,16 +1,14 @@
-use std::io::Read;
 use std::collections::HashMap;
+use std::io::Read;
 use std::str::FromStr;
 
 use vm::Vm;
 
 fn optimize(commands: Vec<String>, c: i32) -> Option<Vec<Vec<String>>> {
     if c == 0 {
-        let len = commands.iter()
-            .map(|i| i.len() + 1)
-            .sum::<usize>() - 1;
+        let len = commands.iter().map(|i| i.len() + 1).sum::<usize>() - 1;
         if len <= 20 {
-            return Some(vec![commands])
+            return Some(vec![commands]);
         } else {
             return None;
         }
@@ -18,11 +16,8 @@ fn optimize(commands: Vec<String>, c: i32) -> Option<Vec<Vec<String>>> {
 
     for k in (2..commands.len()).rev() {
         for i in 0..(commands.len() - k) {
-            let s = &commands[i..i+k];
-            if s.iter()
-                .map(|i| i.len() + 1)
-                .sum::<usize>() - 1 > 20
-            {
+            let s = &commands[i..i + k];
+            if s.iter().map(|i| i.len() + 1).sum::<usize>() - 1 > 20 {
                 continue;
             }
             if s.iter()
@@ -37,7 +32,7 @@ fn optimize(commands: Vec<String>, c: i32) -> Option<Vec<Vec<String>>> {
             let mut j = 0;
             let sub = (b'A' + (c - 1) as u8) as char;
             while j < commands.len() {
-                if j + k <= commands.len() && s == &commands[j..(j+k)] {
+                if j + k <= commands.len() && s == &commands[j..(j + k)] {
                     new_commands.push(sub.to_string());
                     j += k;
                 } else {
@@ -66,7 +61,8 @@ fn main() {
     let mut x = 0;
     let mut y = 0;
     let mut i = 0;
-    while i < 10000 { // Solve the halting problem
+    while i < 10000 {
+        // Solve the halting problem
         if let Some(o) = vm.step() {
             i = 0;
             let c = o as u8 as char;
@@ -83,31 +79,33 @@ fn main() {
         }
     }
 
-    let tile = |pos: &(i32, i32)| -> char {
-        *tiles.get(pos).unwrap_or(&'.')
-    };
+    let tile = |pos: &(i32, i32)| -> char { *tiles.get(pos).unwrap_or(&'.') };
 
-    let alignment = tiles.iter()
-        .filter(|((x, y), v)| **v == '#' &&
-                              tile(&(x + 1, *y)) == '#' &&
-                              tile(&(x - 1, *y)) == '#' &&
-                              tile(&(*x, y + 1)) == '#' &&
-                              tile(&(*x, y - 1)) == '#')
+    let alignment = tiles
+        .iter()
+        .filter(|((x, y), v)| {
+            **v == '#'
+                && tile(&(x + 1, *y)) == '#'
+                && tile(&(x - 1, *y)) == '#'
+                && tile(&(*x, y + 1)) == '#'
+                && tile(&(*x, y - 1)) == '#'
+        })
         .map(|((x, y), _v)| x * y)
         .sum::<i32>();
 
     println!("Part 1: {}", alignment);
 
     // Get bot location and orientation
-    let bot = tiles.iter()
+    let bot = tiles
+        .iter()
         .find(|(_k, v)| **v != '.' && **v != '#')
         .unwrap();
     let mut pos: (i32, i32) = *bot.0;
     let mut dir = match *bot.1 {
-        '^' => ( 0, -1),
-        'v' => ( 0,  1),
-        '>' => ( 1,  0),
-        '<' => (-1,  0),
+        '^' => (0, -1),
+        'v' => (0, 1),
+        '>' => (1, 0),
+        '<' => (-1, 0),
         _ => panic!("Invalid bot character {}", bot.1),
     };
 
@@ -122,8 +120,8 @@ fn main() {
                 distance = 0;
             }
 
-            let left  = ( dir.1, -dir.0);
-            let right = (-dir.1,  dir.0);
+            let left = (dir.1, -dir.0);
+            let right = (-dir.1, dir.0);
             if tile(&(pos.0 + left.0, pos.1 + left.1)) == '#' {
                 commands.push("L".to_string());
                 dir = left;
@@ -144,7 +142,7 @@ fn main() {
 
     let cmds = optimize(commands, 3).unwrap();
     for cmd in cmds {
-        for (i,word) in cmd.iter().enumerate() {
+        for (i, word) in cmd.iter().enumerate() {
             for c in word.chars() {
                 vm.input(c as i64);
             }

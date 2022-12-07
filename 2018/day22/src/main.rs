@@ -1,7 +1,11 @@
-use std::collections::{HashMap, BinaryHeap};
+use std::collections::{BinaryHeap, HashMap};
 
 #[derive(Eq, PartialEq, Copy, Clone)]
-enum Tile { Rocky, Wet, Narrow }
+enum Tile {
+    Rocky,
+    Wet,
+    Narrow,
+}
 use crate::Tile::*;
 impl Tile {
     fn compatible(&self, tool: &Tool) -> bool {
@@ -14,7 +18,11 @@ impl Tile {
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Hash, Ord, PartialOrd)]
-enum Tool { Torch, Gear, Neither }
+enum Tool {
+    Torch,
+    Gear,
+    Neither,
+}
 use crate::Tool::*;
 
 fn main() {
@@ -23,35 +31,36 @@ fn main() {
 
     // We build the graph on an expanded grid, in case there are approaches
     // that come from beyond the target's position
-    let width  = target.0 * 16;
+    let width = target.0 * 16;
     let height = target.1 * 4;
 
     let mut scores: HashMap<(i64, i64), usize> = HashMap::new();
     let mut map: HashMap<(i64, i64), Tile> = HashMap::new();
     for y in 0..=height {
         for x in 0..=width {
-            let g =
-                if x == 0 && y == 0 {
-                    0
-                } else if x == target.0 && y == target.1 {
-                    0
-                } else if y == 0 {
-                    (x * 16807) as usize
-                } else if x == 0 {
-                    (y * 48271) as usize
-                } else {
-                    (scores.get(&(x - 1, y)).unwrap() *
-                     scores.get(&(x, y - 1)).unwrap())
-                };
+            let g = if x == 0 && y == 0 {
+                0
+            } else if x == target.0 && y == target.1 {
+                0
+            } else if y == 0 {
+                (x * 16807) as usize
+            } else if x == 0 {
+                (y * 48271) as usize
+            } else {
+                (scores.get(&(x - 1, y)).unwrap() * scores.get(&(x, y - 1)).unwrap())
+            };
             let erosion_level = (g + depth) % 20183;
 
             scores.insert((x, y), erosion_level);
-            map.insert((x, y), match erosion_level % 3 {
-                0 => Rocky,
-                1 => Wet,
-                2 => Narrow,
-                _ => unreachable!(),
-            });
+            map.insert(
+                (x, y),
+                match erosion_level % 3 {
+                    0 => Rocky,
+                    1 => Wet,
+                    2 => Narrow,
+                    _ => unreachable!(),
+                },
+            );
         }
     }
 
@@ -77,16 +86,18 @@ fn main() {
                 for n in [(0, -1), (0, 1), (-1, 0), (1, 0)].iter() {
                     if let Some(next) = map.get(&(x + n.0, y + n.1)) {
                         if next.compatible(tool) {
-                            graph.entry((x, y, *tool))
+                            graph
+                                .entry((x, y, *tool))
                                 .or_insert(Vec::new())
                                 .push(((x + n.0, y + n.1, *tool), 1));
                         }
                     }
                 }
                 // Try to switch tools while staying in the same position
-                for n in [Torch, Gear, Neither].iter(){
+                for n in [Torch, Gear, Neither].iter() {
                     if n != tool && map.get(&(x, y)).unwrap().compatible(n) {
-                        graph.entry((x, y, *tool))
+                        graph
+                            .entry((x, y, *tool))
                             .or_insert(Vec::new())
                             .push(((x, y, *n), 7));
                     }

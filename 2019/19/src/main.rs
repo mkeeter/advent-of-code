@@ -1,5 +1,5 @@
-use std::io::Read;
 use std::collections::VecDeque;
+use std::io::Read;
 use std::str::FromStr;
 
 use vm::Vm;
@@ -56,10 +56,9 @@ fn main() {
         if buf.len() == 100 {
             let span_start = buf.back().unwrap().0;
             let span_end = span_start + 100;
-            if buf.iter().all(|&(xmin, xmax)|
-                span_start <= xmax && span_start >= xmin &&
-                span_end   <= xmax && span_end   >= xmin)
-            {
+            if buf.iter().all(|&(xmin, xmax)| {
+                span_start <= xmax && span_start >= xmin && span_end <= xmax && span_end >= xmin
+            }) {
                 let corner = (span_start, y - 100 + 1);
                 println!("Part 2: {}", corner.0 * 10000 + corner.1);
                 break;

@@ -57,12 +57,12 @@ fn run(gates: &[Gate]) -> u16 {
         };
         if let Some(z) = match &op {
             Op::Not(a) => get(a).map(|i| !i),
-            Op::Or(a,  b) => get(a).and_then(|i| get(b).map(|j| i | j)),
+            Op::Or(a, b) => get(a).and_then(|i| get(b).map(|j| i | j)),
             Op::And(a, b) => get(a).and_then(|i| get(b).map(|j| i & j)),
             Op::RShift(a, b) => get(a).and_then(|i| get(b).map(|j| i >> j)),
             Op::LShift(a, b) => get(a).and_then(|i| get(b).map(|j| i << j)),
             Op::Dup(a) => get(a),
-        }{
+        } {
             state.insert(out, z);
         } else {
             gates.push_back(Gate(op, out));
@@ -71,9 +71,9 @@ fn run(gates: &[Gate]) -> u16 {
     *state.get("a").unwrap()
 }
 
-
 fn main() {
-    let gates = std::io::stdin().lock()
+    let gates = std::io::stdin()
+        .lock()
         .lines()
         .map(|line| parse(&line.unwrap()))
         .collect::<Vec<Gate>>();

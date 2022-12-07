@@ -1,4 +1,4 @@
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::io::BufRead;
 
 fn search(j: u8, cache: &mut HashMap<u8, u64>) -> u64 {
@@ -15,7 +15,9 @@ fn search(j: u8, cache: &mut HashMap<u8, u64>) -> u64 {
 }
 
 fn main() {
-    let mut p: Vec<u8> = std::io::stdin().lock().lines()
+    let mut p: Vec<u8> = std::io::stdin()
+        .lock()
+        .lines()
         .map(|line| line.unwrap().parse().unwrap())
         .collect();
     p.push(0); // the wall outlet
@@ -23,14 +25,15 @@ fn main() {
     let max = p.last().unwrap() + 3;
     p.push(max); // our device
 
-    let count = p.iter().zip(p.iter().skip(1))
-        .fold((0, 0), |(n1, n3), (a, b)| {
-            match b - a {
-                1 => (n1 + 1, n3),
-                2 => (n1, n3),
-                3 => (n1, n3 + 1),
-                _ => panic!("Cannot adapt!"),
-            }});
+    let count = p
+        .iter()
+        .zip(p.iter().skip(1))
+        .fold((0, 0), |(n1, n3), (a, b)| match b - a {
+            1 => (n1 + 1, n3),
+            2 => (n1, n3),
+            3 => (n1, n3 + 1),
+            _ => panic!("Cannot adapt!"),
+        });
     println!("Part 1: {}", count.0 * count.1);
 
     // Cache how many ways we can get from a particular joltage to 0.

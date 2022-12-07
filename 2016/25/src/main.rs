@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
+use assembunny::Vm;
 use std::io::Read;
 use std::str::FromStr;
-use assembunny::Vm;
 
 fn main() {
     let mut input = String::new();

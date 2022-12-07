@@ -1,14 +1,15 @@
-use std::io::Read;
 use std::collections::{HashMap, HashSet};
+use std::io::Read;
 
 fn parse_line(s: &str) -> (HashSet<&str>, HashSet<&str>) {
     let mut iter = s.split(" (contains ");
-    let ingredients = iter.next().unwrap()
-        .split(' ')
-        .collect();
+    let ingredients = iter.next().unwrap().split(' ').collect();
 
-    let allergens = iter.next().unwrap()
-        .strip_suffix(')').unwrap()
+    let allergens = iter
+        .next()
+        .unwrap()
+        .strip_suffix(')')
+        .unwrap()
         .split(", ")
         .collect();
 
@@ -29,7 +30,8 @@ fn main() {
             *ingredient_count.entry(*i).or_insert(0) += 1;
         }
         for a in algs.iter() {
-            allergens.entry(a)
+            allergens
+                .entry(a)
                 .and_modify(|e| *e = (&*e) & (&ings))
                 .or_insert_with(|| ings.clone());
         }
@@ -38,9 +40,10 @@ fn main() {
     // Map from ingredient to matching allergen
     let mut bound: HashMap<&str, &str> = HashMap::new();
 
-    while let Some((allergen, ingredient)) = allergens.iter()
-            .find(|(_a, i)| i.len() == 1)
-            .map(|(a, i)| (*a, i.iter().next().copied().unwrap()))
+    while let Some((allergen, ingredient)) = allergens
+        .iter()
+        .find(|(_a, i)| i.len() == 1)
+        .map(|(a, i)| (*a, i.iter().next().copied().unwrap()))
     {
         allergens.remove(allergen).unwrap();
         for (_a, i) in allergens.iter_mut() {
@@ -50,7 +53,8 @@ fn main() {
     }
 
     let banned: HashSet<&str> = bound.keys().copied().collect();
-    let out = ingredient_count.iter()
+    let out = ingredient_count
+        .iter()
         .filter(|(i, _n)| !banned.contains(*i))
         .map(|(_i, n)| n)
         .sum::<usize>();

@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-use std::str::FromStr;
-use std::io::BufRead;
 use regex::Regex;
+use std::collections::HashMap;
+use std::io::BufRead;
+use std::str::FromStr;
 
 fn check(room: &str, checksum: &str) -> bool {
     let mut count = HashMap::new();
@@ -10,14 +10,10 @@ fn check(room: &str, checksum: &str) -> bool {
             *count.entry(c).or_insert(0) += 1;
         }
     }
-    let mut sorted = count.into_iter()
-        .collect::<Vec<(char, i32)>>();
+    let mut sorted = count.into_iter().collect::<Vec<(char, i32)>>();
     sorted.sort_by_key(|(c, n)| (-*n, (*c as i32)));
 
-    checksum == sorted.iter()
-        .take(5)
-        .map(|(c, _n)| c)
-        .collect::<String>()
+    checksum == sorted.iter().take(5).map(|(c, _n)| c).collect::<String>()
 }
 
 fn decrypt(room: &str, sector: u32) -> String {
@@ -36,7 +32,9 @@ fn decrypt(room: &str, sector: u32) -> String {
 
 fn main() {
     let r = Regex::new(r"(.*)-(\d+)\[(.*)\]").unwrap();
-    let input = std::io::stdin().lock().lines()
+    let input = std::io::stdin()
+        .lock()
+        .lines()
         .map(|line| {
             let line = line.unwrap();
             let c = r.captures(&line).unwrap();
@@ -47,7 +45,8 @@ fn main() {
         })
         .collect::<Vec<(String, u32, String)>>();
 
-    let a = input.iter()
+    let a = input
+        .iter()
         .filter(|line| check(&line.0, &line.2))
         .map(|line| line.1)
         .sum::<u32>();

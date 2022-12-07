@@ -1,16 +1,14 @@
-use std::io::BufRead;
-use std::collections::HashMap;
 use itertools::Itertools;
+use std::collections::HashMap;
+use std::io::BufRead;
 
 fn nice1(s: &str) -> bool {
-    s.chars()
-        .filter(|&c| "aeiou".contains(c)).count() >= 3 &&
-    s.chars()
-        .zip(s.chars().skip(1))
-        .any(|(a, b)| a == b) &&
-    !s.chars().tuple_windows::<(char, char)>()
-        .any(|p| p == ('a','b') || p == ('c','d') ||
-                 p == ('p','q') || p == ('x','y'))
+    s.chars().filter(|&c| "aeiou".contains(c)).count() >= 3
+        && s.chars().zip(s.chars().skip(1)).any(|(a, b)| a == b)
+        && !s
+            .chars()
+            .tuple_windows::<(char, char)>()
+            .any(|p| p == ('a', 'b') || p == ('c', 'd') || p == ('p', 'q') || p == ('x', 'y'))
 }
 
 fn nice2(s: &str) -> bool {
@@ -26,14 +24,15 @@ fn nice2(s: &str) -> bool {
             pairs.insert((a, b), i);
         }
     }
-    found &&
-    s.chars()
-        .tuple_windows::<(char, char, char)>()
-        .any(|(a, _b, c)| a == c)
+    found
+        && s.chars()
+            .tuple_windows::<(char, char, char)>()
+            .any(|(a, _b, c)| a == c)
 }
 
 fn main() {
-    let words = std::io::stdin().lock()
+    let words = std::io::stdin()
+        .lock()
         .lines()
         .map(|r| r.unwrap())
         .collect::<Vec<String>>();

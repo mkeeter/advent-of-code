@@ -4,21 +4,20 @@ use std::str::FromStr;
 
 type Recipe = [i32; 5];
 
-fn optimize<F>(remaining: usize, recipe: Recipe,
-               ingredients: &[Recipe], pred: &F) -> Option<i32>
-    where F: Fn(&Recipe) -> bool
+fn optimize<F>(remaining: usize, recipe: Recipe, ingredients: &[Recipe], pred: &F) -> Option<i32>
+where
+    F: Fn(&Recipe) -> bool,
 {
     if remaining == 0 {
         if pred(&recipe) {
-            return Some(recipe.iter().take(4)
-                .fold(1, |acc, i| acc * max(*i, 0)));
+            return Some(recipe.iter().take(4).fold(1, |acc, i| acc * max(*i, 0)));
         } else {
             return None;
         }
     }
     let add = |tbs| {
         let mut recipe = recipe;
-        for (i,j) in ingredients[0].iter().enumerate() {
+        for (i, j) in ingredients[0].iter().enumerate() {
             recipe[i] += j * tbs;
         }
         recipe
@@ -29,14 +28,14 @@ fn optimize<F>(remaining: usize, recipe: Recipe,
     // Otherwise, try all possible combinations
     } else {
         (0..remaining)
-            .filter_map(|tbs| optimize(remaining - tbs, add(tbs as i32),
-                                       &ingredients[1..], pred))
+            .filter_map(|tbs| optimize(remaining - tbs, add(tbs as i32), &ingredients[1..], pred))
             .max()
     }
 }
 
 fn main() {
-    let ingredients = std::io::stdin().lock()
+    let ingredients = std::io::stdin()
+        .lock()
         .lines()
         .map(|line| {
             let mut out = [0; 5];

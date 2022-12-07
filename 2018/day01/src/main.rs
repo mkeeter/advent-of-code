@@ -1,6 +1,6 @@
-use std::io::{BufReader, BufRead};
-use std::fs::File;
 use std::collections::HashSet;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 
 fn parse_line(line: &str) -> i32 {
     let mut i = 0;

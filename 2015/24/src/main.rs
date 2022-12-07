@@ -5,17 +5,14 @@ use std::str::FromStr;
 use itertools::*;
 
 fn main() {
-    let weights = std::io::stdin().lock()
+    let weights = std::io::stdin()
+        .lock()
         .lines()
         .map(|line| usize::from_str(&line.unwrap()).unwrap())
         .collect::<Vec<usize>>();
 
-    let qe = |k: &Vec<usize>| {
-        k.iter().map(|j| weights[*j]).product::<usize>()
-    };
-    let wt = |k: &Vec<usize>| {
-        k.iter().map(|j| weights[*j]).sum::<usize>()
-    };
+    let qe = |k: &Vec<usize>| k.iter().map(|j| weights[*j]).product::<usize>();
+    let wt = |k: &Vec<usize>| k.iter().map(|j| weights[*j]).sum::<usize>();
 
     let target_weight = weights.iter().sum::<usize>() / 3;
     'part1: for i in 1..weights.len() {

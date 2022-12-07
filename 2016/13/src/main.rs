@@ -11,7 +11,7 @@ fn main() {
         if x < 0 || y < 0 {
             true
         } else {
-            (x*x + 3*x + 2*x*y + y + y*y + favorite).count_ones() % 2 == 1
+            (x * x + 3 * x + 2 * x * y + y + y * y + favorite).count_ones() % 2 == 1
         }
     };
 
@@ -32,13 +32,12 @@ fn main() {
         if part1.is_some() && part2.is_some() {
             break;
         }
-        todo = todo.into_iter()
+        todo = todo
+            .into_iter()
             .filter(|&(x, y)| seen.insert((x, y)))
-            .flat_map(|(x, y)| directions.iter()
-                      .map(move |(dx, dy)| (x + dx, y + dy)))
+            .flat_map(|(x, y)| directions.iter().map(move |(dx, dy)| (x + dx, y + dy)))
             .filter(|(x, y)| !filled(*x, *y))
             .collect();
-
     }
     println!("Part 1: {}", part1.unwrap());
     println!("Part 2: {}", part2.unwrap());

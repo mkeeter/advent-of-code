@@ -1,28 +1,23 @@
-use std::io::Read;
 use std::collections::HashMap;
+use std::io::Read;
 
-use regex::Regex;
 use itertools::Itertools;
+use regex::Regex;
 
 // All possible rotation + flip matrices, as a 4x4 + shift
 const MATRICES: [[i32; 6]; 8] = [
-    [ 1,  0,  0,  1,    0, 0],
-    [ 1,  0,  0, -1,    0, 1],
-    [-1,  0,  0,  1,    1, 0],
-    [-1,  0,  0, -1,    1, 1],
-    [ 0,  1,  1,  0,    0, 0],
-    [ 0,  1, -1,  0,    0, 1],
-    [ 0, -1,  1,  0,    1, 0],
-    [ 0, -1, -1,  0,    1, 1],
+    [1, 0, 0, 1, 0, 0],
+    [1, 0, 0, -1, 0, 1],
+    [-1, 0, 0, 1, 1, 0],
+    [-1, 0, 0, -1, 1, 1],
+    [0, 1, 1, 0, 0, 0],
+    [0, 1, -1, 0, 0, 1],
+    [0, -1, 1, 0, 1, 0],
+    [0, -1, -1, 0, 1, 1],
 ];
 
 // Ordering of edges: top, right, bottom, left
-const EDGES: [(i32, i32); 4] = [
-    ( 0, -1),
-    ( 1,  0),
-    ( 0,  1),
-    (-1,  0),
-];
+const EDGES: [(i32, i32); 4] = [(0, -1), (1, 0), (0, 1), (-1, 0)];
 
 ////////////////////////////////////////////////////////////////////////////////
 #[derive(Debug)]
@@ -34,7 +29,8 @@ struct Tile {
 
 impl Tile {
     fn new<'a, I>(id: u64, lines: I) -> Tile
-        where I: Iterator<Item=&'a str>
+    where
+        I: Iterator<Item = &'a str>,
     {
         let image = lines
             .map(|line| line.chars().map(|c| c == '#').collect())
@@ -58,16 +54,18 @@ impl Tile {
         }
     }
 
-    fn unpack<I: Iterator<Item=bool>>(iter: I) -> u16 {
+    fn unpack<I: Iterator<Item = bool>>(iter: I) -> u16 {
         iter.fold(0, |a, b| (a << 1) | (b as u16))
     }
 
     fn edges(img: &[Vec<bool>]) -> [u16; 4] {
         // In the same order as EDGES above: top, right, bottom, left
-        [Self::unpack(img[0].iter().copied()),
-         Self::unpack(img.iter().map(|row| row[row.len() - 1])),
-         Self::unpack(img[img.len() - 1].iter().copied()),
-         Self::unpack(img.iter().map(|row| row[0]))]
+        [
+            Self::unpack(img[0].iter().copied()),
+            Self::unpack(img.iter().map(|row| row[row.len() - 1])),
+            Self::unpack(img[img.len() - 1].iter().copied()),
+            Self::unpack(img.iter().map(|row| row[0])),
+        ]
     }
 
     fn flip(img: &[Vec<bool>], orientation: u8) -> Vec<Vec<bool>> {
@@ -79,8 +77,8 @@ impl Tile {
                 let x = x as i32;
                 let y = y as i32;
 
-                let x_ = x*mat[0] + y*mat[1] + (row.len() as i32 - 1)*mat[4];
-                let y_ = x*mat[2] + y*mat[3] + (img.len() as i32 - 1)*mat[5];
+                let x_ = x * mat[0] + y * mat[1] + (row.len() as i32 - 1) * mat[4];
+                let y_ = x * mat[2] + y * mat[3] + (img.len() as i32 - 1) * mat[5];
 
                 out[y_ as usize][x_ as usize] = row[x as usize];
             }
@@ -142,9 +140,7 @@ impl<'a> State<'a> {
                 let o = self.bind[*t].unwrap() as usize;
                 assert!(m == self.tiles[*t].edges[o][(e + 2) % 4])
             } else {
-                let s = self.constraints.entry((x_, y_))
-                    .or_default()
-                    [(e + 2) % 4].replace(m);
+                let s = self.constraints.entry((x_, y_)).or_default()[(e + 2) % 4].replace(m);
                 assert!(s == None);
             }
         }
@@ -164,7 +160,9 @@ impl<'a> State<'a> {
                     continue;
                 }
                 for o in 0..8 {
-                    if tile.edges[o].iter().zip(cs)
+                    if tile.edges[o]
+                        .iter()
+                        .zip(cs)
                         .all(|(m, n)| n.unwrap_or(*m) == *m)
                     {
                         // We've found a tile to place!
@@ -198,9 +196,14 @@ fn main() {
         if id_line == None {
             continue;
         }
-        let id: u64 = re.captures(id_line.unwrap()).unwrap()
-            .get(1).unwrap()
-            .as_str().parse().unwrap();
+        let id: u64 = re
+            .captures(id_line.unwrap())
+            .unwrap()
+            .get(1)
+            .unwrap()
+            .as_str()
+            .parse()
+            .unwrap();
 
         tiles.push(Tile::new(id, iter));
     }
@@ -208,8 +211,20 @@ fn main() {
     // Solve the system
     let sol = State::new(&tiles).run().unwrap();
 
-    let xm = sol.grid.iter().map(|p| p.0.0).minmax().into_option().unwrap();
-    let ym = sol.grid.iter().map(|p| p.0.1).minmax().into_option().unwrap();
+    let xm = sol
+        .grid
+        .iter()
+        .map(|p| p.0 .0)
+        .minmax()
+        .into_option()
+        .unwrap();
+    let ym = sol
+        .grid
+        .iter()
+        .map(|p| p.0 .1)
+        .minmax()
+        .into_option()
+        .unwrap();
     assert!(xm.1 - xm.0 == ym.1 - ym.0); // check for square image
 
     let mut out = 1;
@@ -243,12 +258,16 @@ fn main() {
                   #
 #    ##    ##    ###
  #  #  #  #  #  #   ";
-    let monster_img: Vec<(usize, usize)> = MONSTER.lines()
+    let monster_img: Vec<(usize, usize)> = MONSTER
+        .lines()
         .skip(1)
         .enumerate()
-        .flat_map(|(y, line)| line.chars().enumerate()
-            .filter(|(_, c)| *c == '#')
-            .map(move |(x, _)| (x, y)))
+        .flat_map(|(y, line)| {
+            line.chars()
+                .enumerate()
+                .filter(|(_, c)| *c == '#')
+                .map(move |(x, _)| (x, y))
+        })
         .collect();
 
     for o in 0..8 {
@@ -267,10 +286,7 @@ fn main() {
             }
         }
         if monster_count > 0 {
-            let num_hash = img.iter()
-                .flat_map(|r| r.iter())
-                .filter(|c| **c)
-                .count();
+            let num_hash = img.iter().flat_map(|r| r.iter()).filter(|c| **c).count();
             println!("Part 2: {}", num_hash - monster_count);
         }
     }

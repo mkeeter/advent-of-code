@@ -1,6 +1,6 @@
-use std::io::Read;
-use std::collections::{HashMap, HashSet};
 use std::collections::hash_map::Entry;
+use std::collections::{HashMap, HashSet};
+use std::io::Read;
 use std::str::FromStr;
 
 use vm::Vm;
@@ -36,16 +36,15 @@ fn main() {
     let vm = Vm::from_str(&input).unwrap();
 
     let mut todo = Vec::new();
-    todo.push(Robot { pos: (0, 0), history: vec![], vm });
+    todo.push(Robot {
+        pos: (0, 0),
+        history: vec![],
+        vm,
+    });
 
     let mut seen = HashMap::new();
-    while let Some(bot) = todo.pop()
-    {
-        for (cmd, delta) in [(1, ( 0,  1)),
-                             (2, ( 0, -1)),
-                             (3, (-1,  0)),
-                             (4, ( 1,  0))].iter()
-        {
+    while let Some(bot) = todo.pop() {
+        for (cmd, delta) in [(1, (0, 1)), (2, (0, -1)), (3, (-1, 0)), (4, (1, 0))].iter() {
             let pos = (bot.pos.0 + delta.0, bot.pos.1 + delta.1);
             if let Entry::Vacant(v) = seen.entry(pos) {
                 let mut next = Robot {
@@ -74,10 +73,13 @@ fn main() {
 
     let mut minutes = 0;
     while !next.is_empty() {
-        next = next.iter()
-            .flat_map(|i| [(0, 1), (0, -1), (-1, 0), (1, 0)]
+        next = next
+            .iter()
+            .flat_map(|i| {
+                [(0, 1), (0, -1), (-1, 0), (1, 0)]
                     .iter()
-                    .map(move |d| (i.0 + d.0, i.1 + d.1)))
+                    .map(move |d| (i.0 + d.0, i.1 + d.1))
+            })
             .filter(|j| seen.get(j).unwrap_or(&0) == &1)
             .collect::<HashSet<(i64, i64)>>();
         for n in next.iter() {

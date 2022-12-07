@@ -61,7 +61,8 @@ impl State {
     }
 
     fn heuristic(&self) -> u32 {
-        self.floors.iter()
+        self.floors
+            .iter()
             .enumerate()
             .map(|(i, f)| {
                 // In the best case, we carry two items per trip,
@@ -128,9 +129,7 @@ fn run(start: State) -> u32 {
     open_set.push((start, 0), Reverse(start.heuristic()));
     while let Some(((state, steps), _p)) = open_set.pop() {
         // Check our termination condition
-        if state.floors[0..=2].iter()
-            .all(|f| f.count_items() == 0)
-        {
+        if state.floors[0..=2].iter().all(|f| f.count_items() == 0) {
             return g_score[&state];
         }
 

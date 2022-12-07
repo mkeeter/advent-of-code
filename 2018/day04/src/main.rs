@@ -1,9 +1,11 @@
 use std::str::FromStr;
 
-#[macro_use] extern crate nom;
+#[macro_use]
+extern crate nom;
 use nom::types::CompleteByteSlice;
 
-#[macro_use] extern crate itertools;
+#[macro_use]
+extern crate itertools;
 
 use std::collections::HashMap;
 
@@ -58,27 +60,33 @@ fn main() {
     events.sort();
 
     let mut sleeping = HashMap::new();
-    events.iter().fold((0, 0), |(id, sleep), e| {
-        match e.action {
-            Action::Begin(id) => (id, 0),
-            Action::Sleep => (id, e.minute),
-            Action::Wake => {
-                let minutes = sleeping.entry(id).or_insert([0; 60]);
-                for i in sleep..e.minute {
-                    minutes[i] += 1;
-                };
-                (id, 0)
-            },
+    events.iter().fold((0, 0), |(id, sleep), e| match e.action {
+        Action::Begin(id) => (id, 0),
+        Action::Sleep => (id, e.minute),
+        Action::Wake => {
+            let minutes = sleeping.entry(id).or_insert([0; 60]);
+            for i in sleep..e.minute {
+                minutes[i] += 1;
+            }
+            (id, 0)
         }
     });
 
-    let (guard, _) = sleeping.iter()
+    let (guard, _) = sleeping
+        .iter()
         .map(|(g, mins)| (g, mins.iter().sum::<usize>()))
-        .max_by_key(|k| k.1).unwrap();
-    let min = sleeping[guard].iter().enumerate().max_by_key(|k| k.1).unwrap().0;
+        .max_by_key(|k| k.1)
+        .unwrap();
+    let min = sleeping[guard]
+        .iter()
+        .enumerate()
+        .max_by_key(|k| k.1)
+        .unwrap()
+        .0;
     println!("Part 1: {}", *guard * min);
 
     let (min, (guard, _)) = iproduct!(0..60, sleeping.iter())
-        .max_by_key(|k| (k.1).1[k.0]).unwrap();
+        .max_by_key(|k| (k.1).1[k.0])
+        .unwrap();
     println!("Part 2: {}", min * guard);
 }

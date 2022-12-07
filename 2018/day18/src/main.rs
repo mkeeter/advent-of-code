@@ -1,23 +1,21 @@
-use std::io::{self, Read};
 use std::collections::HashMap;
+use std::io::{self, Read};
 
 #[derive(Hash, Eq, PartialEq, Clone)]
 struct Grid(Vec<Vec<char>>);
 
 impl Grid {
-    fn get(&self, x: i32, y: i32) -> Option<char>
-    {
+    fn get(&self, x: i32, y: i32) -> Option<char> {
         if x < 0 || y < 0 {
             None
         } else {
-            self.0.get(y as usize)?
-                  .get(x as usize)
-                  .cloned()
+            self.0.get(y as usize)?.get(x as usize).cloned()
         }
     }
 
     fn count(&self, r: char) -> usize {
-        self.0.iter()
+        self.0
+            .iter()
             .flat_map(|i| i.iter())
             .filter(|c| **c == r)
             .count()
@@ -39,16 +37,34 @@ impl Grid {
                                 '|' => trees += 1,
                                 '#' => yards += 1,
                                 '.' => continue,
-                                 _  => unimplemented!(),
+                                _ => unimplemented!(),
                             }
                         }
                     }
                 }
                 next[y][x] = match self.0[y][x] {
-                    '.' => if trees >= 3 { '|' } else { '.' },
-                    '|' => if yards >= 3 { '#' } else { '|' },
-                    '#' => if trees >= 1 && yards >= 1 { '#' } else { '.' },
-                     _  => unimplemented!(),
+                    '.' => {
+                        if trees >= 3 {
+                            '|'
+                        } else {
+                            '.'
+                        }
+                    }
+                    '|' => {
+                        if yards >= 3 {
+                            '#'
+                        } else {
+                            '|'
+                        }
+                    }
+                    '#' => {
+                        if trees >= 1 && yards >= 1 {
+                            '#'
+                        } else {
+                            '.'
+                        }
+                    }
+                    _ => unimplemented!(),
                 };
             }
         }
@@ -60,10 +76,7 @@ fn main() {
     let mut buffer = String::new();
     io::stdin().read_to_string(&mut buffer).unwrap();
 
-    let mut grid = Grid(buffer
-        .lines()
-        .map(|c| c.chars().collect())
-        .collect());
+    let mut grid = Grid(buffer.lines().map(|c| c.chars().collect()).collect());
 
     const N: usize = 1000000000;
     let mut seen = HashMap::new();

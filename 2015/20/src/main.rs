@@ -30,10 +30,7 @@ fn main() {
     let mut size = 1000;
     loop {
         let houses = part1(size);
-        if let Some(h) = houses.iter()
-            .enumerate()
-            .find(|(_i, p)| **p >= presents)
-        {
+        if let Some(h) = houses.iter().enumerate().find(|(_i, p)| **p >= presents) {
             println!("Part 1: {}", h.0 + 1);
             break;
         }
@@ -42,10 +39,7 @@ fn main() {
 
     loop {
         let houses = part2(size);
-        if let Some(h) = houses.iter()
-            .enumerate()
-            .find(|(_i, p)| **p >= presents)
-        {
+        if let Some(h) = houses.iter().enumerate().find(|(_i, p)| **p >= presents) {
             println!("Part 2: {}", h.0 + 1);
             break;
         }
