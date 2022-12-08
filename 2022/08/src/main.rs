@@ -43,7 +43,34 @@ fn main() -> Result<()> {
         let col: Vec<i32> = lines.iter().map(|row: &Vec<i32>| row[j]).collect();
         out.extend(bilook(&col).into_iter().map(|r| (r, j)));
     }
-
     println!("Part 1: {}", out.len());
+
+    let mut best = 0;
+    for (i, row) in lines.iter().enumerate() {
+        for (j, &t) in row.iter().enumerate() {
+            if i == 0 || i == lines.len() - 1 || j == 0 || j == row.len() - 1 {
+                continue;
+            }
+            // Up
+            let a = (1..i).rev().take_while(|&d| lines[d][j] < t).count() + 1;
+            // Down
+            let b = ((i + 1)..(row.len() - 1))
+                .take_while(|&d| lines[d][j] < t)
+                .count()
+                + 1;
+            // Left
+            let c = (1..j).rev().take_while(|&d| lines[i][d] < t).count() + 1;
+            // Right
+            let d = ((j + 1)..(lines.len() - 1))
+                .take_while(|&d| lines[i][d] < t)
+                .count()
+                + 1;
+            if a * b * c * d > best {
+                best = a * b * c * d;
+            }
+        }
+    }
+    println!("Part 2: {best}");
+
     Ok(())
 }
