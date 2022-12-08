@@ -35,11 +35,14 @@ fn main() -> Result<()> {
         })
         .collect::<Vec<Vec<i32>>>();
 
+    let rows = lines.len();
+    let cols = lines[0].len();
+
     let mut out = BTreeSet::new();
     for (i, row) in lines.iter().enumerate() {
         out.extend(bilook(row).into_iter().map(|c| (i, c)));
     }
-    for j in 0..lines[0].len() {
+    for j in 0..cols {
         let col: Vec<i32> = lines.iter().map(|row: &Vec<i32>| row[j]).collect();
         out.extend(bilook(&col).into_iter().map(|r| (r, j)));
     }
@@ -48,25 +51,22 @@ fn main() -> Result<()> {
     let mut best = 0;
     for (i, row) in lines.iter().enumerate() {
         for (j, &t) in row.iter().enumerate() {
-            if i == 0 || i == lines.len() - 1 || j == 0 || j == row.len() - 1 {
+            if i == 0 || i == rows - 1 || j == 0 || j == cols - 1 {
                 continue;
             }
+            let check = |r: usize, c: usize| lines[r][c] < t;
             // Up
-            let a = (1..i).rev().take_while(|&d| lines[d][j] < t).count() + 1;
+            let a = (1..i).rev().take_while(|&d| check(d, j)).count();
             // Down
-            let b = ((i + 1)..(row.len() - 1))
-                .take_while(|&d| lines[d][j] < t)
-                .count()
-                + 1;
+            let b = ((i + 1)..(rows - 1)).take_while(|&d| check(d, j)).count();
             // Left
-            let c = (1..j).rev().take_while(|&d| lines[i][d] < t).count() + 1;
+            let c = (1..j).rev().take_while(|&d| check(i, d)).count();
             // Right
-            let d = ((j + 1)..(lines.len() - 1))
-                .take_while(|&d| lines[i][d] < t)
-                .count()
-                + 1;
-            if a * b * c * d > best {
-                best = a * b * c * d;
+            let d = ((j + 1)..(cols - 1)).take_while(|&d| check(i, d)).count();
+
+            let score = (a + 1) * (b + 1) * (c + 1) * (d + 1);
+            if score > best {
+                best = score
             }
         }
     }
