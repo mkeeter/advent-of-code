@@ -62,6 +62,6 @@ fn main() -> Result<()> {
         .collect::<Result<Vec<Command>, _>>()?;
 
     println!("Part 1: {}", run(&commands, 2)?);
-    println!("Part 1: {}", run(&commands, 10)?);
+    println!("Part 2: {}", run(&commands, 10)?);
     Ok(())
 }
