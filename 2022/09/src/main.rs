@@ -1,25 +1,10 @@
-use anyhow::{bail, Result};
-use parse_display::{Display, FromStr};
+use anyhow::{anyhow, bail, Result};
 use std::collections::BTreeSet;
 use std::io::BufRead;
 
-#[derive(Copy, Clone, Debug, FromStr, Display)]
-#[display("{dir} {count}")]
 struct Command {
-    dir: char,
+    dir: (i64, i64),
     count: usize,
-}
-
-impl Command {
-    fn dir(&self) -> Result<(i64, i64)> {
-        match self.dir {
-            'U' => Ok((0, 1)),
-            'D' => Ok((0, -1)),
-            'L' => Ok((-1, 0)),
-            'R' => Ok((1, 0)),
-            c => bail!("Invalid direction '{c}'"),
-        }
-    }
 }
 
 fn adjust((hx, hy): (i64, i64), (tx, ty): (i64, i64)) -> (i64, i64) {
@@ -38,10 +23,9 @@ fn run(commands: &[Command], length: usize) -> Result<usize> {
     let mut seen = BTreeSet::new();
     seen.insert(*rope.last().unwrap());
     for cmd in commands {
-        let (dx, dy) = cmd.dir()?;
         for _ in 0..cmd.count {
-            rope[0].0 += dx;
-            rope[0].1 += dy;
+            rope[0].0 += cmd.dir.0;
+            rope[0].1 += cmd.dir.1;
             for i in 1..length {
                 rope[i] = adjust(rope[i - 1], rope[i]);
             }
@@ -55,7 +39,26 @@ fn main() -> Result<()> {
     let commands = std::io::stdin()
         .lock()
         .lines()
-        .map(|line| line.unwrap().parse())
+        .map(|line| -> Result<Command> {
+            let line = line.unwrap();
+            let mut iter = line.split(' ');
+            let dir = match iter
+                .next()
+                .ok_or_else(|| anyhow!("No direction code"))?
+            {
+                "U" => (0, 1),
+                "D" => (0, -1),
+                "L" => (-1, 0),
+                "R" => (1, 0),
+                c => bail!("Invalid direction '{c}'"),
+            };
+            let count =
+                iter.next().ok_or_else(|| anyhow!("No count"))?.parse()?;
+            if let Some(d) = iter.next() {
+                bail!("Extra data in line: '{d}'");
+            }
+            Ok(Command { dir, count })
+        })
         .collect::<Result<Vec<Command>, _>>()?;
 
     println!("Part 1: {}", run(&commands, 2)?);
