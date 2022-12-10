@@ -76,7 +76,6 @@ fn main() -> Result<()> {
         }
         vm.step();
     }
-
     println!("Part 1: {sum}");
 
     let mut vm = Vm::new(&lines);
