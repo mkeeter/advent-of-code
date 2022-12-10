@@ -47,16 +47,15 @@ impl<'a> Vm<'a> {
     /// Executes a single cycle
     fn step(&mut self) {
         match self.tape[self.ip] {
-            Op::AddX(dx) => {
-                if self.busy {
-                    self.busy = false;
-                    self.x += dx;
-                    self.ip += 1;
-                } else {
-                    self.busy = true;
-                }
+            Op::AddX(dx) if self.busy => {
+                self.busy = false;
+                self.x += dx;
             }
-            Op::Noop => self.ip += 1,
+            Op::AddX(..) => self.busy = true,
+            Op::Noop => (),
+        }
+        if !self.busy {
+            self.ip += 1;
         }
     }
 }
