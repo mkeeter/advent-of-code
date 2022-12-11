@@ -1,5 +1,5 @@
 use anyhow::{anyhow, bail, Result};
-use std::collections::BTreeMap;
+use std::collections::VecDeque;
 use std::io::BufRead;
 
 #[derive(Copy, Clone, Debug)]
@@ -42,7 +42,7 @@ impl Operation {
 #[derive(Clone, Debug)]
 struct Monkey {
     inspection_count: u64,
-    items: Vec<u64>,
+    items: VecDeque<u64>,
     operation: Operation,
     test_divisible: u64,
     true_monkey: usize,
@@ -50,9 +50,8 @@ struct Monkey {
 }
 
 impl Monkey {
-    fn run(&mut self, worry_update: Worry) -> BTreeMap<usize, Vec<u64>> {
-        let mut out: BTreeMap<usize, Vec<u64>> = BTreeMap::new();
-        for worry in std::mem::take(&mut self.items) {
+    fn run(&mut self, worry_update: Worry) -> Option<(usize, u64)> {
+        self.items.pop_front().map(|worry| {
             self.inspection_count += 1;
             let mut worry = self.operation.apply(worry);
             match worry_update {
@@ -64,9 +63,8 @@ impl Monkey {
             } else {
                 self.false_monkey
             };
-            out.entry(out_monkey).or_default().push(worry);
-        }
-        out
+            (out_monkey, worry)
+        })
     }
 }
 
@@ -74,9 +72,8 @@ fn run(monkeys: &[Monkey], rounds: usize, worry_update: Worry) -> u64 {
     let mut monkeys = monkeys.to_vec();
     for _r in 0..rounds {
         for i in 0..monkeys.len() {
-            let out = monkeys[i].run(worry_update);
-            for (v, items) in out.into_iter() {
-                monkeys[v].items.extend(items);
+            while let Some((target, item)) = monkeys[i].run(worry_update) {
+                monkeys[target].items.push_back(item)
             }
         }
     }
@@ -105,7 +102,7 @@ fn main() -> Result<()> {
             .ok_or_else(|| anyhow!("Missing item prefix"))?
             .split(", ")
             .map(|s| s.parse())
-            .collect::<Result<Vec<u64>, _>>()?;
+            .collect::<Result<_, _>>()?;
 
         let op = iter.next().ok_or_else(|| anyhow!("Missing operation"))?;
         let mut op_iter = op
