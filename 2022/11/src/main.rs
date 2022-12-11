@@ -48,16 +48,19 @@ struct Monkey {
 }
 
 impl Monkey {
-    fn run(&mut self, worry_update: Operation) -> Option<(usize, u64)> {
-        let worry = self.items.pop_front()?;
-        self.inspection_count += 1;
-        let worry = worry_update.apply(self.operation.apply(worry));
-        let out_monkey = if worry % self.test_divisible == 0 {
+    fn target(&self, worry: u64) -> usize {
+        if worry % self.test_divisible == 0 {
             self.true_monkey
         } else {
             self.false_monkey
-        };
-        Some((out_monkey, worry))
+        }
+    }
+
+    fn run(&mut self, worry_update: Operation) -> Option<(usize, u64)> {
+        let prev_worry = self.items.pop_front()?;
+        let worry = worry_update.apply(self.operation.apply(prev_worry));
+        self.inspection_count += 1;
+        Some((self.target(worry), worry))
     }
 }
 
