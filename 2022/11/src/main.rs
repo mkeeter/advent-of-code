@@ -6,6 +6,8 @@ use std::io::BufRead;
 enum Op {
     Mul,
     Add,
+    Div,
+    Mod,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -20,12 +22,6 @@ struct Operation {
     value: Value,
 }
 
-#[derive(Copy, Clone, Debug)]
-enum Worry {
-    Divide(u64),
-    Modulo(u64),
-}
-
 impl Operation {
     fn apply(&self, a: u64) -> u64 {
         let b = match self.value {
@@ -35,6 +31,8 @@ impl Operation {
         match self.op {
             Op::Add => a + b,
             Op::Mul => a * b,
+            Op::Div => a / b,
+            Op::Mod => a % b,
         }
     }
 }
@@ -50,14 +48,10 @@ struct Monkey {
 }
 
 impl Monkey {
-    fn run(&mut self, worry_update: Worry) -> Option<(usize, u64)> {
+    fn run(&mut self, worry_update: Operation) -> Option<(usize, u64)> {
         self.items.pop_front().map(|worry| {
             self.inspection_count += 1;
-            let mut worry = self.operation.apply(worry);
-            match worry_update {
-                Worry::Divide(d) => worry /= d,
-                Worry::Modulo(d) => worry %= d,
-            };
+            let worry = worry_update.apply(self.operation.apply(worry));
             let out_monkey = if worry % self.test_divisible == 0 {
                 self.true_monkey
             } else {
@@ -68,7 +62,7 @@ impl Monkey {
     }
 }
 
-fn run(monkeys: &[Monkey], rounds: usize, worry_update: Worry) -> u64 {
+fn run(monkeys: &[Monkey], rounds: usize, worry_update: Operation) -> u64 {
     let mut monkeys = monkeys.to_vec();
     for _r in 0..rounds {
         for i in 0..monkeys.len() {
@@ -80,11 +74,10 @@ fn run(monkeys: &[Monkey], rounds: usize, worry_update: Worry) -> u64 {
 
     let mut monkey_business = monkeys
         .iter()
-        .map(|m| m.inspection_count)
+        .map(|m| std::cmp::Reverse(m.inspection_count))
         .collect::<Vec<_>>();
     monkey_business.sort();
-    monkey_business.reverse();
-    monkey_business[0] * monkey_business[1]
+    monkey_business[0].0 * monkey_business[1].0
 }
 
 fn main() -> Result<()> {
@@ -152,10 +145,17 @@ fn main() -> Result<()> {
         iter.next(); // skip newline
     }
 
-    println!("Part 1: {}", run(&monkeys, 20, Worry::Divide(3)));
+    let div_by_3 = Operation {
+        op: Op::Div,
+        value: Value::Imm(3),
+    };
+    println!("Part 1: {}", run(&monkeys, 20, div_by_3,));
 
-    let prod = monkeys.iter().map(|m| m.test_divisible).product();
-    println!("Part 2: {}", run(&monkeys, 10000, Worry::Modulo(prod)));
+    let mod_by_prod = Operation {
+        op: Op::Mod,
+        value: Value::Imm(monkeys.iter().map(|m| m.test_divisible).product()),
+    };
+    println!("Part 2: {}", run(&monkeys, 10000, mod_by_prod),);
 
     Ok(())
 }
