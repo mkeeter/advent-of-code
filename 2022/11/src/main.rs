@@ -2,25 +2,25 @@ use anyhow::{anyhow, bail, Result};
 use std::collections::BTreeMap;
 use std::io::BufRead;
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 enum Op {
     Mul,
     Add,
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 enum Value {
     Old,
     Imm(u64),
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 struct Operation {
     op: Op,
     value: Value,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Monkey {
     inspection_count: u64,
     items: Vec<u64>,
@@ -31,7 +31,11 @@ struct Monkey {
 }
 
 impl Monkey {
-    fn run(&mut self) -> BTreeMap<usize, Vec<u64>> {
+    fn run(
+        &mut self,
+        divisor: Option<u64>,
+        modulo: Option<u64>,
+    ) -> BTreeMap<usize, Vec<u64>> {
         let mut out: BTreeMap<usize, Vec<u64>> = BTreeMap::new();
         for i in std::mem::take(&mut self.items) {
             self.inspection_count += 1;
@@ -39,10 +43,16 @@ impl Monkey {
                 Value::Old => i,
                 Value::Imm(j) => j,
             };
-            let worry = match self.operation.op {
+            let mut worry = match self.operation.op {
                 Op::Add => i + v,
                 Op::Mul => i * v,
-            } / 3;
+            };
+            if let Some(divisor) = divisor {
+                worry /= divisor;
+            }
+            if let Some(modulo) = modulo {
+                worry = worry % modulo;
+            }
             let out_monkey = if worry % self.test_divisible == 0 {
                 self.true_monkey
             } else {
@@ -52,6 +62,31 @@ impl Monkey {
         }
         out
     }
+}
+
+fn run(
+    monkeys: &[Monkey],
+    rounds: usize,
+    divisor: Option<u64>,
+    modulo: Option<u64>,
+) -> u64 {
+    let mut monkeys = monkeys.to_vec();
+    for _r in 0..rounds {
+        for i in 0..monkeys.len() {
+            let out = monkeys[i].run(divisor, modulo);
+            for (v, items) in out.into_iter() {
+                monkeys[v].items.extend(items);
+            }
+        }
+    }
+
+    let mut monkey_business = monkeys
+        .iter()
+        .map(|m| m.inspection_count)
+        .collect::<Vec<_>>();
+    monkey_business.sort();
+    monkey_business.reverse();
+    monkey_business[0] * monkey_business[1]
 }
 
 fn main() -> Result<()> {
@@ -115,26 +150,10 @@ fn main() -> Result<()> {
         iter.next(); // skip newline
     }
 
-    for round in 1..=20 {
-        for i in 0..monkeys.len() {
-            let out = monkeys[i].run();
-            for (v, items) in out.into_iter() {
-                monkeys[v].items.extend(items);
-            }
-        }
-        println!("{round}");
-        for (i, m) in monkeys.iter().enumerate() {
-            println!("  {i}: {:?}", m.items);
-        }
-    }
+    println!("Part 1: {}", run(&monkeys, 20, Some(3), None));
 
-    let mut monkey_business = monkeys
-        .iter()
-        .map(|m| m.inspection_count)
-        .collect::<Vec<_>>();
-    monkey_business.sort();
-    monkey_business.reverse();
-    println!("Part 1: {}", monkey_business[0] * monkey_business[1]);
+    let mega_divisor = monkeys.iter().map(|m| m.test_divisible).product();
+    println!("Part 2: {}", run(&monkeys, 10000, None, Some(mega_divisor)));
 
     Ok(())
 }
