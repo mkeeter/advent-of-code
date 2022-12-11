@@ -20,6 +20,25 @@ struct Operation {
     value: Value,
 }
 
+#[derive(Copy, Clone, Debug)]
+enum Worry {
+    Divide(u64),
+    Modulo(u64),
+}
+
+impl Operation {
+    fn apply(&self, a: u64) -> u64 {
+        let b = match self.value {
+            Value::Old => a,
+            Value::Imm(i) => i,
+        };
+        match self.op {
+            Op::Add => a + b,
+            Op::Mul => a * b,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 struct Monkey {
     inspection_count: u64,
@@ -31,28 +50,15 @@ struct Monkey {
 }
 
 impl Monkey {
-    fn run(
-        &mut self,
-        divisor: Option<u64>,
-        modulo: Option<u64>,
-    ) -> BTreeMap<usize, Vec<u64>> {
+    fn run(&mut self, worry_update: Worry) -> BTreeMap<usize, Vec<u64>> {
         let mut out: BTreeMap<usize, Vec<u64>> = BTreeMap::new();
-        for i in std::mem::take(&mut self.items) {
+        for worry in std::mem::take(&mut self.items) {
             self.inspection_count += 1;
-            let v = match self.operation.value {
-                Value::Old => i,
-                Value::Imm(j) => j,
+            let mut worry = self.operation.apply(worry);
+            match worry_update {
+                Worry::Divide(d) => worry /= d,
+                Worry::Modulo(d) => worry %= d,
             };
-            let mut worry = match self.operation.op {
-                Op::Add => i + v,
-                Op::Mul => i * v,
-            };
-            if let Some(divisor) = divisor {
-                worry /= divisor;
-            }
-            if let Some(modulo) = modulo {
-                worry = worry % modulo;
-            }
             let out_monkey = if worry % self.test_divisible == 0 {
                 self.true_monkey
             } else {
@@ -64,16 +70,11 @@ impl Monkey {
     }
 }
 
-fn run(
-    monkeys: &[Monkey],
-    rounds: usize,
-    divisor: Option<u64>,
-    modulo: Option<u64>,
-) -> u64 {
+fn run(monkeys: &[Monkey], rounds: usize, worry_update: Worry) -> u64 {
     let mut monkeys = monkeys.to_vec();
     for _r in 0..rounds {
         for i in 0..monkeys.len() {
-            let out = monkeys[i].run(divisor, modulo);
+            let out = monkeys[i].run(worry_update);
             for (v, items) in out.into_iter() {
                 monkeys[v].items.extend(items);
             }
@@ -94,9 +95,12 @@ fn main() -> Result<()> {
 
     let mut monkeys = vec![];
     while let Some(monkey) = iter.next() {
-        println!("monkey: {monkey}");
-        let items = iter.next().ok_or_else(|| anyhow!("Missing items"))?;
-        let items = items
+        if monkey != format!("Monkey {}:", monkeys.len()) {
+            bail!("Invalid Monkey header: {monkey}");
+        }
+        let items = iter
+            .next()
+            .ok_or_else(|| anyhow!("Missing items"))?
             .strip_prefix("  Starting items: ")
             .ok_or_else(|| anyhow!("Missing item prefix"))?
             .split(", ")
@@ -118,22 +122,23 @@ fn main() -> Result<()> {
             i => Value::Imm(i.parse()?),
         };
 
-        let test = iter.next().ok_or_else(|| anyhow!("Missing Test line"))?;
-        let test_divisible: u64 = test
+        let test_divisible: u64 = iter
+            .next()
+            .ok_or_else(|| anyhow!("Missing Test line"))?
             .strip_prefix("  Test: divisible by ")
             .ok_or_else(|| anyhow!("Could not get Test prefix"))?
             .parse()?;
 
-        let true_monkey =
-            iter.next().ok_or_else(|| anyhow!("Missing Test line"))?;
-        let true_monkey: usize = true_monkey
+        let true_monkey: usize = iter
+            .next()
+            .ok_or_else(|| anyhow!("Missing Test line"))?
             .strip_prefix("    If true: throw to monkey ")
             .ok_or_else(|| anyhow!("Could not get Test prefix"))?
             .parse()?;
 
-        let false_monkey =
-            iter.next().ok_or_else(|| anyhow!("Missing Test line"))?;
-        let false_monkey: usize = false_monkey
+        let false_monkey: usize = iter
+            .next()
+            .ok_or_else(|| anyhow!("Missing Test line"))?
             .strip_prefix("    If false: throw to monkey ")
             .ok_or_else(|| anyhow!("Could not get Test prefix"))?
             .parse()?;
@@ -150,10 +155,10 @@ fn main() -> Result<()> {
         iter.next(); // skip newline
     }
 
-    println!("Part 1: {}", run(&monkeys, 20, Some(3), None));
+    println!("Part 1: {}", run(&monkeys, 20, Worry::Divide(3)));
 
-    let mega_divisor = monkeys.iter().map(|m| m.test_divisible).product();
-    println!("Part 2: {}", run(&monkeys, 10000, None, Some(mega_divisor)));
+    let prod = monkeys.iter().map(|m| m.test_divisible).product();
+    println!("Part 2: {}", run(&monkeys, 10000, Worry::Modulo(prod)));
 
     Ok(())
 }
