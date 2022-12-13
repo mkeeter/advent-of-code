@@ -40,19 +40,17 @@ impl Packet {
         }
         Ok((out, s))
     }
+}
 
-    fn compare(&self, right: &Self) -> Option<bool> {
-        match (self, right) {
-            (Packet::Integer(a), Packet::Integer(b)) => match a.cmp(b) {
-                Ordering::Less => Some(true),
-                Ordering::Greater => Some(false),
-                Ordering::Equal => None,
-            },
+impl std::cmp::Ord for Packet {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (Packet::Integer(a), Packet::Integer(b)) => a.cmp(b),
             (Packet::Integer(a), Packet::List(..)) => {
-                Packet::List(vec![Packet::Integer(*a)]).compare(right)
+                Packet::List(vec![Packet::Integer(*a)]).cmp(other)
             }
             (Packet::List(..), Packet::Integer(b)) => {
-                self.compare(&Packet::List(vec![Packet::Integer(*b)]))
+                self.cmp(&Packet::List(vec![Packet::Integer(*b)]))
             }
             (Packet::List(a), Packet::List(b)) => {
                 for i in 0.. {
@@ -60,22 +58,29 @@ impl Packet {
                     let b = b.get(i);
                     match (a, b) {
                         // Lists are the same length; no result
-                        (None, None) => return None,
+                        (None, None) => return Ordering::Equal,
                         // Left list terminated first
-                        (None, Some(..)) => return Some(true),
+                        (None, Some(..)) => return Ordering::Less,
                         // Right list terminated first
-                        (Some(..), None) => return Some(false),
+                        (Some(..), None) => return Ordering::Greater,
                         // Recurse into comparison
                         (Some(a), Some(b)) => {
-                            if let Some(v) = a.compare(b) {
-                                return Some(v);
+                            let v = a.cmp(b);
+                            if v != Ordering::Equal {
+                                return v;
                             }
                         }
                     }
                 }
-                None
+                Ordering::Equal
             }
         }
+    }
+}
+
+impl std::cmp::PartialOrd for Packet {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -125,7 +130,7 @@ fn main() -> Result<()> {
 
     let sum = (1..)
         .zip(&out)
-        .filter(|(_i, (a, b))| a.compare(b).unwrap())
+        .filter(|(_i, (a, b))| a < b)
         .map(|i| i.0)
         .sum::<usize>();
     println!("Part 1: {sum}");
@@ -134,34 +139,12 @@ fn main() -> Result<()> {
         .into_iter()
         .flat_map(|i| [i.0, i.1].into_iter())
         .collect::<Vec<Packet>>();
-    out.push("[[2]]".parse()?);
-    out.push("[[6]]".parse()?);
-    out.sort_unstable_by(|a, b| match a.compare(b) {
-        Some(true) => Ordering::Less,
-        Some(false) => Ordering::Greater,
-        None => Ordering::Equal,
-    });
+    out.sort_unstable();
 
-    let find_marker = |m| {
-        (1..)
-            .zip(out.iter())
-            .find(|(_i, p)| {
-                if let Packet::List(v) = p {
-                    if v.len() == 1 {
-                        if let Packet::List(v) = &v[0] {
-                            if v.len() == 1 && v[0] == Packet::Integer(m) {
-                                return true;
-                            }
-                        }
-                    }
-                }
-                false
-            })
-            .unwrap()
-            .0
-    };
-
-    println!("Part 2: {}", find_marker(2) * find_marker(6));
+    // No need to insert the markers; we'll just find where they *would* go
+    let a = out.binary_search(&"[[2]]".parse()?).err().unwrap();
+    let b = out.binary_search(&"[[6]]".parse()?).err().unwrap();
+    println!("Part 2: {}", (a + 1) * (b + 2));
 
     Ok(())
 }
