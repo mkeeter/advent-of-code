@@ -1,7 +1,7 @@
 use anyhow::{anyhow, bail, Error, Result};
 use std::{cmp::Ordering, io::BufRead};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 enum Packet {
     Integer(i64),
     List(Vec<Packet>),
@@ -134,27 +134,34 @@ fn main() -> Result<()> {
         .into_iter()
         .flat_map(|i| [i.0, i.1].into_iter())
         .collect::<Vec<Packet>>();
-    let marker1: Packet = "[[2]]".parse()?;
-    let marker2: Packet = "[[6]]".parse()?;
-    out.push(marker1.clone());
-    out.push(marker2.clone());
+    out.push("[[2]]".parse()?);
+    out.push("[[6]]".parse()?);
     out.sort_unstable_by(|a, b| match a.compare(b) {
         Some(true) => Ordering::Less,
         Some(false) => Ordering::Greater,
         None => Ordering::Equal,
     });
 
-    let index1 = (1..)
-        .zip(out.iter())
-        .find(|(_i, p)| **p == marker1)
-        .unwrap()
-        .0;
-    let index2 = (1..)
-        .zip(out.iter())
-        .find(|(_i, p)| **p == marker2)
-        .unwrap()
-        .0;
-    println!("Part 2: {}", index1 * index2);
+    let find_marker = |m| {
+        (1..)
+            .zip(out.iter())
+            .find(|(_i, p)| {
+                if let Packet::List(v) = p {
+                    if v.len() == 1 {
+                        if let Packet::List(v) = &v[0] {
+                            if v.len() == 1 && v[0] == Packet::Integer(m) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                false
+            })
+            .unwrap()
+            .0
+    };
+
+    println!("Part 2: {}", find_marker(2) * find_marker(6));
 
     Ok(())
 }
