@@ -6,34 +6,57 @@ BOLD=$(tput bold)
 NORMAL=$(tput sgr0)
 
 run_file() {
-  echo "${BOLD}Running day${DAY} on ${1}${NORMAL}"
-  cargo run -q --bin "day${DAY}" < "${1}"
+    echo "${BOLD}Running day${DAY} on ${1}${NORMAL} (${PROFILE})"
+    cargo run -q --profile "$PROFILE" --bin "day${DAY}" < "${1}"
 }
 
 run_input() {
-  run_file "${DAY}/input"
+    run_file "${DAY}/input"
 }
 
 run_example() {
-  run_file ./example
+    run_file ./example
 }
 
 run_paste() {
-    echo "${BOLD}Running on paste buffer${NORMAL}"
-    pbpaste | cargo run -q --bin "day${DAY}"
+    echo "${BOLD}Running on paste buffer${NORMAL} (${PROFILE})"
+    pbpaste | cargo run -q --profile "$PROFILE" --bin "day${DAY}"
 }
 
-if [ $# -eq 0 ]; then
-    run_input
-    exit 0
-fi
+help() {
+   echo "Usage: ./run.sh [-iepr]"
+   echo "  -i: Run on today's input"
+   echo "  -e: Run on ./example"
+   echo "  -p: Run on paste buffer"
+   echo "  -r: Use release mode (default is dev)"
+}
 
-while getopts iep flag
+
+PROFILE="dev"
+TARGET=INPUT
+while getopts ieprh flag
 do
     case "${flag}" in
-        i) run_input;;
-        e) run_example;;
-        p) run_paste;;
+        i) TARGET=INPUT;;
+        e) TARGET=EXAMPLE;;
+        p) TARGET=PASTE;;
+        h) TARGET=HELP;;
+        r) PROFILE="release";;
         *) exit 1;;
     esac
 done
+
+case $TARGET in
+    PASTE)
+        run_paste
+        break;;
+    INPUT)
+        run_input
+        break;;
+    EXAMPLE)
+        run_example
+        break;;
+    *)
+        help
+        break;;
+esac
