@@ -7,8 +7,8 @@ use std::{collections::BTreeMap, io::BufRead};
 )]
 #[display("{x},{y}")]
 struct Pos {
-    y: i64,
     x: i64,
+    y: i64,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -18,7 +18,7 @@ enum Tile {
 }
 
 const SOURCE: Pos = Pos { x: 500, y: 0 };
-fn drop(map: &BTreeMap<Pos, Tile>, floor: bool, y_max: i64) -> Option<Pos> {
+fn drop(map: &BTreeMap<Pos, Tile>, y_max: i64) -> Option<Pos> {
     let mut pos = SOURCE;
     while pos.y != y_max {
         match [(0, 1), (-1, 1), (1, 1)]
@@ -33,20 +33,16 @@ fn drop(map: &BTreeMap<Pos, Tile>, floor: bool, y_max: i64) -> Option<Pos> {
             None => return Some(pos),
         }
     }
-    if floor {
-        Some(pos)
-    } else {
-        None
-    }
+    Some(pos)
 }
 
 fn run(map: &BTreeMap<Pos, Tile>, floor: bool) -> usize {
     let mut map = map.clone();
-    let y_max = map.keys().rev().next().map(|p| p.y).unwrap_or(0) + 1;
+    let y_max = map.keys().map(|p| p.y).max().unwrap_or(0) + 1;
     while !map.contains_key(&SOURCE) {
-        match drop(&map, floor, y_max) {
-            Some(v) => map.insert(v, Tile::Sand),
-            None => break,
+        match drop(&map, y_max) {
+            Some(v) if floor || v.y != y_max => map.insert(v, Tile::Sand),
+            _ => break,
         };
     }
     map.values().filter(|v| **v == Tile::Sand).count()
