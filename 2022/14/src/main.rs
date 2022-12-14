@@ -17,39 +17,37 @@ enum Tile {
     Sand,
 }
 
-fn run(map: &BTreeMap<Pos, Tile>, floor: bool) -> usize {
-    let y_max = map.keys().map(|p| p.y).max().unwrap_or(0);
-    let mut map = map.clone();
-    const SOURCE: Pos = Pos { x: 500, y: 0 };
-    'outer: while !map.contains_key(&SOURCE) {
-        let mut pos = Pos { x: 500, y: 0 };
-        loop {
-            let y = pos.y + 1;
-            let below = Pos { x: pos.x, y };
-            if below.y == y_max + 2 {
-                if floor {
-                    map.insert(pos, Tile::Sand);
-                    break;
-                } else {
-                    break 'outer;
-                }
-            } else if !map.contains_key(&below) {
-                pos = below;
-            } else {
-                let left = Pos { x: pos.x - 1, y };
-                if !map.contains_key(&left) {
-                    pos = left;
-                } else {
-                    let right = Pos { x: pos.x + 1, y };
-                    if !map.contains_key(&right) {
-                        pos = right;
-                    } else {
-                        map.insert(pos, Tile::Sand);
-                        break;
-                    }
-                }
-            }
+const SOURCE: Pos = Pos { x: 500, y: 0 };
+fn drop(map: &BTreeMap<Pos, Tile>, floor: bool, y_max: i64) -> Option<Pos> {
+    let mut pos = SOURCE;
+    while pos.y != y_max {
+        match [(0, 1), (-1, 1), (1, 1)]
+            .iter()
+            .map(|(dx, dy)| Pos {
+                x: pos.x + dx,
+                y: pos.y + dy,
+            })
+            .find(|next| !map.contains_key(next))
+        {
+            Some(next) => pos = next,
+            None => return Some(pos),
         }
+    }
+    if floor {
+        Some(pos)
+    } else {
+        None
+    }
+}
+
+fn run(map: &BTreeMap<Pos, Tile>, floor: bool) -> usize {
+    let mut map = map.clone();
+    let y_max = map.keys().rev().next().map(|p| p.y).unwrap_or(0) + 1;
+    while !map.contains_key(&SOURCE) {
+        match drop(&map, floor, y_max) {
+            Some(v) => map.insert(v, Tile::Sand),
+            None => break,
+        };
     }
     map.values().filter(|v| **v == Tile::Sand).count()
 }
