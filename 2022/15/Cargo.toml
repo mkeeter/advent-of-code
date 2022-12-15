@@ -6,4 +6,5 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 parse-display.workspace = true
+rayon.workspace = true
 smallvec.workspace = true
