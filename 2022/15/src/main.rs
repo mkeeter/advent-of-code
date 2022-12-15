@@ -2,7 +2,7 @@ use anyhow::{anyhow, bail, Result};
 use parse_display::{Display, FromStr};
 use rayon::prelude::*;
 use smallvec::SmallVec;
-use std::{cell::RefCell, io::BufRead};
+use std::{cell::Cell, io::BufRead};
 
 #[derive(Copy, Clone, Debug, FromStr, Display)]
 #[display("Sensor at x={sx}, y={sy}: closest beacon is at x={bx}, y={by}")]
@@ -16,9 +16,9 @@ struct Reading {
 type Interval = (i64, i64);
 
 fn process_row(readings: &[Reading], row: i64) -> SmallVec<[(i64, i64); 2]> {
-    thread_local!(static SCRATCH: RefCell<Vec<Interval>> = RefCell::default());
-    SCRATCH.with(|intervals| {
-        let mut intervals = intervals.borrow_mut();
+    thread_local!(static SCRATCH: Cell<Vec<Interval>> = Cell::default());
+    SCRATCH.with(|scratch| {
+        let mut intervals = scratch.replace(vec![]);
         intervals.clear();
         for r in readings {
             let manhattan = (r.bx - r.sx).abs() + (r.by - r.sy).abs();
@@ -44,6 +44,7 @@ fn process_row(readings: &[Reading], row: i64) -> SmallVec<[(i64, i64); 2]> {
             }
             merged.push(a);
         }
+        scratch.set(intervals);
         merged
     })
 }
