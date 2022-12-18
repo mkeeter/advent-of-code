@@ -11,27 +11,25 @@ struct Pos {
 }
 
 impl Pos {
-    fn neighbor(&self, sign: i64, (dx, dy, dz): (i64, i64, i64)) -> Self {
-        Self {
-            x: self.x + sign * dx,
-            y: self.y + sign * dy,
-            z: self.z + sign * dz,
-        }
+    fn neighbors(&self) -> impl Iterator<Item = Pos> + '_ {
+        [-1, 1].into_iter().flat_map(move |sign| {
+            [(0, 0, 1), (0, 1, 0), (1, 0, 0)].into_iter().map(
+                move |(dx, dy, dz)| Self {
+                    x: self.x + sign * dx,
+                    y: self.y + sign * dy,
+                    z: self.z + sign * dz,
+                },
+            )
+        })
     }
 }
 
 fn run<F: Fn(&Pos) -> bool>(rocks: &BTreeSet<Pos>, pred: F) -> usize {
-    let mut surface_area = 0;
-    for r in rocks.iter() {
-        for sign in [1, -1] {
-            for offset in [(0, 0, 1), (0, 1, 0), (1, 0, 0)] {
-                if pred(&r.neighbor(sign, offset)) {
-                    surface_area += 1;
-                }
-            }
-        }
-    }
-    surface_area
+    rocks
+        .iter()
+        .flat_map(|r| r.neighbors())
+        .filter(|n| pred(n))
+        .count()
 }
 
 fn main() -> Result<()> {
@@ -43,13 +41,13 @@ fn main() -> Result<()> {
 
     println!("Part 1: {}", run(&rocks, |r| !rocks.contains(r)));
 
+    // Flood fill to find out what's accessible to the open air
     let xmin = rocks.iter().map(|r| r.x).min().unwrap_or(0) - 1;
     let xmax = rocks.iter().map(|r| r.x).max().unwrap_or(0) + 1;
     let ymin = rocks.iter().map(|r| r.y).min().unwrap_or(0) - 1;
     let ymax = rocks.iter().map(|r| r.y).max().unwrap_or(0) + 1;
     let zmin = rocks.iter().map(|r| r.z).min().unwrap_or(0) - 1;
     let zmax = rocks.iter().map(|r| r.z).max().unwrap_or(0) + 1;
-
     let mut air = BTreeSet::new();
     let mut todo = vec![Pos {
         x: xmin,
@@ -57,20 +55,12 @@ fn main() -> Result<()> {
         z: zmin,
     }];
     while let Some(t) = todo.pop() {
-        if !air.insert(t)
-            || !(xmin..=xmax).contains(&t.x)
-            || !(ymin..=ymax).contains(&t.y)
-            || !(zmin..=zmax).contains(&t.z)
+        if air.insert(t)
+            && (xmin..=xmax).contains(&t.x)
+            && (ymin..=ymax).contains(&t.y)
+            && (zmin..=zmax).contains(&t.z)
         {
-            continue;
-        }
-        for sign in [1, -1] {
-            for offset in [(0, 0, 1), (0, 1, 0), (1, 0, 0)] {
-                let t = t.neighbor(sign, offset);
-                if !rocks.contains(&t) {
-                    todo.push(t);
-                }
-            }
+            todo.extend(t.neighbors().filter(|n| !rocks.contains(n)));
         }
     }
     println!("Part 2: {}", run(&rocks, |r| air.contains(r)));
