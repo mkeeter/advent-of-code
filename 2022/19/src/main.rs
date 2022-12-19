@@ -51,6 +51,18 @@ impl State {
             geode: self.geode,
         }
     }
+
+    fn better_than(&self, other: &State) -> bool {
+        self != other
+            && self.ore >= other.ore
+            && self.clay >= other.clay
+            && self.obsidian >= other.obsidian
+            && self.geode >= other.geode
+            && self.ore_bots >= other.ore_bots
+            && self.clay_bots >= other.clay_bots
+            && self.obsidian_bots >= other.obsidian_bots
+            && self.geode_bots >= other.geode_bots
+    }
 }
 
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -101,55 +113,22 @@ fn run(blueprint: Blueprint, minutes: usize) -> u64 {
 
         // Deduplicate by finding states with the same number of bots and
         // strictly better ore counts.
-        let mut per_bots: BTreeMap<_, BTreeSet<State>> = BTreeMap::new();
-        let mut next = BTreeSet::new();
+        let mut groups: BTreeMap<_, BTreeSet<State>> = BTreeMap::new();
         for s in &states {
-            per_bots.entry(s.bot_key()).or_default().insert(*s);
+            groups.entry(s.bot_key()).or_default().insert(*s);
         }
-        for s in &states {
-            let mut better = true;
-            for prev in per_bots.get(&s.bot_key()).unwrap().iter() {
-                if prev.ore >= s.ore
-                    && prev.clay >= s.clay
-                    && prev.obsidian >= s.obsidian
-                    && prev.geode >= s.geode
-                    && prev != s
-                {
-                    better = false;
-                    break;
-                }
-            }
-            if better {
-                next.insert(*s);
-            }
-        }
-        states = std::mem::take(&mut next);
+        states
+            .retain(|s| !groups[&s.bot_key()].iter().any(|p| p.better_than(s)));
 
         // Deduplicate by finding states with the same number of minerals and
         // strictly better bot counts.
-        let mut next = BTreeSet::new();
-        let mut per_minerals: BTreeMap<_, BTreeSet<State>> = BTreeMap::new();
+        let mut groups: BTreeMap<_, BTreeSet<State>> = BTreeMap::new();
         for s in &states {
-            per_minerals.entry(s.mineral_key()).or_default().insert(*s);
+            groups.entry(s.mineral_key()).or_default().insert(*s);
         }
-        for s in &states {
-            let mut better = true;
-            for prev in per_minerals.get(&s.mineral_key()).unwrap().iter() {
-                if prev.ore_bots >= s.ore_bots
-                    && prev.clay_bots >= s.clay_bots
-                    && prev.obsidian_bots >= s.obsidian_bots
-                    && prev.geode_bots >= s.geode_bots
-                    && prev != s
-                {
-                    better = false;
-                    break;
-                }
-            }
-            if better {
-                next.insert(*s);
-            }
-        }
-        states = std::mem::take(&mut next);
+        states.retain(|s| {
+            !groups[&s.mineral_key()].iter().any(|p| p.better_than(s))
+        });
 
         // Filter by bounding on the minimum possible score
         let min_max_score = states
@@ -168,6 +147,7 @@ fn run(blueprint: Blueprint, minutes: usize) -> u64 {
         });
 
         // Do the actual recursion
+        let mut next = BTreeSet::new();
         for s in states.into_iter() {
             let mut new_states = Vec::with_capacity(4);
             new_states.push(s);
