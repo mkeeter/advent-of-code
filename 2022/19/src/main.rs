@@ -1,5 +1,6 @@
 use anyhow::Result;
 use parse_display::{Display, FromStr};
+use rayon::prelude::*;
 use std::{
     collections::{BTreeMap, BTreeSet},
     io::BufRead,
@@ -82,7 +83,6 @@ fn run(blueprint: Blueprint, minutes: usize) -> u64 {
     });
 
     for minute in 1..=minutes {
-        print!("{} -> ", states.len());
         let mut next = BTreeSet::new();
 
         // Deduplicate by finding states with the same number of bots and
@@ -109,7 +109,6 @@ fn run(blueprint: Blueprint, minutes: usize) -> u64 {
             }
         }
         states = std::mem::take(&mut next);
-        print!("{} -> ", states.len());
 
         // Deduplicate by finding states with the same number of minerals and
         // strictly better bot counts.
@@ -136,7 +135,6 @@ fn run(blueprint: Blueprint, minutes: usize) -> u64 {
             }
         }
         states = std::mem::take(&mut next);
-        print!("{} -> ", states.len());
 
         // Filter by bounding on the minimum possible score
         let min_max_score = states
@@ -153,7 +151,6 @@ fn run(blueprint: Blueprint, minutes: usize) -> u64 {
             }
             max_score >= min_max_score
         });
-        println!("{}", states.len());
 
         // Do the actual recursion
         for s in states.into_iter() {
@@ -213,19 +210,17 @@ fn main() -> Result<()> {
         .map(|line| line.unwrap().parse())
         .collect::<Result<Vec<Blueprint>, _>>()?;
 
-    println!(
-        "Part 1: {}",
-        blueprints.iter().map(|b| run(*b, 24) * b.id).sum::<u64>()
-    );
+    let a = blueprints
+        .par_iter()
+        .map(|b| run(*b, 24) * b.id)
+        .sum::<u64>();
+    println!("Part 1: {a}",);
 
-    println!(
-        "Part 2: {}",
-        blueprints
-            .iter()
-            .take(3)
-            .map(|b| run(*b, 32))
-            .product::<u64>()
-    );
+    let b = blueprints[0..3]
+        .par_iter()
+        .map(|b| run(*b, 32))
+        .product::<u64>();
+    println!("Part 2: {b}",);
 
     Ok(())
 }
