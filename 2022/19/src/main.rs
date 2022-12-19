@@ -150,7 +150,6 @@ fn run(blueprint: Blueprint, minutes: usize) -> u64 {
         let mut next = BTreeSet::new();
         for s in states.into_iter() {
             let mut new_states = Vec::with_capacity(4);
-            new_states.push(s);
             if s.ore >= blueprint.ore_cost_ore {
                 new_states.push(State {
                     ore: s.ore - blueprint.ore_cost_ore,
@@ -184,6 +183,11 @@ fn run(blueprint: Blueprint, minutes: usize) -> u64 {
                     geode_bots: s.geode_bots + 1,
                     ..s
                 });
+            }
+            // If we can build any possible robot, then there's no reason to
+            // wait until a later cycle.
+            if new_states.len() != 4 {
+                new_states.push(s);
             }
             for n in &mut new_states {
                 n.ore += s.ore_bots;
