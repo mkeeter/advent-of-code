@@ -70,6 +70,14 @@ struct MineralKey {
 }
 
 fn run(blueprint: Blueprint, minutes: usize) -> u64 {
+    let max_ore_bots = blueprint
+        .ore_cost_ore
+        .max(blueprint.clay_cost_ore)
+        .max(blueprint.obsidian_cost_ore)
+        .max(blueprint.geode_cost_ore);
+    let max_clay_bots = blueprint.obsidian_cost_clay;
+    let max_obsidian_bots = blueprint.geode_cost_obsidian;
+
     let mut states = BTreeSet::new();
     states.insert(State {
         ore: 0,
@@ -83,11 +91,18 @@ fn run(blueprint: Blueprint, minutes: usize) -> u64 {
     });
 
     for minute in 1..=minutes {
-        let mut next = BTreeSet::new();
+        // We can use a limited number of resources per turn, so don't build
+        // gazillions of bots to mine those resources.
+        states.retain(|s| {
+            s.ore_bots <= max_ore_bots
+                && s.clay_bots <= max_clay_bots
+                && s.obsidian_bots <= max_obsidian_bots
+        });
 
         // Deduplicate by finding states with the same number of bots and
         // strictly better ore counts.
         let mut per_bots: BTreeMap<_, BTreeSet<State>> = BTreeMap::new();
+        let mut next = BTreeSet::new();
         for s in &states {
             per_bots.entry(s.bot_key()).or_default().insert(*s);
         }
