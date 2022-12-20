@@ -5,11 +5,7 @@ use std::io::BufRead;
 fn mix_vdq(mut nodes: VecDeque<(usize, i64)>, count: usize) -> i64 {
     for _ in 0..count {
         for i in 0..nodes.len() {
-            let (index, _) = nodes
-                .iter()
-                .enumerate()
-                .find(|(_, (j, _))| *j == i)
-                .unwrap();
+            let index = nodes.iter().position(|(j, _)| *j == i).unwrap();
             nodes.rotate_left(index);
 
             let n = nodes.pop_front().unwrap();
@@ -18,11 +14,7 @@ fn mix_vdq(mut nodes: VecDeque<(usize, i64)>, count: usize) -> i64 {
         }
     }
 
-    let (index, _) = nodes
-        .iter()
-        .enumerate()
-        .find(|(_, (_, v))| *v == 0)
-        .unwrap();
+    let index = nodes.iter().position(|(_, v)| *v == 0).unwrap();
     nodes.rotate_left(index);
     let mut sum = 0;
     for _ in 0..3 {
