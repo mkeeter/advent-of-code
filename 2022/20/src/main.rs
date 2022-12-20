@@ -1,95 +1,54 @@
 use anyhow::{bail, Result};
+use std::collections::VecDeque;
 use std::io::BufRead;
 
-#[derive(Copy, Clone, Debug)]
-struct Node {
-    value: i64,
-    prev: usize,
-    next: usize,
-}
+fn mix_vdq(mut nodes: VecDeque<(usize, i64)>, count: usize) -> i64 {
+    for _ in 0..count {
+        for i in 0..nodes.len() {
+            let (index, _) = nodes
+                .iter()
+                .enumerate()
+                .find(|(_, (j, _))| *j == i)
+                .unwrap();
+            nodes.rotate_left(index);
 
-fn mix(mut nodes: Vec<Node>) -> Vec<Node> {
-    for i in 0..nodes.len() {
-        let v = nodes[i].value.rem_euclid((nodes.len() - 1) as i64);
-
-        // The 0 node does not move
-        if v == 0 {
-            continue;
+            let n = nodes.pop_front().unwrap();
+            nodes.rotate_left(n.1.rem_euclid(nodes.len() as i64) as usize);
+            nodes.push_front(n);
         }
-
-        let mut j = i;
-        for _ in 0..v.abs() {
-            j = nodes[j].next;
-        }
-
-        // Cut node `i` out of the list
-        let prev = nodes[i].prev;
-        let next = nodes[i].next;
-        nodes[prev].next = next;
-        nodes[next].prev = prev;
-
-        // Insert `i` after `j`
-        let n = nodes[j].next;
-        nodes[j].next = i;
-        nodes[n].prev = i;
-        nodes[i].prev = j;
-        nodes[i].next = n;
     }
-    nodes
-}
 
-fn score(nodes: &[Node]) -> i64 {
-    let (mut i, _) = nodes
+    let (index, _) = nodes
         .iter()
         .enumerate()
-        .find(|(_, n)| n.value == 0)
+        .find(|(_, (_, v))| *v == 0)
         .unwrap();
+    nodes.rotate_left(index);
     let mut sum = 0;
     for _ in 0..3 {
-        for _ in 0..1000 {
-            i = nodes[i].next;
-        }
-        sum += nodes[i].value;
+        nodes.rotate_left(1000 % nodes.len());
+        sum += nodes[0].1;
     }
     sum
 }
 
 fn main() -> Result<()> {
-    let mut nodes = std::io::stdin()
+    let nodes = std::io::stdin()
         .lock()
         .lines()
-        .enumerate()
-        .map(|(i, line)| -> Result<Node> {
-            Ok(Node {
-                value: line.unwrap().parse()?,
-                prev: i.saturating_sub(1),
-                next: i + 1,
-            })
-        })
-        .collect::<Result<Vec<Node>, _>>()?;
+        .map(|line| line.unwrap().parse())
+        .collect::<Result<Vec<i64>, _>>()?;
 
     if nodes.is_empty() {
         bail!("Empty input?");
     }
 
-    // Stitch together the list
-    nodes[0].prev = nodes.len() - 1;
-    nodes.last_mut().unwrap().next = 0;
+    let v: VecDeque<_> =
+        nodes.into_iter().enumerate().map(|(i, v)| (i, v)).collect();
+    println!("Part 1: {}", mix_vdq(v.clone(), 1));
 
-    let mixed = mix(nodes.clone());
-    println!("Part 1: {}", score(&mixed));
-
-    let mut mixed = nodes
-        .into_iter()
-        .map(|n| Node {
-            value: n.value * 811589153,
-            ..n
-        })
-        .collect::<Vec<Node>>();
-    for _ in 0..10 {
-        mixed = mix(mixed);
-    }
-    println!("Part 2: {}", score(&mixed));
+    let v = v.into_iter().map(|(i, v)| (i, v * 811589153)).collect();
+    println!("Part 2: {}", mix_vdq(v, 10));
 
     Ok(())
 }
