@@ -2,16 +2,20 @@ use anyhow::{bail, Result};
 use std::collections::VecDeque;
 use std::io::BufRead;
 
-fn mix_vdq(mut nodes: VecDeque<(usize, i64)>, count: usize) -> i64 {
-    for _ in 0..count {
-        for i in 0..nodes.len() {
-            let index = nodes.iter().position(|(j, _)| *j == i).unwrap();
-            nodes.rotate_left(index);
+fn mix(nodes: &mut VecDeque<(usize, i64)>) {
+    for i in 0..nodes.len() {
+        let index = nodes.iter().position(|(j, _)| *j == i).unwrap();
+        nodes.rotate_left(index);
 
-            let n = nodes.pop_front().unwrap();
-            nodes.rotate_left(n.1.rem_euclid(nodes.len() as i64) as usize);
-            nodes.push_front(n);
-        }
+        let n = nodes.pop_front().unwrap();
+        nodes.rotate_left(n.1.rem_euclid(nodes.len() as i64) as usize);
+        nodes.push_front(n);
+    }
+}
+
+fn run(mut nodes: VecDeque<(usize, i64)>, count: usize) -> i64 {
+    for _ in 0..count {
+        mix(&mut nodes);
     }
 
     let index = nodes.iter().position(|(_, v)| *v == 0).unwrap();
@@ -37,10 +41,10 @@ fn main() -> Result<()> {
 
     let v: VecDeque<_> =
         nodes.into_iter().enumerate().map(|(i, v)| (i, v)).collect();
-    println!("Part 1: {}", mix_vdq(v.clone(), 1));
+    println!("Part 1: {}", run(v.clone(), 1));
 
     let v = v.into_iter().map(|(i, v)| (i, v * 811589153)).collect();
-    println!("Part 2: {}", mix_vdq(v, 10));
+    println!("Part 2: {}", run(v, 10));
 
     Ok(())
 }
