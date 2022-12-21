@@ -4,7 +4,7 @@ use z3::ast::Ast;
 
 enum Operation {
     Unknown,
-    Constant(i64),
+    Constant(i32),
     Add(Name, Name),
     Sub(Name, Name),
     Div(Name, Name),
@@ -82,20 +82,16 @@ fn run<'a, I: Iterator<Item = (&'a Name, &'a Operation)> + Clone>(
     let vars = monkeys
         .clone()
         .map(|(name, _)| {
-            (*name, z3::ast::Int::new_const(&ctx, name.to_string()))
+            (*name, z3::ast::Real::new_const(&ctx, name.to_string()))
         })
         .collect::<BTreeMap<Name, _>>();
 
-    let zero = z3::ast::Int::from_i64(&ctx, 0);
     let sol = z3::Solver::new(&ctx);
-    for (k, _v) in monkeys.clone() {
-        sol.assert(&(vars[k].gt(&zero)));
-    }
     for (k, v) in monkeys {
         match v {
             Operation::Unknown => continue,
             Operation::Constant(i) => {
-                sol.assert(&vars[k]._eq(&z3::ast::Int::from_i64(&ctx, *i)))
+                sol.assert(&vars[k]._eq(&z3::ast::Real::from_real(&ctx, *i, 1)))
             }
             Operation::Add(a, b) => {
                 let v = vars[a].clone() + vars[b].clone();
@@ -108,8 +104,6 @@ fn run<'a, I: Iterator<Item = (&'a Name, &'a Operation)> + Clone>(
             Operation::Div(a, b) => {
                 let v = vars[a].clone() / vars[b].clone();
                 sol.assert(&vars[k]._eq(&v));
-                let rem = vars[a].clone() % vars[b].clone();
-                sol.assert(&rem._eq(&zero));
             }
             Operation::Mul(a, b) => {
                 let v = vars[a].clone() * vars[b].clone();
@@ -124,8 +118,13 @@ fn run<'a, I: Iterator<Item = (&'a Name, &'a Operation)> + Clone>(
         bail!("Could not find solution");
     }
     let model = sol.get_model().unwrap();
-    let i = model.eval(&vars[&target], false).unwrap().as_i64().unwrap();
-    Ok(i)
+    let i = model
+        .eval(&vars[&target], false)
+        .unwrap()
+        .as_real()
+        .unwrap();
+    assert_eq!(i.1, 1);
+    Ok(i.0)
 }
 
 fn main() -> Result<()> {
