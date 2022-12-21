@@ -11,3 +11,4 @@ nom = "7"
 parse-display = "0.6"
 rayon = "1.6"
 smallvec = "1"
+z3 = { version = "0.11", features = ["static-link-z3"] }

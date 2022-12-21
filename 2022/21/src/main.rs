@@ -1,44 +1,15 @@
-use anyhow::{anyhow, bail, Context, Error, Result};
-use std::{
-    collections::{BTreeMap, VecDeque},
-    io::{BufRead, Write},
-};
+use anyhow::{anyhow, bail, Error, Result};
+use std::{collections::BTreeMap, io::BufRead};
+use z3::ast::Ast;
 
 enum Operation {
+    Unknown,
     Constant(i64),
     Add(Name, Name),
     Sub(Name, Name),
     Div(Name, Name),
     Mul(Name, Name),
-}
-
-impl Operation {
-    fn eval(&self, values: &BTreeMap<Name, i64>) -> Option<i64> {
-        let out = match self {
-            Operation::Constant(i) => *i,
-            Operation::Add(a, b) => values.get(a)? + values.get(b)?,
-            Operation::Sub(a, b) => values.get(a)? - values.get(b)?,
-            Operation::Div(a, b) => values.get(a)? / values.get(b)?,
-            Operation::Mul(a, b) => values.get(a)? * values.get(b)?,
-        };
-        Some(out)
-    }
-}
-
-impl std::fmt::Display for Operation {
-    fn fmt(
-        &self,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> Result<(), std::fmt::Error> {
-        match self {
-            Operation::Constant(i) => write!(f, "{}", i)?,
-            Operation::Add(a, b) => write!(f, "{} + {}", a, b)?,
-            Operation::Sub(a, b) => write!(f, "{} - {}", a, b)?,
-            Operation::Mul(a, b) => write!(f, "{} * {}", a, b)?,
-            Operation::Div(a, b) => write!(f, "{} / {}", a, b)?,
-        }
-        Ok(())
-    }
+    Equal(Name, Name),
 }
 
 impl std::str::FromStr for Operation {
@@ -102,6 +73,61 @@ impl std::fmt::Display for Name {
     }
 }
 
+fn run<'a, I: Iterator<Item = (&'a Name, &'a Operation)> + Clone>(
+    monkeys: I,
+    target: Name,
+) -> Result<i64> {
+    let cfg = z3::Config::new();
+    let ctx = z3::Context::new(&cfg);
+    let vars = monkeys
+        .clone()
+        .map(|(name, _)| {
+            (*name, z3::ast::Int::new_const(&ctx, name.to_string()))
+        })
+        .collect::<BTreeMap<Name, _>>();
+
+    let zero = z3::ast::Int::from_i64(&ctx, 0);
+    let sol = z3::Solver::new(&ctx);
+    for (k, _v) in monkeys.clone() {
+        sol.assert(&(vars[k].gt(&zero)));
+    }
+    for (k, v) in monkeys {
+        match v {
+            Operation::Unknown => continue,
+            Operation::Constant(i) => {
+                sol.assert(&vars[k]._eq(&z3::ast::Int::from_i64(&ctx, *i)))
+            }
+            Operation::Add(a, b) => {
+                let v = vars[a].clone() + vars[b].clone();
+                sol.assert(&vars[k]._eq(&v))
+            }
+            Operation::Sub(a, b) => {
+                let v = vars[a].clone() - vars[b].clone();
+                sol.assert(&vars[k]._eq(&v))
+            }
+            Operation::Div(a, b) => {
+                let v = vars[a].clone() / vars[b].clone();
+                sol.assert(&vars[k]._eq(&v));
+                let rem = vars[a].clone() % vars[b].clone();
+                sol.assert(&rem._eq(&zero));
+            }
+            Operation::Mul(a, b) => {
+                let v = vars[a].clone() * vars[b].clone();
+                sol.assert(&vars[k]._eq(&v));
+            }
+            Operation::Equal(a, b) => {
+                sol.assert(&vars[a]._eq(&vars[b]));
+            }
+        }
+    }
+    if sol.check() != z3::SatResult::Sat {
+        bail!("Could not find solution");
+    }
+    let model = sol.get_model().unwrap();
+    let i = model.eval(&vars[&target], false).unwrap().as_i64().unwrap();
+    Ok(i)
+}
+
 fn main() -> Result<()> {
     let monkeys = std::io::stdin()
         .lock()
@@ -121,60 +147,23 @@ fn main() -> Result<()> {
         })
         .collect::<Result<BTreeMap<Name, Operation>, _>>()?;
 
-    let mut todo: VecDeque<Name> = monkeys.keys().cloned().collect();
-    let mut values = BTreeMap::new();
-    while let Some(t) = todo.pop_front() {
-        if let Some(v) = monkeys[&t].eval(&values) {
-            values.insert(t, v);
-        } else {
-            todo.push_back(t);
-        }
-    }
-    println!("Part 1: {}", values[&"root".parse().unwrap()]);
+    println!("Part 1: {}", run(monkeys.iter(), Name(*b"root"))?);
 
-    let mut f = std::fs::File::create("monkeys.z3")?;
-    for m in monkeys.keys() {
-        writeln!(&mut f, "(declare-const {m} Int)")?;
-    }
-    for (k, v) in monkeys.iter() {
-        match &k.0 {
-            b"humn" => (),
-            b"root" => {
-                let (a, b) = match v {
-                    Operation::Constant(..) => {
-                        bail!("'root' does not have two operands")
-                    }
-                    Operation::Add(a, b)
-                    | Operation::Sub(a, b)
-                    | Operation::Div(a, b)
-                    | Operation::Mul(a, b) => (a, b),
-                };
-                writeln!(&mut f, "(assert (= {a} {b}))")?;
-            }
-            _ => writeln!(
-                &mut f,
-                "(assert (= {k} {}))",
-                match v {
-                    Operation::Constant(i) => format!("{}", i),
-                    Operation::Add(a, b) => format!("(+ {a} {b})"),
-                    Operation::Sub(a, b) => format!("(- {a} {b})"),
-                    Operation::Div(a, b) => format!("(/ {a} {b})"),
-                    Operation::Mul(a, b) => format!("(* {a} {b})"),
-                }
-            )?,
+    let mut monkeys = monkeys;
+    monkeys.insert(Name(*b"humn"), Operation::Unknown);
+    let root = monkeys.get_mut(&Name(*b"root")).unwrap();
+    let (a, b) = match root {
+        Operation::Unknown | Operation::Constant(..) => {
+            bail!("'root' doesn't have two arguments")
         }
-    }
-    writeln!(&mut f, "(check-sat)")?;
-    writeln!(&mut f, "(eval humn)")?;
-    let out = std::process::Command::new("z3")
-        .arg("monkeys.z3")
-        .output()
-        .context("Failed to call 'z3'; is it installed?")?;
-    let out = std::str::from_utf8(&out.stdout)?;
-    let mut iter = out.split('\n');
-    iter.next(); // Skip 'sat'
-    let result = iter.next().ok_or_else(|| anyhow!("Missing output line"))?;
-    println!("Part 2: {result}");
+        Operation::Add(a, b)
+        | Operation::Sub(a, b)
+        | Operation::Div(a, b)
+        | Operation::Equal(a, b)
+        | Operation::Mul(a, b) => (a, b),
+    };
+    *root = Operation::Equal(*a, *b);
+    println!("Part 2: {}", run(monkeys.iter(), Name(*b"humn"))?);
 
     Ok(())
 }
