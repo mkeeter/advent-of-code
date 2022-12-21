@@ -2,14 +2,17 @@ use anyhow::{anyhow, bail, Error, Result};
 use std::{collections::BTreeMap, io::BufRead};
 use z3::ast::Ast;
 
+enum Opcode {
+    Add,
+    Sub,
+    Div,
+    Mul,
+    Equal,
+}
 enum Operation {
     Unknown,
     Constant(i32),
-    Add(Name, Name),
-    Sub(Name, Name),
-    Div(Name, Name),
-    Mul(Name, Name),
-    Equal(Name, Name),
+    Op(Opcode, Name, Name),
 }
 
 impl std::str::FromStr for Operation {
@@ -33,14 +36,14 @@ impl std::str::FromStr for Operation {
         let a: Name = a.parse()?;
         let b: Name = b.parse()?;
 
-        let out = match op {
-            "+" => Self::Add(a, b),
-            "-" => Self::Sub(a, b),
-            "*" => Self::Mul(a, b),
-            "/" => Self::Div(a, b),
+        let op = match op {
+            "+" => Opcode::Add,
+            "-" => Opcode::Sub,
+            "*" => Opcode::Mul,
+            "/" => Opcode::Div,
             _ => bail!("Unknown operator '{op}'"),
         };
-        Ok(out)
+        Ok(Operation::Op(op, a, b))
     }
 }
 
@@ -93,24 +96,16 @@ fn run<'a, I: Iterator<Item = (&'a Name, &'a Operation)> + Clone>(
             Operation::Constant(i) => {
                 sol.assert(&vars[k]._eq(&z3::ast::Real::from_real(&ctx, *i, 1)))
             }
-            Operation::Add(a, b) => {
-                let v = vars[a].clone() + vars[b].clone();
-                sol.assert(&vars[k]._eq(&v))
-            }
-            Operation::Sub(a, b) => {
-                let v = vars[a].clone() - vars[b].clone();
-                sol.assert(&vars[k]._eq(&v))
-            }
-            Operation::Div(a, b) => {
-                let v = vars[a].clone() / vars[b].clone();
-                sol.assert(&vars[k]._eq(&v));
-            }
-            Operation::Mul(a, b) => {
-                let v = vars[a].clone() * vars[b].clone();
-                sol.assert(&vars[k]._eq(&v));
-            }
-            Operation::Equal(a, b) => {
-                sol.assert(&vars[a]._eq(&vars[b]));
+            Operation::Op(op, a, b) => {
+                let a = vars[a].clone();
+                let b = vars[b].clone();
+                match op {
+                    Opcode::Add => sol.assert(&vars[k]._eq(&(a + b))),
+                    Opcode::Sub => sol.assert(&vars[k]._eq(&(a - b))),
+                    Opcode::Div => sol.assert(&vars[k]._eq(&(a / b))),
+                    Opcode::Mul => sol.assert(&vars[k]._eq(&(a * b))),
+                    Opcode::Equal => sol.assert(&a._eq(&b)),
+                }
             }
         }
     }
@@ -148,20 +143,14 @@ fn main() -> Result<()> {
 
     println!("Part 1: {}", run(monkeys.iter(), Name(*b"root"))?);
 
+    // Modify the monkeys, switching humn to unknown and root to equality
     let mut monkeys = monkeys;
-    monkeys.insert(Name(*b"humn"), Operation::Unknown);
+    *monkeys.get_mut(&Name(*b"humn")).unwrap() = Operation::Unknown;
     let root = monkeys.get_mut(&Name(*b"root")).unwrap();
-    let (a, b) = match root {
-        Operation::Unknown | Operation::Constant(..) => {
-            bail!("'root' doesn't have two arguments")
-        }
-        Operation::Add(a, b)
-        | Operation::Sub(a, b)
-        | Operation::Div(a, b)
-        | Operation::Equal(a, b)
-        | Operation::Mul(a, b) => (a, b),
-    };
-    *root = Operation::Equal(*a, *b);
+    match root {
+        Operation::Op(op, ..) => *op = Opcode::Equal,
+        _ => bail!("Invalid operation for 'root'"),
+    }
     println!("Part 2: {}", run(monkeys.iter(), Name(*b"humn"))?);
 
     Ok(())
