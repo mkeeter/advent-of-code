@@ -349,14 +349,14 @@ fn main() -> Result<()> {
         for x in 0..side_length {
             for y in 0..side_length {
                 let pos_orig = origin + dx * x + dy * y;
-                let pos_new = Pos {
+                let pos_flat = Pos {
                     x: offset_x + x,
                     y: offset_y + y,
                 };
-                flat_map.insert(pos_new, map.get(&pos_orig).unwrap());
+                flat_map.insert(pos_flat, map.get(&pos_orig).unwrap());
                 for dir in &DIRS {
                     flat_to_orig.insert(
-                        (pos_new, (Dir { dx: 1, dy: 0 }).rotate(*dir)),
+                        (pos_flat, (Dir { dx: 1, dy: 0 }).rotate(*dir)),
                         (pos_orig, dx.rotate(*dir)),
                     );
                 }
