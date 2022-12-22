@@ -331,6 +331,7 @@ fn main() -> Result<()> {
         size: side_length,
     });
 
+    // Find the canonical unwinding of the map
     while sides.iter().any(Option::is_none) {
         for i in 0..sides.len() {
             let s = match sides[i] {
@@ -371,50 +372,170 @@ fn main() -> Result<()> {
         }
     }
     let sides = sides.map(Option::unwrap);
-    for (i, s) in sides.iter().enumerate() {
-        println!("{i}: {s:?}");
-    }
-    println!();
 
-    //let mut tiles = BTreeMap::new();
-    for (side_index, side_a) in sides.iter().enumerate() {
-        println!("{side_a:?}");
-        for (edge_index, dir) in DIRS.iter().enumerate() {
-            let (side_b_index, rot_b) = NEIGHBORS[side_index][edge_index];
-            let side_b = sides[side_b_index];
-            println!("  {side_a:?}");
-
-            let offset_a = side_a.origin + side_a.dir * (side_length - 1);
-            let axis_a = side_a.dir.rotate(Rotation::Right);
-
-            println!("  side b origin: {:?}", side_b.origin);
-            println!("  rot_b: {rot_b:?}");
-            let offset_b = side_b.rotate(side_b.origin, rot_b);
-            let axis_b = side_b.dir.rotate(rot_b).rotate(Rotation::Right);
-            println!("    offset_a: {offset_a:?}");
-            println!("    axis_a:   {axis_a:?}");
-            println!("    offset_b: {offset_b:?}");
-            println!("    axis_b:   {axis_b:?}");
-
-            for pos in 0..side_length {
-                let p = side_a.rotate(offset_a + axis_a * pos as i64, *dir);
-                let q = side_b.rotate(offset_b + axis_b * pos as i64, *dir);
-                println!(
-                    "       {p:?} + {:?} => {q:?}",
-                    side_a.dir.rotate(*dir)
-                );
+    let mut flat_map = BTreeMap::new();
+    let mut flat_to_orig = BTreeMap::new();
+    for (side, (offset_x, offset_y)) in sides
+        .iter()
+        .zip([(1, 0), (0, 1), (1, 1), (2, 1), (1, 2), (1, 3)].into_iter())
+    {
+        let offset_x = offset_x * side_length;
+        let offset_y = offset_y * side_length;
+        let origin = side.origin;
+        let dx = side.dir;
+        let dy = side.dir.rotate(Rotation::Right);
+        for x in 0..side_length {
+            for y in 0..side_length {
+                let pos_orig = origin + dx * x + dy * y;
+                let pos_new = Pos {
+                    x: offset_x + x,
+                    y: offset_y + y,
+                };
+                flat_map.insert(pos_new, map.get(&pos_orig).unwrap());
+                flat_to_orig.insert(pos_new, pos_orig);
             }
-            panic!();
         }
     }
 
-    let mut pos = (start_x, 0);
-    assert_eq!(start_x % side_length, 0);
+    let mut warp_zones = BTreeMap::new();
+    let mut make_warp = |a: (Pos, Dir), b: (Pos, Dir)| {
+        assert!(flat_map.contains_key(&a.0));
+        assert!(flat_map.contains_key(&b.0));
+        assert!(!flat_map.contains_key(&(a.0 + a.1)));
+        assert!(!flat_map.contains_key(&(b.0 + b.1 * -1)));
+        warp_zones.insert(a, b);
+        warp_zones.insert(
+            (b.0, b.1.rotate(Rotation::Flip)),
+            (a.0, a.1.rotate(Rotation::Flip)),
+        );
+    };
+    for i in 0..side_length {
+        // 0-5
+        make_warp(
+            (
+                Pos {
+                    x: i + side_length,
+                    y: 0,
+                },
+                Dir { dx: 0, dy: -1 },
+            ),
+            (
+                Pos {
+                    x: i + side_length,
+                    y: side_length * 4 - 1,
+                },
+                Dir { dx: 0, dy: -1 },
+            ),
+        );
+        // 0-1
+        make_warp(
+            (
+                Pos {
+                    x: i,
+                    y: side_length,
+                },
+                Dir { dx: 0, dy: -1 },
+            ),
+            (
+                Pos {
+                    x: side_length,
+                    y: i,
+                },
+                Dir { dx: 1, dy: 0 },
+            ),
+        );
+        // 0-3
+        make_warp(
+            (
+                Pos {
+                    x: side_length * 2 + i,
+                    y: side_length,
+                },
+                Dir { dx: 0, dy: -1 },
+            ),
+            (
+                Pos {
+                    x: side_length * 2 - 1,
+                    y: side_length - 1 - i,
+                },
+                Dir { dx: -1, dy: 0 },
+            ),
+        );
+        // 1-5
+        make_warp(
+            (
+                Pos {
+                    x: 0,
+                    y: side_length + i,
+                },
+                Dir { dx: -1, dy: 0 },
+            ),
+            (
+                Pos {
+                    x: side_length,
+                    y: side_length * 4 - 1 - i,
+                },
+                Dir { dx: 1, dy: 0 },
+            ),
+        );
+        // 3-5
+        make_warp(
+            (
+                Pos {
+                    x: side_length * 3 - 1,
+                    y: side_length + i,
+                },
+                Dir { dx: 1, dy: 0 },
+            ),
+            (
+                Pos {
+                    x: side_length * 2 - 1,
+                    y: side_length * 4 - 1 - i,
+                },
+                Dir { dx: -1, dy: 0 },
+            ),
+        );
+        // 1-4
+        make_warp(
+            (
+                Pos {
+                    x: i,
+                    y: side_length * 2 - 1,
+                },
+                Dir { dx: 0, dy: 1 },
+            ),
+            (
+                Pos {
+                    x: side_length,
+                    y: side_length * 3 - 1 - i,
+                },
+                Dir { dx: 1, dy: 0 },
+            ),
+        );
+        // 3-4
+        make_warp(
+            (
+                Pos {
+                    x: side_length * 2 + i,
+                    y: side_length * 2 - 1,
+                },
+                Dir { dx: 0, dy: 1 },
+            ),
+            (
+                Pos {
+                    x: side_length * 2 - 1,
+                    y: side_length * 2 + i,
+                },
+                Dir { dx: -1, dy: 0 },
+            ),
+        );
+    }
 
-    let mut side = 0;
-    let mut pos = Pos { x: start_x, y: 0 };
+    let mut pos = Pos {
+        x: side_length,
+        y: 0,
+    };
     let mut dir = Dir { dx: 1, dy: 0 };
-
     for m in &actions {
         match m {
             Action::Left => dir = dir.rotate(Rotation::Left),
@@ -423,39 +544,35 @@ fn main() -> Result<()> {
                 for _ in 0..*n {
                     let next = pos + dir;
 
-                    let next = if map.contains_key(&next) {
-                        next
-                    } else {
-                        println!(
-                            "Departing from side {side} at {pos:?}, {dir:?}"
-                        );
-                        panic!();
-                        // WARP
-                        let mut next = pos;
-                        let mut last = None;
-                        while next.x >= 0
-                            && next.x <= size
-                            && next.y >= 0
-                            && next.y <= size
-                        {
-                            if map.contains_key(&next) {
-                                last = Some(next);
-                            }
-                            next = next - dir;
-                        }
-                        last.unwrap()
-                    };
-
-                    if let Some(t) = map.get(&next) {
+                    if let Some(t) = flat_map.get(&next) {
                         match t {
                             Tile::Rock => break,
                             Tile::Empty => pos = next,
+                        }
+                    } else {
+                        let (next_pos, next_dir) =
+                            warp_zones.get(&(pos, dir)).unwrap();
+                        match flat_map.get(next_pos).unwrap() {
+                            Tile::Rock => break,
+                            Tile::Empty => {
+                                pos = *next_pos;
+                                dir = *next_dir;
+                            }
                         }
                     }
                 }
             }
         }
     }
+    println!("{:?}", pos);
+    println!("{:?}", dir);
+    println!("{:?}", flat_to_orig.get(&pos));
+
+    let pos = flat_to_orig.get(&pos).unwrap();
+    let row = pos.y + 1;
+    let col = pos.x + 1;
+    let facing = dir.score();
+    println!("Part 2: {}", row * 1000 + col * 4 + facing);
 
     Ok(())
 }
