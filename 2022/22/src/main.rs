@@ -79,7 +79,7 @@ impl Dir {
             }
         }
     }
-    fn score(&self) -> i64 {
+    fn facing(&self) -> i64 {
         match (self.dx, self.dy) {
             (1, 0) => 0,
             (0, 1) => 1,
@@ -112,6 +112,13 @@ enum Action {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
+fn score(pos: Pos, dir: Dir) -> i64 {
+    let row = pos.y + 1;
+    let col = pos.x + 1;
+    let facing = dir.facing();
+    row * 1000 + col * 4 + facing
+}
 
 fn main() -> Result<()> {
     let mut map = BTreeMap::new();
@@ -190,6 +197,8 @@ fn main() -> Result<()> {
                         // Let's do a warp!
                         let mut next = pos;
                         let mut last = None;
+
+                        // Find the last occupied tile in this row / column
                         while next.x >= 0
                             && next.x <= size
                             && next.y >= 0
@@ -203,20 +212,15 @@ fn main() -> Result<()> {
                         last.unwrap()
                     };
 
-                    if let Some(t) = map.get(&next) {
-                        match t {
-                            Tile::Rock => break,
-                            Tile::Empty => pos = next,
-                        }
+                    match map[&next] {
+                        Tile::Rock => break,
+                        Tile::Empty => pos = next,
                     }
                 }
             }
         }
     }
-    let row = pos.y + 1;
-    let col = pos.x + 1;
-    let facing = dir.score();
-    println!("Part 1: {}", row * 1000 + col * 4 + facing);
+    println!("Part 1: {}", score(pos, dir));
 
     ////////////////////////////////////////////////////////////////////////////
 
@@ -304,16 +308,16 @@ fn main() -> Result<()> {
                     let new_dx = new_dir;
                     let new_dy = new_dir.rotate(Rotation::Right);
 
-                    // Snap to the original grid
+                    // Snap to the original grid, then pick the side's origin
                     let mut new_origin = Pos {
                         x: corner.x / side_length * side_length,
                         y: corner.y / side_length * side_length,
                     };
                     if new_dx.dx < 0 || new_dx.dy < 0 {
-                        new_origin = new_origin + new_dx * (-side_length + 1);
+                        new_origin = new_origin - new_dx * (side_length - 1);
                     }
                     if new_dy.dx < 0 || new_dy.dy < 0 {
-                        new_origin = new_origin + new_dy * (-side_length + 1);
+                        new_origin = new_origin - new_dy * (side_length - 1);
                     }
 
                     let new_side = Side {
@@ -330,6 +334,7 @@ fn main() -> Result<()> {
     }
     let sides = sides.map(Option::unwrap);
 
+    // Build a new map with the canonical layout
     let mut flat_map = BTreeMap::new();
     let mut flat_to_orig = BTreeMap::new();
     for (side, (offset_x, offset_y)) in sides
@@ -349,7 +354,12 @@ fn main() -> Result<()> {
                     y: offset_y + y,
                 };
                 flat_map.insert(pos_new, map.get(&pos_orig).unwrap());
-                flat_to_orig.insert(pos_new, pos_orig);
+                for dir in &DIRS {
+                    flat_to_orig.insert(
+                        (pos_new, (Dir { dx: 1, dy: 0 }).rotate(*dir)),
+                        (pos_orig, dx.rotate(*dir)),
+                    );
+                }
             }
         }
     }
@@ -500,49 +510,26 @@ fn main() -> Result<()> {
             Action::Move(n) => {
                 for _ in 0..*n {
                     let next = pos + dir;
-
-                    if let Some(t) = flat_map.get(&next) {
-                        match t {
-                            Tile::Rock => break,
-                            Tile::Empty => pos = next,
-                        }
+                    let (next_pos, next_dir) = if flat_map.contains_key(&next) {
+                        (next, dir)
                     } else {
-                        let (next_pos, next_dir) =
-                            warp_zones.get(&(pos, dir)).unwrap();
-                        match flat_map.get(next_pos).unwrap() {
-                            Tile::Rock => break,
-                            Tile::Empty => {
-                                pos = *next_pos;
-                                dir = *next_dir;
-                            }
+                        warp_zones[&(pos, dir)]
+                    };
+
+                    match flat_map[&next_pos] {
+                        Tile::Empty => {
+                            pos = next_pos;
+                            dir = next_dir;
                         }
+                        Tile::Rock => break, // bonk
                     }
                 }
             }
         }
     }
 
-    let final_side = match (pos.x / side_length, pos.y / side_length) {
-        (1, 0) => 0,
-        (0, 1) => 1,
-        (1, 1) => 2,
-        (2, 1) => 3,
-        (1, 2) => 4,
-        (1, 3) => 5,
-        _ => panic!("Invalid final position"),
-    };
-    // Unwind the rotation back to our global frame
-    let mut dir_local = sides[final_side].dir;
-    while dir_local != (Dir { dx: 1, dy: 0 }) {
-        dir_local = dir_local.rotate(Rotation::Left);
-        dir = dir.rotate(Rotation::Left);
-    }
-
-    let pos = flat_to_orig.get(&pos).unwrap();
-    let row = pos.y + 1;
-    let col = pos.x + 1;
-    let facing = dir.score();
-    println!("Part 2: {}", row * 1000 + col * 4 + facing);
+    let (pos, dir) = flat_to_orig.get(&(pos, dir)).unwrap();
+    println!("Part 2: {}", score(*pos, *dir));
 
     Ok(())
 }
