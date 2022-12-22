@@ -369,7 +369,7 @@ fn main() -> Result<()> {
         assert!(flat_map.contains_key(&a.0));
         assert!(flat_map.contains_key(&b.0));
         assert!(!flat_map.contains_key(&(a.0 + a.1)));
-        assert!(!flat_map.contains_key(&(b.0 + b.1 * -1)));
+        assert!(!flat_map.contains_key(&(b.0 - b.1)));
         warp_zones.insert(a, b);
         warp_zones.insert(
             (b.0, b.1.rotate(Rotation::Flip)),
