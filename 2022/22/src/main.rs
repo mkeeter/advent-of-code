@@ -94,49 +94,6 @@ impl Dir {
 struct Side {
     origin: Pos,
     dir: Dir,
-    size: i64,
-}
-
-impl Side {
-    fn rotate(&self, pos: Pos, rot: Rotation) -> Pos {
-        let origin = self.origin
-            + match (self.dir.dx, self.dir.dy) {
-                (1, 0) => Dir { dx: 0, dy: 0 },
-                (0, 1) => Dir {
-                    dx: -self.size,
-                    dy: 0,
-                },
-                (-1, 0) => Dir {
-                    dx: -self.size,
-                    dy: -self.size,
-                },
-                (0, -1) => Dir {
-                    dx: 0,
-                    dy: -self.size,
-                },
-                _ => panic!("aaah"),
-            };
-
-        let dx = pos.x - origin.x;
-        let dy = pos.y - origin.y;
-        let vec = Dir { dx, dy }.rotate(rot);
-        let corner = match rot {
-            Rotation::Left => Pos {
-                x: self.origin.x,
-                y: self.origin.y + self.size - 1,
-            },
-            Rotation::Right => Pos {
-                x: self.origin.x + self.size - 1,
-                y: self.origin.y,
-            },
-            Rotation::Flip => Pos {
-                x: self.origin.x + self.size - 1,
-                y: self.origin.y + self.size - 1,
-            },
-            Rotation::Null => self.origin,
-        };
-        corner + vec
-    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -153,6 +110,8 @@ enum Action {
     Left,
     Right,
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 fn main() -> Result<()> {
     let mut map = BTreeMap::new();
@@ -228,7 +187,7 @@ fn main() -> Result<()> {
                     let next = if map.contains_key(&next) {
                         next
                     } else {
-                        // WARP
+                        // Let's do a warp!
                         let mut next = pos;
                         let mut last = None;
                         while next.x >= 0
@@ -328,7 +287,6 @@ fn main() -> Result<()> {
     sides[0] = Some(Side {
         origin: Pos { x: start_x, y: 0 },
         dir: Dir { dx: 1, dy: 0 },
-        size: side_length,
     });
 
     // Find the canonical unwinding of the map
@@ -361,7 +319,6 @@ fn main() -> Result<()> {
                     let new_side = Side {
                         origin: new_origin,
                         dir: new_dir,
-                        size: side_length,
                     };
                     if let Some(prev_new_side) = sides[new_side_index] {
                         assert_eq!(new_side, prev_new_side);
@@ -564,9 +521,22 @@ fn main() -> Result<()> {
             }
         }
     }
-    println!("{:?}", pos);
-    println!("{:?}", dir);
-    println!("{:?}", flat_to_orig.get(&pos));
+
+    let final_side = match (pos.x / side_length, pos.y / side_length) {
+        (1, 0) => 0,
+        (0, 1) => 1,
+        (1, 1) => 2,
+        (2, 1) => 3,
+        (1, 2) => 4,
+        (1, 3) => 5,
+        _ => panic!("Invalid final position"),
+    };
+    // Unwind the rotation back to our global frame
+    let mut dir_local = sides[final_side].dir;
+    while dir_local != (Dir { dx: 1, dy: 0 }) {
+        dir_local = dir_local.rotate(Rotation::Left);
+        dir = dir.rotate(Rotation::Left);
+    }
 
     let pos = flat_to_orig.get(&pos).unwrap();
     let row = pos.y + 1;
