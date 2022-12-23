@@ -19,6 +19,7 @@ fn main() -> Result<()> {
     for round in 0.. {
         let dir_iter = std::iter::repeat(DIRS).flatten().skip(round).take(4);
         let mut proposals = BTreeMap::new();
+        let mut proposal_count = BTreeMap::new();
         for elf in &elves {
             // Check for neighbors
             let any_nearby = (-1..=1)
@@ -37,7 +38,9 @@ fn main() -> Result<()> {
                     ))
                 });
                 if !any_nearby {
-                    proposals.insert(*elf, (elf.0 + dir.0, elf.1 + dir.1));
+                    let pos = (elf.0 + dir.0, elf.1 + dir.1);
+                    proposals.insert(*elf, pos);
+                    *proposal_count.entry(pos).or_insert(0) += 1;
                     break;
                 }
             }
@@ -45,10 +48,6 @@ fn main() -> Result<()> {
         if proposals.is_empty() {
             println!("Part 2: {}", round + 1);
             break;
-        }
-        let mut proposal_count = BTreeMap::new();
-        for p in proposals.values() {
-            *proposal_count.entry(*p).or_insert(0) += 1;
         }
         for (start, end) in proposals.into_iter() {
             if proposal_count[&end] == 1 {
