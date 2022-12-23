@@ -4,19 +4,6 @@ use std::{
     io::BufRead,
 };
 
-fn print_elves(elves: &BTreeSet<(i64, i64)>) {
-    let xmin = elves.iter().map(|p| p.0).min().unwrap_or(0);
-    let xmax = elves.iter().map(|p| p.0).max().unwrap_or(0);
-    let ymin = elves.iter().map(|p| p.1).min().unwrap_or(0);
-    let ymax = elves.iter().map(|p| p.1).max().unwrap_or(0);
-    for y in ymin..=ymax {
-        for x in xmin..=xmax {
-            print!("{}", if elves.contains(&(x, y)) { '#' } else { '.' });
-        }
-        println!();
-    }
-}
-
 fn main() -> Result<()> {
     let mut elves = BTreeSet::new();
     for (y, line) in std::io::stdin().lock().lines().enumerate() {
@@ -28,19 +15,25 @@ fn main() -> Result<()> {
         }
     }
 
-    print_elves(&elves);
-    println!();
     const DIRECTIONS: [(i64, i64); 4] = [(0, -1), (0, 1), (-1, 0), (1, 0)];
-    for round in 0..10 {
-        println!("\nRound {round}");
-        println!(
-            "{:?}",
-            std::iter::repeat(DIRECTIONS)
-                .flatten()
-                .skip(round)
-                .take(4)
-                .collect::<Vec<_>>()
-        );
+    for round in 0.. {
+        if round == 10 {
+            let xmin = elves.iter().map(|p| p.0).min().unwrap_or(0);
+            let xmax = elves.iter().map(|p| p.0).max().unwrap_or(0);
+            let ymin = elves.iter().map(|p| p.1).min().unwrap_or(0);
+            let ymax = elves.iter().map(|p| p.1).max().unwrap_or(0);
+
+            let mut ground_tiles = 0;
+            for y in ymin..=ymax {
+                for x in xmin..=xmax {
+                    if !elves.contains(&(x, y)) {
+                        ground_tiles += 1;
+                    }
+                }
+            }
+            println!("Part 1: {ground_tiles}");
+        }
+
         let mut proposals = BTreeMap::new();
         for elf in &elves {
             // Check for neighbors
@@ -56,7 +49,6 @@ fn main() -> Result<()> {
                 continue;
             }
 
-            let mut proposal = None;
             for dir in
                 std::iter::repeat(DIRECTIONS).flatten().skip(round).take(4)
             {
@@ -67,13 +59,14 @@ fn main() -> Result<()> {
                         elves.contains(&(elf.0 + dir.0, elf.1 + dir.1));
                 }
                 if !any_nearby {
-                    proposal = Some((elf.0 + dir.0, elf.1 + dir.1));
+                    proposals.insert(*elf, (elf.0 + dir.0, elf.1 + dir.1));
                     break;
                 }
             }
-            if let Some(p) = proposal {
-                proposals.insert(*elf, p);
-            }
+        }
+        if proposals.is_empty() {
+            println!("Part 2: {}", round + 1);
+            break;
         }
         let mut proposal_count = BTreeMap::new();
         for p in proposals.values() {
@@ -84,23 +77,7 @@ fn main() -> Result<()> {
             elves.remove(&start);
             elves.insert(end);
         }
-        print_elves(&elves);
     }
-
-    let xmin = elves.iter().map(|p| p.0).min().unwrap_or(0);
-    let xmax = elves.iter().map(|p| p.0).max().unwrap_or(0);
-    let ymin = elves.iter().map(|p| p.1).min().unwrap_or(0);
-    let ymax = elves.iter().map(|p| p.1).max().unwrap_or(0);
-
-    let mut ground_tiles = 0;
-    for y in ymin..=ymax {
-        for x in xmin..=xmax {
-            if !elves.contains(&(x, y)) {
-                ground_tiles += 1;
-            }
-        }
-    }
-    println!("Part 1: {ground_tiles}");
 
     Ok(())
 }
