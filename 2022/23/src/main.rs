@@ -15,25 +15,9 @@ fn main() -> Result<()> {
         }
     }
 
-    const DIRECTIONS: [(i64, i64); 4] = [(0, -1), (0, 1), (-1, 0), (1, 0)];
+    const DIRS: [(i64, i64); 4] = [(0, -1), (0, 1), (-1, 0), (1, 0)];
     for round in 0.. {
-        if round == 10 {
-            let xmin = elves.iter().map(|p| p.0).min().unwrap_or(0);
-            let xmax = elves.iter().map(|p| p.0).max().unwrap_or(0);
-            let ymin = elves.iter().map(|p| p.1).min().unwrap_or(0);
-            let ymax = elves.iter().map(|p| p.1).max().unwrap_or(0);
-
-            let mut ground_tiles = 0;
-            for y in ymin..=ymax {
-                for x in xmin..=xmax {
-                    if !elves.contains(&(x, y)) {
-                        ground_tiles += 1;
-                    }
-                }
-            }
-            println!("Part 1: {ground_tiles}");
-        }
-
+        let dir_iter = std::iter::repeat(DIRS).flatten().skip(round).take(4);
         let mut proposals = BTreeMap::new();
         for elf in &elves {
             // Check for neighbors
@@ -49,9 +33,7 @@ fn main() -> Result<()> {
                 continue;
             }
 
-            for dir in
-                std::iter::repeat(DIRECTIONS).flatten().skip(round).take(4)
-            {
+            for dir in dir_iter.clone() {
                 let mut any_nearby = false;
                 for i in -1..=1 {
                     let dir = (dir.0 + i * dir.1, dir.1 + i * dir.0);
@@ -76,6 +58,23 @@ fn main() -> Result<()> {
         for (start, end) in proposals.into_iter() {
             elves.remove(&start);
             elves.insert(end);
+        }
+
+        if round + 1 == 10 {
+            let xmin = elves.iter().map(|p| p.0).min().unwrap_or(0);
+            let xmax = elves.iter().map(|p| p.0).max().unwrap_or(0);
+            let ymin = elves.iter().map(|p| p.1).min().unwrap_or(0);
+            let ymax = elves.iter().map(|p| p.1).max().unwrap_or(0);
+
+            let mut ground_tiles = 0;
+            for y in ymin..=ymax {
+                for x in xmin..=xmax {
+                    if !elves.contains(&(x, y)) {
+                        ground_tiles += 1;
+                    }
+                }
+            }
+            println!("Part 1: {ground_tiles}");
         }
     }
 
