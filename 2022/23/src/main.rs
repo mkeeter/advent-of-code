@@ -21,25 +21,21 @@ fn main() -> Result<()> {
         let mut proposals = BTreeMap::new();
         for elf in &elves {
             // Check for neighbors
-            let mut any_nearby = false;
-            for y in -1..=1 {
-                for x in -1..=1 {
-                    if (x, y) != (0, 0) {
-                        any_nearby |= elves.contains(&(elf.0 + x, elf.1 + y));
-                    }
-                }
-            }
+            let any_nearby = (-1..=1)
+                .flat_map(|x| (-1..=1).map(move |y| (x, y)))
+                .filter(|p| *p != (0, 0))
+                .any(|(x, y)| elves.contains(&(elf.0 + x, elf.1 + y)));
             if !any_nearby {
                 continue;
             }
 
             for dir in dir_iter.clone() {
-                let mut any_nearby = false;
-                for i in -1..=1 {
-                    let dir = (dir.0 + i * dir.1, dir.1 + i * dir.0);
-                    any_nearby |=
-                        elves.contains(&(elf.0 + dir.0, elf.1 + dir.1));
-                }
+                let any_nearby = (-1..=1).any(|i| {
+                    elves.contains(&(
+                        elf.0 + dir.0 + i * dir.1,
+                        elf.1 + dir.1 + i * dir.0,
+                    ))
+                });
                 if !any_nearby {
                     proposals.insert(*elf, (elf.0 + dir.0, elf.1 + dir.1));
                     break;
