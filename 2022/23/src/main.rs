@@ -50,10 +50,11 @@ fn main() -> Result<()> {
         for p in proposals.values() {
             *proposal_count.entry(*p).or_insert(0) += 1;
         }
-        proposals.retain(|_k, p| proposal_count[p] == 1);
         for (start, end) in proposals.into_iter() {
-            elves.remove(&start);
-            elves.insert(end);
+            if proposal_count[&end] == 1 {
+                elves.remove(&start);
+                elves.insert(end);
+            }
         }
 
         if round + 1 == 10 {
