@@ -18,7 +18,7 @@ fn main() -> Result<()> {
     const DIRS: [(i64, i64); 4] = [(0, -1), (0, 1), (-1, 0), (1, 0)];
     for round in 0.. {
         let dir_iter = std::iter::repeat(DIRS).flatten().skip(round).take(4);
-        let mut proposals = BTreeMap::new();
+        let mut proposals = Vec::new();
         let mut proposal_count = BTreeMap::new();
         for elf in &elves {
             // Check for neighbors
@@ -39,7 +39,7 @@ fn main() -> Result<()> {
                 });
                 if !any_nearby {
                     let pos = (elf.0 + dir.0, elf.1 + dir.1);
-                    proposals.insert(*elf, pos);
+                    proposals.push((*elf, pos));
                     *proposal_count.entry(pos).or_insert(0) += 1;
                     break;
                 }
