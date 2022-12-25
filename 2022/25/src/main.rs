@@ -22,12 +22,12 @@ fn encode(mut i: i64) -> String {
     let mut remainder = 0;
     while i != 0 {
         let (c, new_remainder) = match (i % 5) + remainder {
-            0 => ('0', 0),
-            1 => ('1', 0),
-            2 => ('2', 0),
-            3 => ('=', 1),
-            4 => ('-', 1),
-            5 => ('0', 1),
+            0 => (b'0', 0),
+            1 => (b'1', 0),
+            2 => (b'2', 0),
+            3 => (b'=', 1),
+            4 => (b'-', 1),
+            5 => (b'0', 1),
             _ => unreachable!(),
         };
         remainder = new_remainder;
@@ -35,11 +35,12 @@ fn encode(mut i: i64) -> String {
         i /= 5;
     }
     if remainder != 0 {
-        out.push('1');
+        out.push(b'1');
     } else if out.is_empty() {
-        out.push('0');
+        out.push(b'0');
     }
-    out.iter().rev().collect()
+    out.reverse();
+    String::from_utf8(out).unwrap()
 }
 
 fn main() -> Result<()> {
