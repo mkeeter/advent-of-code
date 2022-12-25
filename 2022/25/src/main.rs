@@ -44,13 +44,13 @@ fn encode(mut i: i64) -> String {
 }
 
 fn main() -> Result<()> {
-    let input = std::io::stdin()
+    let sum = std::io::stdin()
         .lock()
         .lines()
         .map(|line| decode(&line.unwrap()))
-        .collect::<Result<Vec<i64>, _>>()?;
+        .sum::<Result<i64>>()?;
 
-    println!("Part 1: {}", encode(input.iter().sum()));
+    println!("Part 1: {}", encode(sum));
     println!("Part 2: ⭐️");
     Ok(())
 }
