@@ -32,15 +32,13 @@ fn score2(line: &str) -> u32 {
     let mut cs = line.chars();
     let mut out = Digits::default();
     loop {
-        for (i, d) in DIGITS.iter().enumerate() {
-            if cs
-                .clone()
+        if let Some((i, _)) = DIGITS.iter().enumerate().find(|(_, d)| {
+            cs.clone()
                 .chain(std::iter::repeat(' '))
                 .zip(d.chars())
                 .all(|(a, b)| a == b)
-            {
-                out.record(i as u32 + 1);
-            }
+        }) {
+            out.record(i as u32 + 1);
         }
         if let Some(c) = cs.next() {
             if let Some(d) = c.to_digit(10) {
