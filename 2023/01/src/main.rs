@@ -1,35 +1,55 @@
 use anyhow::Result;
 use std::io::BufRead;
 
-fn score<I: Iterator<Item = u32>>(digits: I) -> u32 {
-    let mut first = None;
-    let mut last = None;
-    for i in digits {
-        if first.is_none() {
-            first = Some(i);
-        }
-        last = Some(i);
-    }
-    first.unwrap() * 10 + last.unwrap()
+#[derive(Default)]
+struct Digits {
+    first: Option<u32>,
+    last: Option<u32>,
 }
 
-fn translate(line: &str) -> impl Iterator<Item = u32> + '_ {
+impl Digits {
+    fn record(&mut self, i: u32) {
+        self.first.get_or_insert(i);
+        self.last.replace(i);
+    }
+    fn value(&self) -> u32 {
+        self.first.unwrap() * 10 + self.last.unwrap()
+    }
+}
+
+fn score1(s: &str) -> u32 {
+    let mut out = Digits::default();
+    for c in s.chars().filter_map(|c| c.to_digit(10)) {
+        out.record(c);
+    }
+    out.value()
+}
+
+fn score2(line: &str) -> u32 {
     const DIGITS: [&str; 9] = [
         "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
     ];
-    (0..line.len()).filter_map(|i| {
-        let substring = line.get(i..).unwrap();
-        if let Some(d) = substring.chars().next().unwrap().to_digit(10) {
-            Some(d)
-        } else {
-            for (i, d) in DIGITS.iter().enumerate() {
-                if substring.starts_with(d) {
-                    return Some(i as u32 + 1);
-                }
+    let mut cs = line.chars();
+    let mut out = Digits::default();
+    loop {
+        for (i, d) in DIGITS.iter().enumerate() {
+            if cs
+                .clone()
+                .chain(std::iter::repeat(' '))
+                .zip(d.chars())
+                .all(|(a, b)| a == b)
+            {
+                out.record(i as u32 + 1);
             }
-            None
         }
-    })
+        if let Some(c) = cs.next() {
+            if let Some(d) = c.to_digit(10) {
+                out.record(d);
+            }
+        } else {
+            break out.value();
+        }
+    }
 }
 
 fn main() -> Result<()> {
@@ -38,15 +58,11 @@ fn main() -> Result<()> {
         .lines()
         .collect::<Result<Vec<String>, _>>()?;
 
-    let sum = lines
-        .iter()
-        .map(|s| score(s.chars().filter_map(|c| c.to_digit(10))))
-        .sum::<u32>();
+    let sum = lines.iter().map(|s| score1(s)).sum::<u32>();
     println!("Part 1: {sum}");
 
-    let sum = lines.iter().map(|s| score(translate(s))).sum::<u32>();
+    let sum = lines.iter().map(|s| score2(s)).sum::<u32>();
     println!("Part 2: {sum}");
 
-    // 55330 is too low
     Ok(())
 }
