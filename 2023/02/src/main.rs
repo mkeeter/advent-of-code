@@ -1,14 +1,16 @@
 use anyhow::Result;
 use std::io::BufRead;
 
+type Rgb = [usize; 3];
+
 #[derive(Debug)]
 struct Game {
     index: usize,
-    rgb: Vec<[usize; 3]>,
+    rgb: Vec<Rgb>,
 }
 
 impl Game {
-    fn max_seen(&self) -> [usize; 3] {
+    fn max_seen(&self) -> Rgb {
         let mut out = [0; 3];
         for v in &self.rgb {
             for i in 0..out.len() {
