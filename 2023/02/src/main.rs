@@ -11,7 +11,7 @@ impl Game {
     fn max_seen(&self) -> [usize; 3] {
         let mut out = [0; 3];
         for v in &self.rgb {
-            for i in 0..3 {
+            for i in 0..out.len() {
                 out[i] = out[i].max(v[i]);
             }
         }
