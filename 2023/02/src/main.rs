@@ -36,20 +36,19 @@ fn main() -> Result<()> {
 
         let mut rgb = vec![];
         for r in iter.next().unwrap().split("; ") {
-            let mut red = 0;
-            let mut green = 0;
-            let mut blue = 0;
+            let mut v = Rgb::default();
             for ball in r.split(", ") {
                 let mut iter = ball.split(' ');
                 let count = iter.next().unwrap().parse::<usize>()?;
-                *match iter.next().unwrap() {
-                    "red" => &mut red,
-                    "green" => &mut green,
-                    "blue" => &mut blue,
-                    c => panic!("invalid color {c}"),
-                } = count;
+                let color = iter.next().unwrap();
+                let i = ["red", "green", "blue"]
+                    .iter()
+                    .position(|s| *s == color)
+                    .unwrap();
+                assert_eq!(v[i], 0);
+                v[i] = count;
             }
-            rgb.push([red, green, blue]);
+            rgb.push(v);
         }
         games.push(Game { index, rgb });
     }
