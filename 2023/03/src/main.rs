@@ -74,17 +74,13 @@ fn main() -> Result<()> {
                 let (pos, prev) = number.unwrap_or(((x as i64, y as i64), 0));
                 number = Some((pos, prev * 10 + d));
             } else {
-                if let Some((pos, v)) = number.take() {
-                    numbers.insert(pos, v);
-                }
                 if c != '.' {
                     symbols.insert((x as i64, y as i64), c);
                 }
+                numbers.extend(number.take());
             }
         }
-        if let Some((pos, v)) = number.take() {
-            numbers.insert(pos, v);
-        }
+        numbers.extend(number.take());
     }
 
     println!("Part 1: {}", part1(&numbers, &symbols));

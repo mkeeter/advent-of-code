@@ -13,3 +13,6 @@ parse-display = "0.6"
 rayon = "1.6"
 regex = "1.10"
 smallvec = "1"
+
+[profile.release]
+overflow-checks = true
