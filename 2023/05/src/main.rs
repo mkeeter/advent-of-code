@@ -84,7 +84,6 @@ fn main() -> Result<()> {
         .chunks(2)
         .map(|s| s[0]..s[0] + s[1])
         .collect::<Vec<_>>();
-
     for m in &maps {
         out = out.into_iter().flat_map(|s| m.get_range(s)).collect();
     }
