@@ -29,16 +29,13 @@ impl RangeMap {
         // Artificially split the input range based on map split points
         let mut ranges = vec![];
         for (&k, _) in self.0.range(i.clone()) {
-            if k > i.start {
-                ranges.push(i.start..k);
-                i = k..i.end
-            }
+            ranges.push(i.start..k);
+            i = k..i.end
         }
-        if i.start != i.end {
-            ranges.push(i)
-        }
+        ranges.push(i);
         ranges
-            .iter()
+            .into_iter()
+            .filter(|r| !r.is_empty())
             .map(|r| {
                 let start = self.get(r.start);
                 start..start + r.len()
