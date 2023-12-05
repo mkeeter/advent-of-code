@@ -63,14 +63,13 @@ fn main() -> Result<()> {
         if line.contains("map") {
             maps.push(map);
             map = RangeMap::new();
-            continue;
+        } else {
+            let mut iter = line.split(' ').map(|s| s.parse::<usize>().unwrap());
+            let dest = iter.next().unwrap();
+            let source = iter.next().unwrap();
+            let n = iter.next().unwrap();
+            map.insert(dest, source, n);
         }
-
-        let mut iter = line.split(' ').map(|s| s.parse::<usize>().unwrap());
-        let dest = iter.next().unwrap();
-        let source = iter.next().unwrap();
-        let n = iter.next().unwrap();
-        map.insert(dest, source, n);
     }
     maps.push(map);
 
