@@ -1,0 +1,104 @@
+use anyhow::Result;
+use std::{collections::BTreeMap, io::BufRead};
+
+#[derive(Debug)]
+struct RangeMap(BTreeMap<usize, usize>);
+
+impl RangeMap {
+    fn new() -> Self {
+        let mut out = BTreeMap::new();
+        out.insert(0, 0);
+        Self(out)
+    }
+    fn insert(&mut self, dest: usize, src: usize, n: usize) {
+        self.0.insert(src, dest);
+        use std::collections::btree_map::Entry;
+        if let Entry::Vacant(e) = self.0.entry(src + n) {
+            e.insert(src + n);
+        }
+    }
+    fn get(&self, i: usize) -> usize {
+        let k = self.0.range(..=i).last().unwrap();
+        k.1 + i - k.0
+    }
+
+    fn get_range(
+        &self,
+        mut i: std::ops::Range<usize>,
+    ) -> Vec<std::ops::Range<usize>> {
+        // Artificially split the input range based on map split points
+        let mut ranges = vec![];
+        for (&k, _) in self.0.range(i.clone()) {
+            if k > i.start {
+                ranges.push(i.start..k);
+                i = k..i.end
+            }
+        }
+        if i.start != i.end {
+            ranges.push(i)
+        }
+        ranges
+            .iter()
+            .map(|r| {
+                let start = self.get(r.start);
+                start..start + r.len()
+            })
+            .collect()
+    }
+}
+
+fn main() -> Result<()> {
+    let lines = std::io::stdin()
+        .lock()
+        .lines()
+        .collect::<Result<Vec<String>, _>>()?;
+
+    let seeds = lines[0]
+        .strip_prefix("seeds: ")
+        .unwrap()
+        .split(' ')
+        .map(|s| s.parse::<usize>().unwrap())
+        .collect::<Vec<_>>();
+
+    let mut map = RangeMap::new();
+    let mut maps = vec![];
+    for line in lines[3..].iter().filter(|line| !line.is_empty()) {
+        if line.contains("map") {
+            maps.push(map);
+            map = RangeMap::new();
+            continue;
+        }
+
+        let mut iter = line.split(' ').map(|s| s.parse::<usize>().unwrap());
+        let dest = iter.next().unwrap();
+        let source = iter.next().unwrap();
+        let n = iter.next().unwrap();
+        map.insert(dest, source, n);
+    }
+    maps.push(map);
+
+    let mut out = vec![];
+    for mut s in seeds.iter().cloned() {
+        for m in &maps {
+            s = m.get(s);
+        }
+        out.push(s);
+    }
+    println!("Part 1: {}", out.iter().min().unwrap());
+
+    let mut seeds = seeds
+        .chunks(2)
+        .map(|s| s[0]..s[0] + s[1])
+        .collect::<Vec<_>>();
+
+    for m in &maps {
+        let mut next = vec![];
+        for s in seeds {
+            next.extend(m.get_range(s));
+        }
+        seeds = next;
+    }
+    println!("Part 2: {}", seeds.iter().map(|s| s.start).min().unwrap());
+
+    Ok(())
+}
