@@ -74,28 +74,21 @@ fn main() -> Result<()> {
     }
     maps.push(map);
 
-    let mut out = vec![];
-    for mut s in seeds.iter().cloned() {
-        for m in &maps {
-            s = m.get(s);
-        }
-        out.push(s);
+    let mut out = seeds.clone();
+    for m in &maps {
+        out.iter_mut().for_each(|s| *s = m.get(*s));
     }
     println!("Part 1: {}", out.iter().min().unwrap());
 
-    let mut seeds = seeds
+    let mut out = seeds
         .chunks(2)
         .map(|s| s[0]..s[0] + s[1])
         .collect::<Vec<_>>();
 
     for m in &maps {
-        let mut next = vec![];
-        for s in seeds {
-            next.extend(m.get_range(s));
-        }
-        seeds = next;
+        out = out.into_iter().flat_map(|s| m.get_range(s)).collect();
     }
-    println!("Part 2: {}", seeds.iter().map(|s| s.start).min().unwrap());
+    println!("Part 2: {}", out.iter().map(|s| s.start).min().unwrap());
 
     Ok(())
 }
