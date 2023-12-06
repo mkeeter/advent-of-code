@@ -31,8 +31,7 @@ fn main() -> Result<()> {
         lines[i]
             .strip_prefix(v)
             .unwrap()
-            .split(' ')
-            .filter(|s| !s.is_empty())
+            .split_whitespace()
             .map(|s| s.parse::<i64>().unwrap())
             .collect::<Vec<i64>>()
     };

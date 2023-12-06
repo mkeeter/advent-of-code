@@ -53,7 +53,7 @@ fn main() -> Result<()> {
     let seeds = lines[0]
         .strip_prefix("seeds: ")
         .unwrap()
-        .split(' ')
+        .split_whitespace()
         .map(|s| s.parse::<usize>().unwrap())
         .collect::<Vec<_>>();
 
@@ -64,7 +64,8 @@ fn main() -> Result<()> {
             maps.push(map);
             map = RangeMap::new();
         } else {
-            let mut iter = line.split(' ').map(|s| s.parse::<usize>().unwrap());
+            let mut iter =
+                line.split_whitespace().map(|s| s.parse::<usize>().unwrap());
             let dest = iter.next().unwrap();
             let source = iter.next().unwrap();
             let n = iter.next().unwrap();

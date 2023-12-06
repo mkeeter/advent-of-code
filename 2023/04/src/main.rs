@@ -11,19 +11,17 @@ fn main() -> Result<()> {
     let mut scores = vec![];
     for line in lines {
         let mut iter = line.split(": ");
-        let mut game =
-            iter.next().unwrap().split(' ').filter(|v| !v.is_empty());
+        let mut game = iter.next().unwrap().split_whitespace();
         assert_eq!(game.next().unwrap(), "Card");
 
         let index = game.next().unwrap().parse::<usize>().unwrap();
         assert_eq!(prev_index + 1, index);
         prev_index = index; // Checking that cards are in order
 
-        let mut iter = iter
-            .next()
-            .unwrap()
-            .split(" | ")
-            .map(|r| r.split(' ').filter_map(|v| v.parse::<usize>().ok()));
+        let mut iter =
+            iter.next().unwrap().split(" | ").map(|r| {
+                r.split_whitespace().map(|v| v.parse::<usize>().unwrap())
+            });
         let nums = iter.next().unwrap().collect::<Vec<usize>>();
         let winners = iter.next().unwrap().collect::<BTreeSet<usize>>();
         scores.push(nums.into_iter().filter(|n| winners.contains(n)).count());

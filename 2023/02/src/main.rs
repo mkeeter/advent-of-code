@@ -30,7 +30,7 @@ fn main() -> Result<()> {
     let mut games = vec![];
     for line in lines {
         let mut iter = line.split(": ");
-        let mut game = iter.next().unwrap().split(' ');
+        let mut game = iter.next().unwrap().split_whitespace();
         assert_eq!(game.next().unwrap(), "Game");
         let index = game.next().unwrap().parse::<usize>().unwrap();
 
@@ -38,7 +38,7 @@ fn main() -> Result<()> {
         for r in iter.next().unwrap().split("; ") {
             let mut v = Rgb::default();
             for ball in r.split(", ") {
-                let mut iter = ball.split(' ');
+                let mut iter = ball.split_whitespace();
                 let count = iter.next().unwrap().parse::<usize>()?;
                 let color = iter.next().unwrap();
                 let i = ["red", "green", "blue"]
