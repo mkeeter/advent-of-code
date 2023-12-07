@@ -12,17 +12,22 @@ struct Hand {
     bid: u64,
 }
 
-fn score_hand(mut seen: [u8; 13]) -> u8 {
-    seen.sort_by_key(|i| -(*i as i32));
-    match (seen[0], seen[1]) {
-        (1, 1) => 0,
-        (2, 1) => 1,
-        (2, 2) => 2,
-        (3, 1) => 3,
-        (3, 2) => 4,
-        (4, 1) => 5,
-        (5, 0) => 6,
-        _ => panic!("invalid count: {seen:?}"),
+fn score_hand(seen: [u8; 13]) -> u8 {
+    let mut seen_count = [0u8; 5];
+    for s in seen {
+        if s > 0 {
+            seen_count[s as usize - 1] += 1;
+        }
+    }
+    match seen_count {
+        [5, _, _, _, _] => 0, // high card
+        [3, 1, _, _, _] => 1, // pair
+        [1, 2, _, _, _] => 2, // two pair
+        [2, _, 1, _, _] => 3, // three of a kind
+        [_, 1, 1, _, _] => 4, // full house
+        [1, _, _, 1, _] => 5, // four of a kind
+        [_, _, _, _, 1] => 6, // four of a kind
+        _ => panic!("oh no"),
     }
 }
 
