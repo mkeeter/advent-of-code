@@ -12,14 +12,19 @@ struct Hand {
     bid: u64,
 }
 
-fn score_hand(seen: [u8; 13]) -> u8 {
+/// Converts from card count to group count
+fn count(seen: [u8; 13]) -> [u8; 5] {
     let mut seen_count = [0u8; 5];
     for s in seen {
         if s > 0 {
             seen_count[s as usize - 1] += 1;
         }
     }
-    match seen_count {
+    seen_count
+}
+
+fn score(count: [u8; 5]) -> u8 {
+    match count {
         [5, 0, 0, 0, 0] => 0, // high card
         [3, 1, 0, 0, 0] => 1, // pair
         [1, 2, 0, 0, 0] => 2, // two pair
@@ -27,30 +32,21 @@ fn score_hand(seen: [u8; 13]) -> u8 {
         [0, 1, 1, 0, 0] => 4, // full house
         [1, 0, 0, 1, 0] => 5, // four of a kind
         [0, 0, 0, 0, 1] => 6, // four of a kind
-        _ => panic!("oh no"),
+        _ => panic!("oh no: {:?}", count),
     }
 }
 
-fn score_wild(seen: [u8; 13]) -> u8 {
-    // Jokers are at index 0 in the unsorted list
-    if seen[0] > 0 {
-        let mut best = 0;
-        for i in 1..13 {
-            let mut hand = seen;
-            hand[0] -= 1;
-            hand[i] += 1;
-            let s = score_wild(hand);
-            if s > best {
-                best = s;
-                if best == 6 {
-                    return best;
-                }
-            }
+fn score_wild(jokers: u8, mut count: [u8; 5]) -> u8 {
+    if jokers > 0 {
+        // Upgrade the highest possible group (e.g. high card -> pair)
+        if let Some(i) = (0..5).rev().find(|i| count[*i] > 0) {
+            count[i] -= 1;
+            count[i + jokers as usize] += 1;
+        } else {
+            count[jokers as usize - 1] += 1;
         }
-        best
-    } else {
-        score_hand(seen)
     }
+    score(count)
 }
 
 fn main() -> Result<()> {
@@ -71,12 +67,12 @@ fn main() -> Result<()> {
                 'Q' => 10,
                 'J' => 9,
                 'T' => 8,
-                i => i.to_digit(10).unwrap() - 2,
+                c => c.to_digit(10).unwrap() - 2,
             };
             seen[i as usize] += 1;
             cards = cards * 13 + i;
         }
-        let score = score_hand(seen);
+        let score = score(count(seen));
         let bid = iter.next().unwrap().parse::<u64>().unwrap();
         hands.push(Hand { cards, score, bid });
     }
@@ -103,12 +99,13 @@ fn main() -> Result<()> {
                 'Q' => 10,
                 'T' => 9,
                 'J' => 0,
-                i => i.to_digit(10).unwrap() - 1,
+                c => c.to_digit(10).unwrap() - 1,
             };
             seen[i as usize] += 1;
             cards = cards * 13 + i;
         }
-        let score = score_wild(seen);
+        let jokers = std::mem::take(&mut seen[0]);
+        let score = score_wild(jokers, count(seen));
         let bid = iter.next().unwrap().parse::<u64>().unwrap();
         hands.push(Hand { cards, score, bid });
     }
