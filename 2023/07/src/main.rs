@@ -37,6 +37,9 @@ fn score_wild(seen: [u8; 13]) -> u8 {
             let s = score_wild(hand);
             if s > best {
                 best = s;
+                if best == 6 {
+                    return best;
+                }
             }
         }
         best
@@ -104,7 +107,6 @@ fn main() -> Result<()> {
         let bid = iter.next().unwrap().parse::<u64>().unwrap();
         hands.push(Hand { cards, score, bid });
     }
-
     println!("Part 2: {}", winnings(hands));
 
     Ok(())
