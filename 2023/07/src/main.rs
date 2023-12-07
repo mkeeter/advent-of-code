@@ -20,13 +20,13 @@ fn score_hand(seen: [u8; 13]) -> u8 {
         }
     }
     match seen_count {
-        [5, _, _, _, _] => 0, // high card
-        [3, 1, _, _, _] => 1, // pair
-        [1, 2, _, _, _] => 2, // two pair
-        [2, _, 1, _, _] => 3, // three of a kind
-        [_, 1, 1, _, _] => 4, // full house
-        [1, _, _, 1, _] => 5, // four of a kind
-        [_, _, _, _, 1] => 6, // four of a kind
+        [5, 0, 0, 0, 0] => 0, // high card
+        [3, 1, 0, 0, 0] => 1, // pair
+        [1, 2, 0, 0, 0] => 2, // two pair
+        [2, 0, 1, 0, 0] => 3, // three of a kind
+        [0, 1, 1, 0, 0] => 4, // full house
+        [1, 0, 0, 1, 0] => 5, // four of a kind
+        [0, 0, 0, 0, 1] => 6, // four of a kind
         _ => panic!("oh no"),
     }
 }
