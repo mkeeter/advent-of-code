@@ -44,7 +44,6 @@ impl std::str::FromStr for Node {
 }
 
 fn main() -> Result<()> {
-    let start = std::time::Instant::now();
     let lines = std::io::stdin()
         .lock()
         .lines()
@@ -91,6 +90,11 @@ fn main() -> Result<()> {
             if pos.is_end() {
                 if let Some((prev_end, prev_steps)) = seen {
                     assert_eq!(prev_end, pos, "multi-end loop detected");
+                    assert_eq!(
+                        prev_steps % lines[0].len(),
+                        i % lines[0].len(),
+                        "offset detected"
+                    );
                     periods.push((prev_steps, i - prev_steps));
                     break;
                 } else {
@@ -128,6 +132,5 @@ fn main() -> Result<()> {
             .collect();
     }
     println!("Part 2: {}", periods[0]);
-    println!("{:?}", start.elapsed());
     Ok(())
 }
