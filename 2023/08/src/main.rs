@@ -1,12 +1,9 @@
 use anyhow::{bail, Result};
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    io::BufRead,
-};
+use std::{collections::BTreeSet, io::BufRead, str::FromStr};
 
-use parse_display::{Display, FromStr};
+use parse_display::FromStr;
 
-#[derive(Display, FromStr, PartialEq)]
+#[derive(FromStr, PartialEq)]
 #[display("{start} = ({left}, {right})")]
 struct Input {
     start: Node,
@@ -15,23 +12,14 @@ struct Input {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-struct Node([u8; 3]);
+struct Node(u16);
 
 impl Node {
     fn is_start(&self) -> bool {
-        self.0[2] == b'A'
+        self.0 % 36 == 0 // 'A'
     }
     fn is_end(&self) -> bool {
-        self.0[2] == b'Z'
-    }
-}
-impl std::fmt::Display for Node {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}{}{}",
-            self.0[0] as char, self.0[1] as char, self.0[2] as char
-        )
+        self.0 % 36 == 25 // 'Z'
     }
 }
 
@@ -42,28 +30,40 @@ impl std::str::FromStr for Node {
         if s.len() != 3 {
             bail!("Invalid length (expected 3, got {})", s.len());
         }
-        let mut out = [0u8; 3];
-        for (i, c) in s.chars().enumerate() {
-            out[i] = c.try_into().unwrap();
+        let mut out = 0u16;
+        for c in s.chars() {
+            let i = match c {
+                'A'..='Z' => c as u8 - b'A',
+                '0'..='9' => c as u8 - b'9',
+                _ => bail!("Invalid character {c}"),
+            };
+            out = out * 36 + i as u16;
         }
         Ok(Self(out))
     }
 }
 
 fn main() -> Result<()> {
+    let start = std::time::Instant::now();
     let lines = std::io::stdin()
         .lock()
         .lines()
         .collect::<Result<Vec<String>, _>>()?;
 
-    let mut map = BTreeMap::new();
+    let mut map = vec![];
+    let mut nodes = vec![];
     for line in &lines[2..] {
         let i = line.parse::<Input>().unwrap();
-        map.insert(i.start, (i.left, i.right));
+        let n = i.start.0 as usize;
+        if n >= map.len() {
+            map.resize(n + 1, (Node(u16::MAX), Node(u16::MAX)));
+        }
+        map[n] = (i.left, i.right);
+        nodes.push(i.start);
     }
 
-    let mut pos = "AAA".parse::<Node>().unwrap();
-    let dest = "ZZZ".parse::<Node>().unwrap();
+    let mut pos = Node::from_str("AAA").unwrap();
+    let dest = Node::from_str("ZZZ").unwrap();
     for (i, lr) in std::iter::repeat(&lines[0])
         .flat_map(|c| c.chars())
         .enumerate()
@@ -73,15 +73,14 @@ fn main() -> Result<()> {
             break;
         }
         match lr {
-            'L' => pos = map[&pos].0,
-            'R' => pos = map[&pos].1,
+            'L' => pos = map[pos.0 as usize].0,
+            'R' => pos = map[pos.0 as usize].1,
             c => panic!("invalid direction '{c}'"),
         }
     }
 
-    let starts: Vec<_> = map.keys().filter(|n| n.is_start()).collect();
-    let ends: BTreeSet<_> = map.keys().filter(|n| n.is_end()).collect();
-    let mut periods = vec![];
+    let starts: Vec<_> = nodes.iter().filter(|n| n.is_start()).collect();
+    let mut periods = Vec::with_capacity(starts.len());
     for start in starts {
         let mut pos = *start;
         let mut seen = None;
@@ -89,7 +88,7 @@ fn main() -> Result<()> {
             .flat_map(|c| c.chars())
             .enumerate()
         {
-            if ends.contains(&pos) {
+            if pos.is_end() {
                 if let Some((prev_end, prev_steps)) = seen {
                     assert_eq!(prev_end, pos, "multi-end loop detected");
                     periods.push((prev_steps, i - prev_steps));
@@ -99,8 +98,8 @@ fn main() -> Result<()> {
                 }
             }
             match lr {
-                'L' => pos = map[&pos].0,
-                'R' => pos = map[&pos].1,
+                'L' => pos = map[pos.0 as usize].0,
+                'R' => pos = map[pos.0 as usize].1,
                 c => panic!("invalid direction '{c}'"),
             }
         }
@@ -117,9 +116,9 @@ fn main() -> Result<()> {
         let mut b = periods[1];
         while a != b {
             if a < b {
-                a += periods[0]
+                a += (b - a).div_ceil(periods[0]) * periods[0];
             } else {
-                b += periods[1]
+                b += (a - b).div_ceil(periods[1]) * periods[1];
             }
         }
         periods = periods[2..]
@@ -129,5 +128,6 @@ fn main() -> Result<()> {
             .collect();
     }
     println!("Part 2: {}", periods[0]);
+    println!("{:?}", start.elapsed());
     Ok(())
 }
