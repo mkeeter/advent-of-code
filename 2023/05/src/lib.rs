@@ -1,5 +1,4 @@
-use anyhow::Result;
-use std::{collections::BTreeMap, io::BufRead};
+use std::collections::BTreeMap;
 
 #[derive(Debug)]
 struct RangeMap(BTreeMap<usize, usize>);
@@ -44,11 +43,8 @@ impl RangeMap {
     }
 }
 
-fn main() -> Result<()> {
-    let lines = std::io::stdin()
-        .lock()
-        .lines()
-        .collect::<Result<Vec<String>, _>>()?;
+pub fn solve(s: &str) -> (String, String) {
+    let lines = s.lines().collect::<Vec<&str>>();
 
     let seeds = lines[0]
         .strip_prefix("seeds: ")
@@ -78,7 +74,7 @@ fn main() -> Result<()> {
     for m in &maps {
         out.iter_mut().for_each(|s| *s = m.get(*s));
     }
-    println!("Part 1: {}", out.iter().min().unwrap());
+    let p1 = out.iter().min().unwrap();
 
     let mut out = seeds
         .chunks(2)
@@ -87,7 +83,7 @@ fn main() -> Result<()> {
     for m in &maps {
         out = out.into_iter().flat_map(|s| m.get_range(s)).collect();
     }
-    println!("Part 2: {}", out.iter().map(|s| s.start).min().unwrap());
+    let p2 = out.iter().map(|s| s.start).min().unwrap();
 
-    Ok(())
+    (p1.to_string(), p2.to_string())
 }

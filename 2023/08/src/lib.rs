@@ -1,4 +1,4 @@
-use std::{io::BufRead, str::FromStr};
+use std::str::FromStr;
 
 use anyhow::{bail, Result};
 use parse_display::FromStr;
@@ -50,11 +50,8 @@ enum Direction {
     Right,
 }
 
-fn main() -> Result<()> {
-    let lines = std::io::stdin()
-        .lock()
-        .lines()
-        .collect::<Result<Vec<String>, _>>()?;
+pub fn solve(s: &str) -> (String, String) {
+    let lines = s.lines().collect::<Vec<&str>>();
 
     let dirs = lines[0]
         .chars()
@@ -88,9 +85,10 @@ fn main() -> Result<()> {
     };
 
     let dest = Node::from_str("ZZZ").unwrap();
+    let mut p1 = 0;
     for (i, pos) in run(Node::from_str("AAA").unwrap()) {
         if pos == dest {
-            println!("Part 1: {i}");
+            p1 = i;
             break;
         }
     }
@@ -141,6 +139,7 @@ fn main() -> Result<()> {
             .chain(std::iter::once(a))
             .collect();
     }
-    println!("Part 2: {}", periods[0]);
-    Ok(())
+    let p2 = periods[0];
+
+    (p1.to_string(), p2.to_string())
 }

@@ -1,6 +1,3 @@
-use anyhow::Result;
-use std::io::BufRead;
-
 #[derive(Default)]
 struct Digits {
     first: Option<u32>,
@@ -50,17 +47,11 @@ fn score2(line: &str) -> u32 {
     }
 }
 
-fn main() -> Result<()> {
-    let lines = std::io::stdin()
-        .lock()
-        .lines()
-        .collect::<Result<Vec<String>, _>>()?;
+pub fn solve(s: &str) -> (String, String) {
+    let lines = s.lines().collect::<Vec<&str>>();
 
-    let sum = lines.iter().map(|s| score1(s)).sum::<u32>();
-    println!("Part 1: {sum}");
+    let p1 = lines.iter().map(|s| score1(s)).sum::<u32>();
+    let p2 = lines.iter().map(|s| score2(s)).sum::<u32>();
 
-    let sum = lines.iter().map(|s| score2(s)).sum::<u32>();
-    println!("Part 2: {sum}");
-
-    Ok(())
+    (p1.to_string(), p2.to_string())
 }

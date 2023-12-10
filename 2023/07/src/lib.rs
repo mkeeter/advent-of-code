@@ -1,6 +1,3 @@
-use anyhow::Result;
-use std::io::BufRead;
-
 /// Structure for a single hand, with field order chosen to sort correctly
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd)]
 struct Hand {
@@ -49,11 +46,8 @@ fn score_wild(jokers: u8, mut count: [u8; 5]) -> u8 {
     score(count)
 }
 
-fn main() -> Result<()> {
-    let lines = std::io::stdin()
-        .lock()
-        .lines()
-        .collect::<Result<Vec<String>, _>>()?;
+pub fn solve(s: &str) -> (String, String) {
+    let lines = s.lines().collect::<Vec<&str>>();
 
     let mut hands = vec![];
     for line in &lines {
@@ -85,7 +79,7 @@ fn main() -> Result<()> {
             .map(|(i, h)| (i as u64 + 1) * h.bid)
             .sum::<u64>()
     };
-    println!("Part 1: {}", winnings(hands));
+    let p1 = winnings(hands);
 
     let mut hands = vec![];
     for line in &lines {
@@ -109,7 +103,7 @@ fn main() -> Result<()> {
         let bid = iter.next().unwrap().parse::<u64>().unwrap();
         hands.push(Hand { cards, score, bid });
     }
-    println!("Part 2: {}", winnings(hands));
+    let p2 = winnings(hands);
 
-    Ok(())
+    (p1.to_string(), p2.to_string())
 }

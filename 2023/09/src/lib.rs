@@ -1,13 +1,8 @@
-use anyhow::Result;
-use std::io::BufRead;
-
-fn main() -> Result<()> {
-    let mut lines = std::io::stdin()
-        .lock()
+pub fn solve(s: &str) -> (String, String) {
+    let mut lines = s
         .lines()
         .map(|s| {
-            s.unwrap()
-                .split_whitespace()
+            s.split_whitespace()
                 .map(|p| p.parse::<i64>().unwrap())
                 .collect()
         })
@@ -38,8 +33,6 @@ fn main() -> Result<()> {
         }
         p2 += heads.pop().unwrap();
     }
-    println!("Part 1: {p1}");
-    println!("Part 2: {p2}");
 
-    Ok(())
+    (p1.to_string(), p2.to_string())
 }

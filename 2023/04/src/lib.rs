@@ -1,11 +1,7 @@
-use anyhow::Result;
-use std::{collections::BTreeSet, io::BufRead};
+use std::collections::BTreeSet;
 
-fn main() -> Result<()> {
-    let lines = std::io::stdin()
-        .lock()
-        .lines()
-        .collect::<Result<Vec<String>, _>>()?;
+pub fn solve(s: &str) -> (String, String) {
+    let lines = s.lines().collect::<Vec<&str>>();
 
     let mut prev_index = 0;
     let mut scores = vec![];
@@ -32,7 +28,7 @@ fn main() -> Result<()> {
     for &s in scores.iter().filter(|s| **s > 0) {
         out += 1 << (s - 1);
     }
-    println!("Part 1: {out}");
+    let p1 = out;
 
     let mut count = vec![1; scores.len()];
     for (i, s) in scores.iter().enumerate() {
@@ -40,6 +36,6 @@ fn main() -> Result<()> {
             count[i + 1 + v] += count[i];
         }
     }
-    println!("Part 2: {}", count.into_iter().sum::<usize>());
-    Ok(())
+    let p2 = count.into_iter().sum::<usize>();
+    (p1.to_string(), p2.to_string())
 }

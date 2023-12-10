@@ -1,8 +1,4 @@
-use anyhow::Result;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    io::BufRead,
-};
+use std::collections::{BTreeMap, BTreeSet};
 
 fn part1(
     numbers: &BTreeMap<(i64, i64), u32>,
@@ -59,11 +55,8 @@ fn part2(
     out
 }
 
-fn main() -> Result<()> {
-    let lines = std::io::stdin()
-        .lock()
-        .lines()
-        .collect::<Result<Vec<String>, _>>()?;
+pub fn solve(s: &str) -> (String, String) {
+    let lines = s.lines().collect::<Vec<_>>();
 
     let mut numbers = BTreeMap::new();
     let mut symbols = BTreeMap::new();
@@ -83,7 +76,8 @@ fn main() -> Result<()> {
         numbers.extend(number.take());
     }
 
-    println!("Part 1: {}", part1(&numbers, &symbols));
-    println!("Part 2: {}", part2(&numbers, &symbols));
-    Ok(())
+    (
+        part1(&numbers, &symbols).to_string(),
+        part2(&numbers, &symbols).to_string(),
+    )
 }

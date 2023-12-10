@@ -1,6 +1,3 @@
-use anyhow::Result;
-use std::io::BufRead;
-
 fn run(time: &[i64], dist: &[i64]) -> i64 {
     let mut out = 1;
     for (t, d) in time.iter().zip(dist.iter()) {
@@ -22,11 +19,8 @@ fn run(time: &[i64], dist: &[i64]) -> i64 {
     out
 }
 
-fn main() -> Result<()> {
-    let lines = std::io::stdin()
-        .lock()
-        .lines()
-        .collect::<Result<Vec<String>, _>>()?;
+pub fn solve(s: &str) -> (String, String) {
+    let lines = s.lines().collect::<Vec<&str>>();
     let f = |i: usize, v| {
         lines[i]
             .strip_prefix(v)
@@ -38,8 +32,7 @@ fn main() -> Result<()> {
 
     let time = f(0, "Time:");
     let dist = f(1, "Distance:");
-
-    println!("Part 1: {}", run(&time, &dist));
+    let p1 = run(&time, &dist);
 
     let f = |i: usize, v| {
         lines[i]
@@ -51,6 +44,7 @@ fn main() -> Result<()> {
     };
     let time = f(0, "Time:");
     let dist = f(1, "Distance:");
-    println!("Part 2: {}", run(&[time], &[dist]));
-    Ok(())
+    let p2 = run(&[time], &[dist]);
+
+    (p1.to_string(), p2.to_string())
 }

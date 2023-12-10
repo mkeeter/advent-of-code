@@ -2,7 +2,3 @@
 name = "day02"
 version = "0.1.0"
 edition = "2021"
-
-[dependencies]
-anyhow.workspace = true
-parse-display.workspace = true

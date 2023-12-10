@@ -1,6 +1,3 @@
-use anyhow::Result;
-use std::io::BufRead;
-
 type Rgb = [usize; 3];
 
 #[derive(Debug)]
@@ -21,11 +18,8 @@ impl Game {
     }
 }
 
-fn main() -> Result<()> {
-    let lines = std::io::stdin()
-        .lock()
-        .lines()
-        .collect::<Result<Vec<String>, _>>()?;
+pub fn solve(s: &str) -> (String, String) {
+    let lines = s.lines().collect::<Vec<&str>>();
 
     let mut games = vec![];
     for line in lines {
@@ -39,7 +33,7 @@ fn main() -> Result<()> {
             let mut v = Rgb::default();
             for ball in r.split(", ") {
                 let mut iter = ball.split_whitespace();
-                let count = iter.next().unwrap().parse::<usize>()?;
+                let count = iter.next().unwrap().parse::<usize>().unwrap();
                 let color = iter.next().unwrap();
                 let i = ["red", "green", "blue"]
                     .iter()
@@ -60,14 +54,14 @@ fn main() -> Result<()> {
             out += game.index;
         }
     }
-    println!("Part 1: {out}");
+    let p1 = out.to_string();
 
     let mut out = 0;
     for game in &games {
         let [r, g, b] = game.max_seen();
         out += r * g * b;
     }
-    println!("Part 2: {out}");
+    let p2 = out.to_string();
 
-    Ok(())
+    (p1, p2)
 }
