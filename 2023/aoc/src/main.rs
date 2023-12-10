@@ -89,9 +89,7 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let input = if args.input {
-        read_input_for(day)?
-    } else if args.example {
+    let input = if args.example {
         let f =
             std::fs::read("example").context("failed to read `./example`")?;
         String::from_utf8(f).context("example is not valid UTF-8")?
@@ -100,7 +98,7 @@ fn main() -> Result<()> {
             .and_then(|mut ctx| ctx.get_contents())
             .map_err(|e| anyhow!("failed to create clipboard context: {e:?}"))?
     } else {
-        bail!("No input (must specify --input, --example, or --paste)");
+        read_input_for(day)?
     };
 
     let out = (DAYS[day as usize - 1])(&input);
