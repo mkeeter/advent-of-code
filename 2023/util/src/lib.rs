@@ -19,6 +19,25 @@ impl DenseGrid {
         Self { data, width }
     }
 
+    /// Builds a new empty grid
+    #[inline]
+    pub fn empty(width: usize, height: usize) -> Self {
+        let data = vec!['.'; width * height];
+        Self { data, width }
+    }
+
+    /// Returns the height of the grid
+    #[inline]
+    pub fn width(&self) -> usize {
+        self.width
+    }
+
+    /// Returns the height of the grid
+    #[inline]
+    pub fn height(&self) -> usize {
+        self.data.len() / self.width
+    }
+
     /// Converts from a 2D position to an index in the dense grid
     ///
     /// Returns `None` if the position is outside the grid
