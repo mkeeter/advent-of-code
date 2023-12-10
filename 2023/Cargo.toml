@@ -14,5 +14,7 @@ rayon = "1.6"
 regex = "1.10"
 smallvec = "1"
 
+util.path = "util"
+
 [profile.release]
 overflow-checks = true

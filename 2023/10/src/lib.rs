@@ -13,16 +13,9 @@ fn neighbors(c: char) -> [(i64, i64); 2] {
 }
 
 pub fn solve(s: &str) -> (String, String) {
-    let mut map = BTreeMap::new();
-    for (y, line) in s.lines().enumerate() {
-        for (x, c) in line.chars().enumerate() {
-            if c != '.' {
-                map.insert((x as i64, y as i64), c);
-            }
-        }
-    }
+    let mut map = util::DenseGrid::new(s);
 
-    let start = *map.iter().find(|(_, c)| **c == 'S').unwrap().0;
+    let start = map.iter().find(|(_, c)| **c == 'S').unwrap().0;
     let c = "|-FJL7"
         .chars()
         .find(|c| {
@@ -68,25 +61,16 @@ pub fn solve(s: &str) -> (String, String) {
     // Remove non-path tiles from the map
     map.retain(|k, _| path.contains(k));
 
-    let mut xmin = i64::MAX;
-    let mut xmax = i64::MIN;
-    let mut ymin = i64::MAX;
-    let mut ymax = i64::MIN;
-    for (x, y) in map.keys() {
-        xmin = xmin.min(*x);
-        xmax = xmax.max(*x);
-        ymin = ymin.min(*y);
-        ymax = ymax.max(*y);
-    }
+    let bounds = map.bounds();
     let mut inside = 0;
-    for x in xmin..=xmax {
+    for y in bounds.ymin..=bounds.ymax {
         let mut winding = 0;
-        for y in ymin..=ymax {
+        for x in bounds.xmin..=bounds.xmax {
             if let Some(c) = map.get(&(x, y)) {
                 winding ^= match c {
-                    'F' | 'L' => 0b01,
-                    'J' | '7' => 0b10,
-                    '-' => 0b11,
+                    'F' | '7' => 0b01,
+                    'J' | 'L' => 0b10,
+                    '|' => 0b11,
                     _ => 0b00,
                 };
             } else {
