@@ -122,6 +122,7 @@ pub fn solve(s: &str) -> (String, String) {
         })
         .collect::<Vec<usize>>();
 
+    // Hacky LCM calculation
     while periods.len() > 1 {
         let pa = periods.pop().unwrap();
         let pb = periods.pop().unwrap();
