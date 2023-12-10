@@ -17,10 +17,10 @@ struct Node(u16);
 
 impl Node {
     fn is_start(&self) -> bool {
-        self.0 % 36 == 0 // 'A'
+        self.0 & 0b11111 == 0 // 'A'
     }
     fn is_end(&self) -> bool {
-        self.0 % 36 == 25 // 'Z'
+        self.0 & 0b11111 == 25 // 'Z'
     }
 }
 
@@ -38,7 +38,7 @@ impl std::str::FromStr for Node {
                 '0'..='9' => c as u16 - b'9' as u16,
                 _ => bail!("Invalid character {c}"),
             };
-            out = out * 36 + i;
+            out = (out << 5) + i;
         }
         Ok(Self(out))
     }
