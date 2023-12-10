@@ -60,18 +60,21 @@ pub fn solve(s: &str) -> (String, String) {
     // Remove non-path tiles from the map
     map.retain(|k, _| path.contains(k));
 
+    // Build a look-up table for pipe shape -> winding number change
+    let mut lut = [0u8; 256];
+    lut[b'F' as usize] = 0b01;
+    lut[b'7' as usize] = 0b01;
+    lut[b'J' as usize] = 0b10;
+    lut[b'L' as usize] = 0b10;
+    lut[b'|' as usize] = 0b11;
+
     let bounds = map.bounds();
     let mut inside = 0;
     for y in bounds.ymin..=bounds.ymax {
         let mut winding = 0;
         for x in bounds.xmin..=bounds.xmax {
             if let Some(c) = map.get(&(x, y)) {
-                winding ^= match c {
-                    'F' | '7' => 0b01,
-                    'J' | 'L' => 0b10,
-                    '|' => 0b11,
-                    _ => 0b00,
-                };
+                winding ^= lut[*c as usize];
             } else {
                 match winding {
                     0b11 => inside += 1,
