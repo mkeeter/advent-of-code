@@ -59,10 +59,10 @@ struct Args {
 }
 
 async fn ensure_input_exists(day: u32) -> Result<()> {
-    let mut path = std::path::PathBuf::from(format!("{day:02}"));
+    let path: std::path::PathBuf =
+        [&format!("{day:02}"), "input"].into_iter().collect();
 
     // Check for a pre-existing input file
-    path.push("input");
     if path.exists() {
         return Ok(());
     }
