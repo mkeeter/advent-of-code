@@ -123,21 +123,18 @@ pub fn solve(s: &str) -> (String, String) {
         .collect::<Vec<usize>>();
 
     while periods.len() > 1 {
-        periods.sort();
-        let mut a = periods[0];
-        let mut b = periods[1];
+        let pa = periods.pop().unwrap();
+        let pb = periods.pop().unwrap();
+        let mut a = pa;
+        let mut b = pb;
         while a != b {
             if a < b {
-                a += (b - a).div_ceil(periods[0]) * periods[0];
+                a += (b - a).div_ceil(pa) * pa;
             } else {
-                b += (a - b).div_ceil(periods[1]) * periods[1];
+                b += (a - b).div_ceil(pb) * pb;
             }
         }
-        periods = periods[2..]
-            .iter()
-            .cloned()
-            .chain(std::iter::once(a))
-            .collect();
+        periods.push(a);
     }
     let p2 = periods[0];
 
