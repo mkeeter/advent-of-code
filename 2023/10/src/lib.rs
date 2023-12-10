@@ -36,27 +36,26 @@ pub fn solve(s: &str) -> (String, String) {
     // Replace 'S' with the appropriate pipe symbol
     map.insert(start, c);
 
-    let mut prev = [start, start];
-    let mut pos = neighbors(c).map(|(dx, dy)| (start.0 + dx, start.1 + dy));
+    let mut prev = start;
+    let (dx, dy) = neighbors(c)[0];
+    let mut pos = (start.0 + dx, start.1 + dy);
 
     let mut path = BTreeSet::new();
     path.insert(start);
 
     let mut steps = 1;
-    while pos[0] != pos[1] {
-        path.extend(pos.iter().cloned());
+    while pos != start {
+        path.insert(pos);
         let next_prev = pos;
-        for (prev, pos) in prev.iter().zip(pos.iter_mut()) {
-            *pos = neighbors(*map.get(pos).unwrap())
-                .map(|(dx, dy)| (pos.0 + dx, pos.1 + dy))
-                .into_iter()
-                .find(|p| p != prev)
-                .unwrap();
-        }
+        pos = neighbors(*map.get(&pos).unwrap())
+            .map(|(dx, dy)| (pos.0 + dx, pos.1 + dy))
+            .into_iter()
+            .find(|p| *p != prev)
+            .unwrap();
         prev = next_prev;
         steps += 1;
     }
-    path.extend(pos.iter().cloned());
+    steps /= 2;
 
     // Remove non-path tiles from the map
     map.retain(|k, _| path.contains(k));
