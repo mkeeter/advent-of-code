@@ -1,5 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use arrayvec::ArrayVec;
+
 fn part1(numbers: &[((i64, i64), u32)], symbols: &[((i64, i64), char)]) -> u32 {
     // Find the 3x3 neighborhood around each symbol
     let mut ns = BTreeSet::new();
@@ -34,16 +36,28 @@ fn part2(numbers: &[((i64, i64), u32)], gears: &[(i64, i64)]) -> u32 {
     let mut out = 0;
     for (x, y) in gears {
         // Find numbers (by index) which are neighbors of this gear
-        let mut ns = BTreeSet::new();
+        let mut ns: ArrayVec<usize, 9> = ArrayVec::new();
         for dx in [-1, 0, 1] {
             for dy in [-1, 0, 1] {
                 if let Some(i) = numspan.get(&(x + dx, y + dy)) {
-                    ns.insert(*i);
+                    ns.push(*i);
                 }
             }
         }
-        if ns.len() == 2 {
-            out += ns.iter().map(|i| nums[*i]).product::<u32>();
+        // Find the product of unique numbers in the list
+        ns.sort();
+        let mut prev = None;
+        let mut count = 0;
+        let mut prod = 1;
+        for i in &ns {
+            if prev.map(|p| p != i).unwrap_or(true) {
+                count += 1;
+                prod *= nums[*i];
+            }
+            prev = Some(i);
+        }
+        if count == 2 {
+            out += prod;
         }
     }
     out
@@ -74,8 +88,10 @@ pub fn solve(s: &str) -> (String, String) {
         numbers.extend(number.take());
     }
 
-    (
-        part1(&numbers, &symbols).to_string(),
-        part2(&numbers, &gears).to_string(),
-    )
+    let out = std::thread::scope(|s| {
+        let p1 = s.spawn(|| part1(&numbers, &symbols).to_string());
+        let p2 = s.spawn(|| part2(&numbers, &gears).to_string());
+        (p1.join().unwrap(), p2.join().unwrap())
+    });
+    out
 }

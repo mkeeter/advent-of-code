@@ -108,6 +108,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "arrayvec"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96d30a06541fbafbc7f82ed10c06164cfbd2c401138f6addd8404629c4b16711"
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -396,6 +402,10 @@ version = "0.1.0"
 [[package]]
 name = "day03"
 version = "0.1.0"
+dependencies = [
+ "arrayvec",
+ "rayon",
+]
 
 [[package]]
 name = "day04"
