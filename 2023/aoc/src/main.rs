@@ -4,7 +4,7 @@ use clap::Parser;
 use copypasta::{ClipboardContext, ClipboardProvider};
 
 type Solver = fn(&str) -> (String, String);
-const DAYS: [Solver; 10] = [
+const DAYS: [Solver; 25] = [
     day01::solve,
     day02::solve,
     day03::solve,
@@ -15,6 +15,21 @@ const DAYS: [Solver; 10] = [
     day08::solve,
     day09::solve,
     day10::solve,
+    day11::solve,
+    day12::solve,
+    day13::solve,
+    day14::solve,
+    day15::solve,
+    day16::solve,
+    day17::solve,
+    day18::solve,
+    day19::solve,
+    day20::solve,
+    day21::solve,
+    day22::solve,
+    day23::solve,
+    day24::solve,
+    day25::solve,
 ];
 
 #[derive(Parser, Debug)]
@@ -43,15 +58,76 @@ struct Args {
     all: bool,
 }
 
-fn read_input_for(day: u32) -> Result<String> {
-    let file = format!("{day:02}/input");
-    let f = std::fs::read(&file)
-        .with_context(|| format!("failed to read input from {file}"))?;
-    let out = String::from_utf8(f).context("example is not valid UTF-8")?;
-    Ok(out)
+async fn ensure_input_exists(day: u32) -> Result<()> {
+    let mut path = std::path::PathBuf::from(format!("{day:02}"));
+
+    // Check for a pre-existing input file
+    path.push("input");
+    if path.exists() {
+        return Ok(());
+    }
+
+    let t = chrono::Local::now();
+    if day > t.day() {
+        bail!("cannot request inputs from the future");
+    }
+
+    let jar = {
+        let mut cookie_path = dirs::home_dir()
+            .ok_or_else(|| anyhow!("could not get home directory"))?;
+        cookie_path.push(".aoc-cookie");
+        let cookie =
+            std::fs::read_to_string(&cookie_path).with_context(|| {
+                format!("failed to read cookie from {cookie_path:?}")
+            })?;
+
+        let jar = reqwest::cookie::Jar::default();
+        let url = "https://adventofcode.com".parse::<url::Url>()?;
+        jar.add_cookie_str(&format!("session={cookie}"), &url);
+        jar
+    };
+
+    let year = t.year();
+    let client = reqwest::ClientBuilder::new()
+        .user_agent(
+            "github.com/mkeeter/advent-of-code/blob/master/2023/aoc by \
+             matt.j.keeter@gmail.com",
+        )
+        .cookie_provider(jar.into())
+        .build()
+        .context("failed to build client")?;
+    let r = client
+        .get(format!("https://adventofcode.com/{year}/day/{day}/input"))
+        .build()
+        .context("failed to build request")?;
+    let out = client
+        .execute(r)
+        .await
+        .context("failed to execute request")?;
+
+    let text = out.text().await.context("failed to get text")?;
+
+    // Check for certain well-known replies
+    if text.contains("Please don't repeatedly request this endpoint") {
+        bail!("download failed due to rate-limiting on the server");
+    } else if text.contains("Puzzle inputs differ by user") {
+        bail!("login failed; perhaps your cookie is stale?");
+    }
+
+    std::fs::write(&path, text)
+        .with_context(|| "failed to write output to {path}")?;
+
+    Ok(())
 }
 
-fn main() -> Result<()> {
+fn read_input_for(day: u32) -> Result<String> {
+    let file = format!("{day:02}/input");
+    std::fs::read_to_string(&file)
+        .with_context(|| format!("failed to read input from {file}"))
+}
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<()> {
     let args = Args::parse();
 
     if args.bench && cfg!(debug_assertions) {
@@ -71,6 +147,9 @@ fn main() -> Result<()> {
             t.day()
         }
     };
+
+    // Download the input, if necessary
+    ensure_input_exists(day).await?;
 
     if args.bench {
         use criterion::Criterion;

@@ -1,6 +1,5 @@
 [workspace]
-members = ["*"]
-exclude = ["target", "template"]
+members = ["aoc"]
 resolver = "2"
 
 [workspace.dependencies]
