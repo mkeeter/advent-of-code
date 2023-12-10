@@ -1,12 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-fn part1(
-    numbers: &BTreeMap<(i64, i64), u32>,
-    symbols: &BTreeMap<(i64, i64), char>,
-) -> u32 {
+fn part1(numbers: &[((i64, i64), u32)], symbols: &[((i64, i64), char)]) -> u32 {
     // Find the 3x3 neighborhood around each symbol
     let mut ns = BTreeSet::new();
-    for (x, y) in symbols.keys() {
+    for ((x, y), _) in symbols {
         for dx in [-1, 0, 1] {
             for dy in [-1, 0, 1] {
                 ns.insert((x + dx, y + dy));
@@ -23,10 +20,7 @@ fn part1(
     out
 }
 
-fn part2(
-    numbers: &BTreeMap<(i64, i64), u32>,
-    symbols: &BTreeMap<(i64, i64), char>,
-) -> u32 {
+fn part2(numbers: &[((i64, i64), u32)], gears: &[(i64, i64)]) -> u32 {
     // Build a map from (x, y) -> index of number in `nums`
     let mut numspan = BTreeMap::new();
     let mut nums = vec![];
@@ -38,7 +32,7 @@ fn part2(
     }
 
     let mut out = 0;
-    for ((x, y), _) in symbols.iter().filter(|(_, c)| **c == '*') {
+    for (x, y) in gears {
         // Find numbers (by index) which are neighbors of this gear
         let mut ns = BTreeSet::new();
         for dx in [-1, 0, 1] {
@@ -58,8 +52,9 @@ fn part2(
 pub fn solve(s: &str) -> (String, String) {
     let lines = s.lines().collect::<Vec<_>>();
 
-    let mut numbers = BTreeMap::new();
-    let mut symbols = BTreeMap::new();
+    let mut numbers = Vec::new();
+    let mut symbols = Vec::new();
+    let mut gears = Vec::new();
     for (y, line) in lines.iter().enumerate() {
         let mut number = None;
         for (x, c) in line.chars().enumerate() {
@@ -68,7 +63,10 @@ pub fn solve(s: &str) -> (String, String) {
                 number = Some((pos, prev * 10 + d));
             } else {
                 if c != '.' {
-                    symbols.insert((x as i64, y as i64), c);
+                    symbols.push(((x as i64, y as i64), c));
+                }
+                if c == '*' {
+                    gears.push((x as i64, y as i64));
                 }
                 numbers.extend(number.take());
             }
@@ -78,6 +76,6 @@ pub fn solve(s: &str) -> (String, String) {
 
     (
         part1(&numbers, &symbols).to_string(),
-        part2(&numbers, &symbols).to_string(),
+        part2(&numbers, &gears).to_string(),
     )
 }
