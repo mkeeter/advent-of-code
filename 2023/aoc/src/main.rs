@@ -4,7 +4,7 @@ use clap::Parser;
 use copypasta::{ClipboardContext, ClipboardProvider};
 
 type Solver = fn(&str) -> (String, String);
-const DAYS: [Solver; 9] = [
+const DAYS: [Solver; 10] = [
     day01::solve,
     day02::solve,
     day03::solve,
@@ -14,6 +14,7 @@ const DAYS: [Solver; 9] = [
     day07::solve,
     day08::solve,
     day09::solve,
+    day10::solve,
 ];
 
 #[derive(Parser, Debug)]

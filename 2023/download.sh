@@ -12,7 +12,7 @@ then
     echo " ✨ Making directory for day $DAY"
     mkdir -p "$DAY/src"
     sed "s/template/day$DAY/g" template/Cargo.toml > "$DAY/Cargo.toml"
-    cp template/src/main.rs "$DAY/src/"
+    cp template/src/lib.rs "$DAY/src/"
     cargo check -p "day$DAY" &> /dev/null
     git add "$DAY" Cargo.lock
 fi
