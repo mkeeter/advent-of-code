@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-fn neighbors(c: char) -> [(i32, i32); 2] {
+fn neighbors(c: char) -> [(i64, i64); 2] {
     match c {
         '|' => [(0, -1), (0, 1)],
         '-' => [(-1, 0), (1, 0)],
@@ -17,7 +17,7 @@ pub fn solve(s: &str) -> (String, String) {
     for (y, line) in s.lines().enumerate() {
         for (x, c) in line.chars().enumerate() {
             if c != '.' {
-                map.insert((x as i32, y as i32), c);
+                map.insert((x as i64, y as i64), c);
             }
         }
     }
@@ -44,37 +44,34 @@ pub fn solve(s: &str) -> (String, String) {
     map.insert(start, c);
 
     let mut prev = [start, start];
-    let mut next = neighbors(c).map(|(dx, dy)| (start.0 + dx, start.1 + dy));
+    let mut pos = neighbors(c).map(|(dx, dy)| (start.0 + dx, start.1 + dy));
 
     let mut path = BTreeSet::new();
     path.insert(start);
 
     let mut steps = 1;
-    while next[0] != next[1] {
-        path.extend(next.iter().cloned());
-        let next_prev = next;
-        for (prev, pos) in prev.iter().zip(next.iter_mut()) {
-            for (dx, dy) in neighbors(*map.get(pos).unwrap()) {
-                let x = pos.0 + dx;
-                let y = pos.1 + dy;
-                if (x, y) != *prev {
-                    *pos = (x, y);
-                    break;
-                }
-            }
+    while pos[0] != pos[1] {
+        path.extend(pos.iter().cloned());
+        let next_prev = pos;
+        for (prev, pos) in prev.iter().zip(pos.iter_mut()) {
+            *pos = neighbors(*map.get(pos).unwrap())
+                .map(|(dx, dy)| (pos.0 + dx, pos.1 + dy))
+                .into_iter()
+                .find(|p| p != prev)
+                .unwrap();
         }
         prev = next_prev;
         steps += 1;
     }
-    path.extend(next.iter().cloned());
+    path.extend(pos.iter().cloned());
 
     // Remove non-path tiles from the map
     map.retain(|k, _| path.contains(k));
 
-    let mut xmin = i32::MAX;
-    let mut xmax = i32::MIN;
-    let mut ymin = i32::MAX;
-    let mut ymax = i32::MIN;
+    let mut xmin = i64::MAX;
+    let mut xmax = i64::MIN;
+    let mut ymin = i64::MAX;
+    let mut ymax = i64::MIN;
     for (x, y) in map.keys() {
         xmin = xmin.min(*x);
         xmax = xmax.max(*x);
