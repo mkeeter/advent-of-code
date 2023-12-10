@@ -78,7 +78,7 @@ fn main() -> Result<()> {
         } else {
             vec![day]
         };
-        let mut c = Criterion::default();
+        let mut c = Criterion::default().with_output_color(true);
         for day in days {
             let input = read_input_for(day)?;
             c.bench_function(&format!("day{day:02}"), |b| {
