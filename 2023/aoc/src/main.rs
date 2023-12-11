@@ -154,7 +154,12 @@ async fn main() -> Result<()> {
     if args.bench {
         use criterion::Criterion;
         let days = if args.all {
-            (0..DAYS.len()).map(|i| i as u32 + 1).collect()
+            let t = chrono::Local::now();
+            if t.year() > 2023 {
+                (0..DAYS.len()).map(|i| i as u32 + 1).collect()
+            } else {
+                (1..=t.day()).collect()
+            }
         } else {
             vec![day]
         };
