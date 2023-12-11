@@ -39,6 +39,6 @@ pub fn solve(s: &str) -> (String, String) {
     };
 
     let p1 = run(1);
-    let p2 = run(1000000 - 1);
+    let p2 = run(1_000_000 - 1);
     (p1.to_string(), p2.to_string())
 }
