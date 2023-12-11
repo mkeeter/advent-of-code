@@ -30,10 +30,8 @@ pub fn solve(s: &str) -> (String, String) {
         let mut out = 0;
         for (i, (ax, ay)) in galaxies.iter().cloned().enumerate() {
             for (bx, by) in galaxies.iter().cloned().skip(i + 1) {
-                let dx: usize =
-                    bx.abs_diff(ax) + col_sum[ax].abs_diff(col_sum[bx]);
-                let dy: usize =
-                    by.abs_diff(ay) + row_sum[ay].abs_diff(row_sum[by]);
+                let dx = bx.abs_diff(ax) + col_sum[ax].abs_diff(col_sum[bx]);
+                let dy = by.abs_diff(ay) + row_sum[ay].abs_diff(row_sum[by]);
                 out += dx + dy;
             }
         }
