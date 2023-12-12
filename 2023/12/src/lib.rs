@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use rayon::prelude::*;
 
 /// Checks a single row
 ///
@@ -56,69 +56,6 @@ fn count(row: &mut [u8], target: &[usize]) -> usize {
     }
 }
 
-/*
-#[derive(Copy, Clone)]
-enum Tile {
-    Spring,
-    Unknown,
-    // Empty tiles are implicit between chunks
-}
-
-impl std::fmt::Display for Tile {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        let c = match self {
-            Self::Spring => '#',
-            Self::Unknown => '?',
-        };
-        write!(f, "{c}")
-    }
-}
-
-struct Chunk(Vec<Tile>);
-impl std::fmt::Display for Chunk {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        for c in &self.0 {
-            write!(f, "{c}")?;
-        }
-        Ok(())
-    }
-}
-
-struct Row(Vec<Chunk>);
-impl std::fmt::Display for Row {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        for (i, c) in self.0.iter().enumerate() {
-            if i > 0 {
-                write!(f, "..")?;
-            }
-            write!(f, "{c}")?;
-        }
-        Ok(())
-    }
-}
-
-fn make_chunks(row: &str, target: &[usize]) {
-    let chunks = row
-        .split('.')
-        .filter(|c| !c.is_empty())
-        .collect::<VecDeque<&str>>();
-
-    // Peel off unambiguous chunks from the front
-    if chunks.len() == target.len() {
-        // we're done, perfect match
-    } else if chunks.len() > target.len() {
-        // too many chunks, I hope some of them are all-ambiguous
-        for c in chunks {
-            // phew
-            if c.chars().all(|c| c == '?') {}
-        }
-    }
-
-    chunks[0].contains('?');
-    todo!()
-}
-*/
-
 pub fn solve(s: &str) -> (String, String) {
     let mut rows: Vec<Vec<u8>> = vec![];
     let mut runs: Vec<Vec<usize>> = vec![];
@@ -157,12 +94,19 @@ pub fn solve(s: &str) -> (String, String) {
         .map(|v| std::iter::repeat(v).take(5).flatten().collect())
         .collect();
 
-    let mut out = 0;
-    for (row, run) in rows.iter_mut().zip(runs.iter()) {
-        let n = count(row, run);
-        println!("{n}");
-        out += n;
-    }
+    let counter = std::sync::atomic::AtomicUsize::new(0);
+    let total = rows.len();
+    let out = rows
+        .iter_mut()
+        .zip(runs.iter())
+        .par_bridge()
+        .map(|(row, run)| {
+            let n = count(row, run);
+            let c = counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            println!("{} / {}", c + 1, total);
+            n
+        })
+        .sum::<usize>();
     let p2 = out;
 
     (p1.to_string(), p2.to_string())
