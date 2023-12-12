@@ -62,14 +62,21 @@ pub fn solve(s: &str) -> (String, String) {
     for line in s.split('\n').filter(|line| !line.is_empty()) {
         let mut iter = line.split_ascii_whitespace();
         let row = iter.next().unwrap();
-        rows.push(
-            row.chars()
-                .map(|c| {
-                    assert!(c.is_ascii());
-                    c as u8
-                })
-                .collect(),
-        );
+        let mut out = vec![];
+        let mut empty = false;
+        for c in row.chars() {
+            assert!(c.is_ascii());
+            if c == '.' {
+                if !empty {
+                    out.push(c as u8);
+                    empty = true;
+                }
+            } else {
+                out.push(c as u8);
+                empty = false;
+            }
+        }
+        rows.push(out);
         let rs = iter.next().unwrap();
         runs.push(rs.split(',').map(|s| s.parse::<usize>().unwrap()).collect());
     }
