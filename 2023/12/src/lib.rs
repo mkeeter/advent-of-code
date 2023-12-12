@@ -40,6 +40,25 @@ fn check<'a>(
         return Ok(false);
     }
 
+    let min_total = row.iter().filter(|c| **c == b'#').count();
+    if min_total > target.iter().sum() {
+        return Ok(false);
+    }
+
+    let mut min_runs = 0;
+    let mut running = false;
+    for c in &*row {
+        if *c == b'.' {
+            running = false;
+        } else if *c == b'#' && !running {
+            min_runs += 1;
+            running = true;
+        }
+    }
+    if min_runs > target.len() {
+        return Ok(false);
+    }
+
     while i < row.len() {
         if run > 0 && run > target[0] {
             return Ok(false);
@@ -70,6 +89,89 @@ fn check<'a>(
     Ok(target.is_empty() || (target.len() == 1 && run == target[0]))
 }
 
+fn recurse(
+    mut row: &mut [u8],
+    mut target: &mut [usize],
+    indent: usize,
+) -> usize {
+    /*
+    for _ in 0..indent * 2 {
+        print!(" ");
+    }
+    println!("{} {target:?}", std::str::from_utf8(row).unwrap());
+    */
+    let leading_size = loop {
+        // Trim the end of the row
+        while row.first() == Some(&b'.') {
+            row = &mut row[1..];
+        }
+        // Trim all '#' from the end of the row
+        let mut leading_size = 0;
+        while row.first() == Some(&b'#') {
+            leading_size += 1;
+            row = &mut row[1..];
+        }
+        // We've found either a gap or an ambiguity, check the first target
+        if row.first() == Some(&b'.') || (row.is_empty() && !target.is_empty())
+        {
+            if leading_size != target.first().cloned().unwrap_or(0) {
+                return 0;
+            }
+            target = &mut target[1..];
+        } else {
+            break leading_size;
+        }
+    };
+    /*
+    for _ in 0..indent * 2 {
+        print!(" ");
+    }
+    println!(
+        "{} {target:?} {leading_size}",
+        std::str::from_utf8(row).unwrap()
+    );
+    */
+
+    if target.is_empty() {
+        if leading_size > 0 || row.iter().any(|c| *c == b'#') {
+            return 0;
+        } else {
+            return 1;
+        }
+    }
+
+    if row.is_empty() {
+        assert!(!target.is_empty());
+        return 0;
+    }
+    assert_eq!(row[0], b'?');
+
+    if target[0] == leading_size {
+        // Unambiguous case: if the run before the ambiguous `?` was exactly our
+        // target length, then we have to replace it with '.', which we can do
+        // by trimming the block.
+        recurse(&mut row[1..], &mut target[1..], indent + 1)
+    } else if leading_size > target[0] {
+        0
+    } else if leading_size == 0 {
+        row[0] = b'#';
+        let score_a = recurse(row, target, indent + 1);
+        row[0] = b'.';
+        let score_b = recurse(row, target, indent + 1);
+        row[0] = b'?';
+        score_a + score_b
+    } else {
+        // We have some trailing values, but not enough to reach the target
+        // size.  We must put a '#' here and recurse.
+        row[0] = b'#';
+        target[0] -= leading_size;
+        let score = recurse(row, target, indent + 1);
+        row[0] = b'?';
+        target[0] += leading_size;
+        score
+    }
+}
+
 fn count(row: &mut [u8], target: &[usize]) -> usize {
     match check(row, target) {
         Ok(true) => 1,
@@ -83,6 +185,45 @@ fn count(row: &mut [u8], target: &[usize]) -> usize {
             row[i] = b'?';
             score_a + score_b
         }
+    }
+}
+
+struct Chunk(Vec<u8>);
+
+impl std::fmt::Display for Chunk {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        for c in &self.0 {
+            write!(f, "{}", *c as char)?;
+        }
+        Ok(())
+    }
+}
+
+impl Chunk {
+    fn can_split(&self) -> bool {
+        for (i, &c) in self.0.iter().enumerate() {
+            if c == b'?' && (i > 0 && i < self.0.len() - 1) {
+                return true;
+            }
+        }
+        false
+    }
+    fn split_point(&self) -> Option<usize> {
+        let midpoint = self.0.len() / 2;
+        self.0
+            .iter()
+            .enumerate()
+            .filter(|(_i, k)| **k == b'?')
+            .max_by_key(|(i, _k)| i.abs_diff(midpoint))
+            .map(|(i, _k)| i)
+    }
+
+    fn split(&self) -> (Self, Self) {
+        let i = self.split_point().unwrap();
+        (
+            Chunk(self.0[0..i].to_vec()),
+            Chunk(self.0[i + 1..].to_vec()),
+        )
     }
 }
 
@@ -111,8 +252,10 @@ pub fn solve(s: &str) -> (String, String) {
         runs.push(rs.split(',').map(|s| s.parse::<usize>().unwrap()).collect());
     }
     let mut out = 0;
-    for (row, run) in rows.iter_mut().zip(runs.iter()) {
-        out += count(row, run);
+    for (row, run) in rows.iter_mut().zip(runs.iter_mut()) {
+        let r = recurse(row, run, 0);
+        println!("{r}");
+        out += r;
     }
     let p1 = out;
 
@@ -138,9 +281,11 @@ pub fn solve(s: &str) -> (String, String) {
         .zip(runs.iter())
         .par_bridge()
         .map(|(row, run)| {
-            let n = count(row, run);
+            let start = std::time::Instant::now();
             let c = counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            println!("{} / {}", c + 1, total);
+            println!("{c}: {} {run:?}", std::str::from_utf8(row).unwrap());
+            let n = count(row, run);
+            println!("{c} / {total} done in {:?}", start.elapsed());
             n
         })
         .sum::<usize>();
