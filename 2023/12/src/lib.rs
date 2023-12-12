@@ -1,12 +1,33 @@
 use rayon::prelude::*;
+use std::collections::BTreeMap;
 
-fn recurse(mut row: &mut [u8], mut target: &mut [usize]) -> usize {
-    /*
-    for _ in 0..indent * 2 {
-        print!(" ");
+fn recurse(
+    row: &mut [u8],
+    target: &mut [usize],
+    seen: &mut BTreeMap<Vec<u8>, usize>,
+) -> usize {
+    let mut key = Vec::with_capacity(row.len() + target.len());
+    key.extend(row.iter().cloned());
+    key.extend(target.iter().map(|v| {
+        let v: u8 = (*v).try_into().unwrap();
+        v
+    }));
+    if let Some(v) = seen.get(&key) {
+        return *v;
     }
-    println!("{} {target:?}", std::str::from_utf8(row).unwrap());
-    */
+    let r = recurse_inner(row, target, seen);
+    seen.insert(key, r);
+    r
+}
+
+fn recurse_inner(
+    mut row: &mut [u8],
+    mut target: &mut [usize],
+    seen: &mut BTreeMap<Vec<u8>, usize>,
+) -> usize {
+    if row.len() < target.len() {
+        return 0;
+    }
     let leading_size = loop {
         // Trim the end of the row
         while row.first() == Some(&b'.') {
@@ -18,10 +39,11 @@ fn recurse(mut row: &mut [u8], mut target: &mut [usize]) -> usize {
             leading_size += 1;
             row = &mut row[1..];
         }
-        // We've found either a gap or an ambiguity, check the first target
-        if row.first() == Some(&b'.') || (row.is_empty() && !target.is_empty())
-        {
-            if leading_size != target.first().cloned().unwrap_or(0) {
+        // We've found a gap (or the end of the line)
+        if matches!(row.first(), Some(&b'.') | None) {
+            if target.is_empty() {
+                return (leading_size == 0) as usize;
+            } else if leading_size != target[0] {
                 return 0;
             }
             target = &mut target[1..];
@@ -29,42 +51,26 @@ fn recurse(mut row: &mut [u8], mut target: &mut [usize]) -> usize {
             break leading_size;
         }
     };
-    /*
-    for _ in 0..indent * 2 {
-        print!(" ");
-    }
-    println!(
-        "{} {target:?} {leading_size}",
-        std::str::from_utf8(row).unwrap()
-    );
-    */
+    assert!(row.is_empty() || row[0] == b'?');
 
     if target.is_empty() {
-        if leading_size > 0 || row.iter().any(|c| *c == b'#') {
-            return 0;
-        } else {
-            return 1;
-        }
-    }
-
-    if row.is_empty() {
-        assert!(!target.is_empty());
+        // If the target is empty, then we better not have any springs
+        ((leading_size == 0) && row.iter().all(|c| *c != b'#')) as usize
+    } else if row.is_empty() {
+        // The target is not empty, so we have failed
         return 0;
-    }
-    assert_eq!(row[0], b'?');
-
-    if target[0] == leading_size {
+    } else if target[0] == leading_size {
         // Unambiguous case: if the run before the ambiguous `?` was exactly our
         // target length, then we have to replace it with '.', which we can do
         // by trimming the block.
-        recurse(&mut row[1..], &mut target[1..])
+        recurse(&mut row[1..], &mut target[1..], seen)
     } else if leading_size > target[0] {
         0
     } else if leading_size == 0 {
+        // Ambiguous case: we could either recurse with '.' or '#'
         row[0] = b'#';
-        let score_a = recurse(row, target);
-        row[0] = b'.';
-        let score_b = recurse(row, target);
+        let score_a = recurse(row, target, seen);
+        let score_b = recurse(&mut row[1..], target, seen);
         row[0] = b'?';
         score_a + score_b
     } else {
@@ -72,7 +78,7 @@ fn recurse(mut row: &mut [u8], mut target: &mut [usize]) -> usize {
         // size.  We must put a '#' here and recurse.
         row[0] = b'#';
         target[0] -= leading_size;
-        let score = recurse(row, target);
+        let score = recurse(row, target, seen);
         row[0] = b'?';
         target[0] += leading_size;
         score
@@ -105,9 +111,7 @@ pub fn solve(s: &str) -> (String, String) {
     }
     let mut out = 0;
     for (row, run) in rows.iter_mut().zip(runs.iter_mut()) {
-        let r = recurse(row, run);
-        println!("{r}");
-        out += r;
+        out += recurse(row, run, &mut BTreeMap::new());
     }
     let p1 = out;
 
@@ -126,19 +130,11 @@ pub fn solve(s: &str) -> (String, String) {
         .map(|v| std::iter::repeat(v).take(5).flatten().collect())
         .collect();
 
-    let counter = std::sync::atomic::AtomicUsize::new(0);
-    let total = rows.len();
     let out = rows
         .iter_mut()
         .zip(runs.iter_mut())
         .par_bridge()
-        .map(|(row, run)| {
-            let start = std::time::Instant::now();
-            let n = recurse(row, run);
-            let c = counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            println!("{c} / {total} done in {:?}", start.elapsed());
-            n
-        })
+        .map(|(row, run)| recurse(row, run, &mut BTreeMap::new()))
         .sum::<usize>();
     let p2 = out;
 
