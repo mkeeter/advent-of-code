@@ -10,6 +10,36 @@ fn check<'a>(
 ) -> Result<bool, (&'a mut [u8], &'a [usize], usize)> {
     let mut i = 0; // index into row
     let mut run = 0;
+
+    // Early exit: if the target is empty but the row still contains tiles
+    if target.is_empty() {
+        return Ok(!row.contains(&b'#'));
+    }
+    // Early exit: if the row is empty (and the target is non-empty, above)
+    if row.is_empty() {
+        return Ok(false);
+    }
+
+    // Semi-early exit: if the max run is larger than any of our target runs
+    let mut max_run = 0;
+    let mut start = None;
+    for (i, c) in row.iter().enumerate() {
+        if *c == b'#' {
+            if start.is_none() {
+                start = Some(i);
+            }
+        } else if let Some(s) = start {
+            let run = i - s;
+            if run > max_run {
+                max_run = run;
+            }
+            start = None;
+        }
+    }
+    if max_run > *target.iter().max().unwrap() {
+        return Ok(false);
+    }
+
     while i < row.len() {
         if run > 0 && run > target[0] {
             return Ok(false);
