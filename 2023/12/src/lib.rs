@@ -134,9 +134,8 @@ pub fn solve(s: &str) -> (String, String) {
         .par_bridge()
         .map(|(row, run)| {
             let start = std::time::Instant::now();
-            let c = counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            println!("{c}: {} {run:?}", std::str::from_utf8(row).unwrap());
             let n = recurse(row, run);
+            let c = counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             println!("{c} / {total} done in {:?}", start.elapsed());
             n
         })
