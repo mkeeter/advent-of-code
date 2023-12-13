@@ -35,29 +35,29 @@ fn find_mirror(map: &Map) -> Option<usize> {
 }
 
 fn find_smudged_mirror(map: &Map) -> Option<usize> {
-    let mut valid = vec![0; map[0].len() - 1];
-    for row in map {
+    // Use a 32-bit word as a simple set, with one bit per row
+    assert!(map.len() < 32);
+    let mut valid = vec![0u32; map[0].len() - 1];
+    for (r, row) in map.iter().enumerate() {
         for (i, v) in valid.iter_mut().enumerate() {
-            if is_symmetric_about(row, i) {
-                *v += 1;
+            if !is_symmetric_about(row, i) {
+                *v |= 1 << r;
             }
         }
     }
-    for i in valid
+    for (i, r) in valid
         .iter()
         .enumerate()
-        .filter(|(_i, v)| **v == map.len() - 1)
-        .map(|(i, _v)| i)
+        .filter(|(_i, v)| v.count_ones() == 1)
+        .map(|(i, v)| (i, v.trailing_zeros() as usize))
     {
-        for row in map.iter().filter(|row| !is_symmetric_about(row, i)) {
-            let mut row = row.to_vec();
-            for j in 0..row.len() {
-                row[j] = !row[j];
-                if is_symmetric_about(&row, i) {
-                    return Some(i + 1);
-                }
-                row[j] = !row[j];
+        let mut row = map[r].to_vec();
+        for j in 0..row.len() {
+            row[j] = !row[j];
+            if is_symmetric_about(&row, i) {
+                return Some(i + 1);
             }
+            row[j] = !row[j];
         }
     }
     None
