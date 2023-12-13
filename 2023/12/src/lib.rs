@@ -30,7 +30,7 @@ struct Row<'a, T> {
     data: &'a [T],
 }
 
-impl<'a, T: Copy + Clone> Row<'a, T> {
+impl<'a, T: Copy + Clone + std::fmt::Debug> Row<'a, T> {
     fn new(data: &'a [T]) -> Self {
         Self { first: None, data }
     }
@@ -120,27 +120,36 @@ fn recurse_inner(
     if target.is_empty() {
         // If the target is empty, then we better not have any springs
         ((leading_size == 0) && row.iter().all(|c| *c != b'#')) as usize
-    } else if row.is_empty() || leading_size > *target.first().unwrap() {
+    } else if row.is_empty() {
         // The target is not empty, or we already have too many tiles
-        return 0;
-    } else if *target.first().unwrap() == leading_size {
-        // Unambiguous case: if the run before the ambiguous `?` was exactly our
-        // target length, then we have to replace it with '.', which we can do
-        // by trimming the block.
-        recurse(row.skip_first(), target.skip_first(), seen)
+        0
     } else if leading_size == 0 {
         // Ambiguous case: we could either recurse with '.' or '#'
         let score_a = recurse(row.swap_first(b'#'), target, seen);
         let score_b = recurse(row.skip_first(), target, seen);
         score_a + score_b
     } else {
-        // We have some trailing values, but not enough to reach the target
-        // size.  We must put a '#' here and recurse.
-        recurse(
-            row.swap_first(b'#'),
-            target.map_first(|t| t - leading_size),
-            seen,
-        )
+        match target.first().unwrap().cmp(&leading_size) {
+            std::cmp::Ordering::Equal => {
+                // Unambiguous case: if the run before the ambiguous `?` was
+                // exactly our target length, then we have to replace it with
+                // '.', which we can do by trimming the block.
+                recurse(row.skip_first(), target.skip_first(), seen)
+            }
+            std::cmp::Ordering::Less => {
+                // Our initial run of tiles is too long already
+                0
+            }
+            std::cmp::Ordering::Greater => {
+                // We have some trailing values, but not enough to reach the
+                // target size.  We must put a '#' here and recurse.
+                recurse(
+                    row.swap_first(b'#'),
+                    target.map_first(|t| t - leading_size),
+                    seen,
+                )
+            }
+        }
     }
 }
 
