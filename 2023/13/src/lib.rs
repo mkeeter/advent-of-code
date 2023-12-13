@@ -64,21 +64,22 @@ fn find_smudged_mirror(map: &Map) -> Option<usize> {
 }
 
 pub fn solve(s: &str) -> (String, String) {
-    let mut maps: Vec<Map> = vec![vec![]];
+    let mut hmaps: Vec<Map> = vec![vec![]];
     for line in s.lines() {
         if line.is_empty() {
-            maps.push(vec![]);
+            hmaps.push(vec![]);
         } else {
             let row = line.chars().map(|c| c == '#').collect();
-            maps.last_mut().unwrap().push(row);
+            hmaps.last_mut().unwrap().push(row);
         }
     }
+    let vmaps: Vec<Map> = hmaps.iter().map(transpose).collect();
 
     let mut out = 0;
-    for map in &maps {
-        if let Some(h) = find_mirror(map) {
+    for (hmap, vmap) in hmaps.iter().zip(vmaps.iter()) {
+        if let Some(h) = find_mirror(hmap) {
             out += h;
-        } else if let Some(v) = find_mirror(&transpose(map)) {
+        } else if let Some(v) = find_mirror(vmap) {
             out += v * 100;
         } else {
             panic!("no mirror found");
@@ -87,10 +88,10 @@ pub fn solve(s: &str) -> (String, String) {
     let p1 = out;
 
     let mut out = 0;
-    for map in &maps {
-        if let Some(h) = find_smudged_mirror(map) {
+    for (hmap, vmap) in hmaps.iter().zip(vmaps.iter()) {
+        if let Some(h) = find_smudged_mirror(hmap) {
             out += h;
-        } else if let Some(v) = find_smudged_mirror(&transpose(map)) {
+        } else if let Some(v) = find_smudged_mirror(vmap) {
             out += v * 100;
         } else {
             panic!("no smudge found");
