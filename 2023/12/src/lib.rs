@@ -30,20 +30,24 @@ struct Row<'a, T> {
     data: &'a [T],
 }
 
-impl<'a, T: Clone> Row<'a, T> {
+impl<'a, T: Copy + Clone> Row<'a, T> {
     fn new(data: &'a [T]) -> Self {
         Self { first: None, data }
     }
+
     fn len(&self) -> usize {
         self.data.len() + self.first.is_some() as usize
     }
+
     fn is_empty(&self) -> bool {
         self.first.is_none() && self.data.is_empty()
     }
+
     fn first(&self) -> Option<&T> {
         self.first.as_ref().or_else(|| self.data.first())
     }
 
+    #[must_use]
     fn skip_first(&self) -> Self {
         Self {
             first: None,
@@ -54,26 +58,25 @@ impl<'a, T: Clone> Row<'a, T> {
             },
         }
     }
-    fn pop_first(&mut self) -> Option<T> {
-        std::mem::take(&mut self.first).or_else(|| {
-            if let Some(out) = self.data.get(0).cloned() {
-                self.data = &self.data[1..];
-                Some(out)
-            } else {
-                None
+
+    #[must_use]
+    fn map_first<F: FnMut(T) -> T>(&self, mut f: F) -> Self {
+        if let Some(t) = &self.first {
+            Self {
+                first: Some(f(*t)),
+                data: self.data,
             }
-        })
+        } else {
+            Self {
+                first: Some(f(self.data[0])),
+                data: &self.data[1..],
+            }
+        }
     }
 
-    fn push_first(&mut self, t: T) {
-        assert!(self.first.is_none());
-        self.first = Some(t);
-    }
-
-    fn swap_first(&mut self, t: T) -> T {
-        let out = self.pop_first().unwrap();
-        self.push_first(t);
-        out
+    #[must_use]
+    fn swap_first(&self, t: T) -> Self {
+        self.map_first(|_| t)
     }
 
     fn iter(&self) -> impl Iterator<Item = &T> {
@@ -127,17 +130,17 @@ fn recurse_inner(
         recurse(row.skip_first(), target.skip_first(), seen)
     } else if leading_size == 0 {
         // Ambiguous case: we could either recurse with '.' or '#'
-        row.swap_first(b'#');
-        let score_a = recurse(row, target, seen);
+        let score_a = recurse(row.swap_first(b'#'), target, seen);
         let score_b = recurse(row.skip_first(), target, seen);
         score_a + score_b
     } else {
         // We have some trailing values, but not enough to reach the target
         // size.  We must put a '#' here and recurse.
-        let t = target.pop_first().unwrap();
-        target.push_first(t - leading_size);
-        row.swap_first(b'#');
-        recurse(row, target, seen)
+        recurse(
+            row.swap_first(b'#'),
+            target.map_first(|t| t - leading_size),
+            seen,
+        )
     }
 }
 
