@@ -10,7 +10,7 @@ Solutions to [Advent of Code](https://adventofcode.com) for all years (2015-2022
 | [2020](https://adventofcode.com/2020) | 50      | Rust                | ✓            |
 | [2021](https://adventofcode.com/2021) | 50      | Rust                | ✓            |
 | [2022](https://adventofcode.com/2022) | 50      | Rust                | ✓            |
-| [2023](https://adventofcode.com/2023) | 24      | Rust                | ✓            |
+| [2023](https://adventofcode.com/2023) | 28      | Rust                | ✓            |
 
 **Standardized** code reads an input file from `stdin` and prints
 ```
