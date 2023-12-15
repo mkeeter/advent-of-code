@@ -1,10 +1,6 @@
 fn hash(s: &str) -> u8 {
-    let mut hash = 0u8;
-    for c in s.bytes() {
-        hash = hash.wrapping_add(c);
-        hash = hash.wrapping_mul(17);
-    }
-    hash
+    s.bytes()
+        .fold(0u8, |acc, c| acc.wrapping_add(c).wrapping_mul(17))
 }
 
 pub fn solve(s: &str) -> (String, String) {
