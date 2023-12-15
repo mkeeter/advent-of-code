@@ -26,6 +26,21 @@ trait Grid {
 struct Base {
     data: Vec<u8>,
     width: usize,
+    count: usize,
+}
+
+impl Base {
+    fn key(&self) -> Vec<u16> {
+        let mut out = Vec::with_capacity(self.count);
+        for (i, c) in self.data.iter().enumerate() {
+            if *c == b'O' {
+                let x: u8 = (i % self.width).try_into().unwrap();
+                let y: u8 = (i / self.width).try_into().unwrap();
+                out.push(u16::from_le_bytes([x, y]));
+            }
+        }
+        out
+    }
 }
 
 impl std::fmt::Display for Base {
@@ -137,7 +152,7 @@ fn part2(mut grid: Base) -> usize {
         roll(&mut FlipNorthSouth(&mut grid)); // South
         roll(&mut FlipNorthSouth(&mut FlipNorthWest(&mut grid))); // East
         c += 1;
-        match seen.entry(grid.clone()) {
+        match seen.entry(grid.key()) {
             Entry::Vacant(e) => {
                 e.insert(c);
             }
@@ -162,7 +177,8 @@ pub fn solve(s: &str) -> (String, String) {
         data.extend(line.bytes());
     }
 
-    let grid = Base { data, width };
+    let count = data.iter().filter(|c| **c == b'O').count();
+    let grid = Base { data, width, count };
 
     let p1 = part1(grid.clone());
     let p2 = part2(grid);
