@@ -8,7 +8,6 @@ anyhow.workspace = true
 
 chrono = "0.4"
 clap = { version = "4.4", features = ["derive"] }
-copypasta = "0.10.0"
 criterion = "0.5.1"
 dirs = "5.0.1"
 reqwest = { version = "0.11", features = ["cookies"] }
@@ -40,3 +39,6 @@ day22.path = "../22"
 day23.path = "../23"
 day24.path = "../24"
 day25.path = "../25"
+
+[target.'cfg(not(target_os = "illumos"))'.dependencies]
+copypasta = "0.10.0"

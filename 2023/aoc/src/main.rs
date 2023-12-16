@@ -1,6 +1,8 @@
 use anyhow::{anyhow, bail, Context, Result};
 use chrono::Datelike;
 use clap::Parser;
+
+#[cfg(not(target_os = "illumos"))]
 use copypasta::{ClipboardContext, ClipboardProvider};
 
 type Solver = fn(&str) -> (String, String);
@@ -58,13 +60,14 @@ struct Args {
     all: bool,
 }
 
-async fn ensure_input_exists(day: u32) -> Result<()> {
+async fn read_input_for(day: u32) -> Result<String> {
     let path: std::path::PathBuf =
         [&format!("{day:02}"), "input"].into_iter().collect();
 
     // Check for a pre-existing input file
     if path.exists() {
-        return Ok(());
+        return std::fs::read_to_string(&path)
+            .with_context(|| format!("failed to read input from {path:?}"));
     }
 
     let t = chrono::Local::now();
@@ -114,16 +117,10 @@ async fn ensure_input_exists(day: u32) -> Result<()> {
         bail!("login failed; perhaps your cookie is stale?");
     }
 
-    std::fs::write(&path, text)
+    std::fs::write(&path, &text)
         .with_context(|| "failed to write output to {path}")?;
 
-    Ok(())
-}
-
-fn read_input_for(day: u32) -> Result<String> {
-    let file = format!("{day:02}/input");
-    std::fs::read_to_string(&file)
-        .with_context(|| format!("failed to read input from {file}"))
+    Ok(text)
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -149,7 +146,6 @@ async fn main() -> Result<()> {
     };
 
     // Download the input, if necessary
-    ensure_input_exists(day).await?;
 
     if args.bench {
         use criterion::Criterion;
@@ -165,7 +161,7 @@ async fn main() -> Result<()> {
         };
         let mut c = Criterion::default().with_output_color(true);
         for day in days {
-            let input = read_input_for(day)?;
+            let input = read_input_for(day).await?;
             c.bench_function(&format!("day{day:02}"), |b| {
                 b.iter(|| DAYS[day as usize - 1](&input))
             });
@@ -179,11 +175,15 @@ async fn main() -> Result<()> {
             std::fs::read("example").context("failed to read `./example`")?;
         String::from_utf8(f).context("example is not valid UTF-8")?
     } else if args.paste {
+        #[cfg(target_os = "illumos")]
+        bail!("cannot use clipboard on illumos");
+
+        #[cfg(not(target_os = "illumos"))]
         ClipboardContext::new()
             .and_then(|mut ctx| ctx.get_contents())
             .map_err(|e| anyhow!("failed to create clipboard context: {e:?}"))?
     } else {
-        read_input_for(day)?
+        read_input_for(day).await?
     };
 
     let out = (DAYS[day as usize - 1])(&input);
