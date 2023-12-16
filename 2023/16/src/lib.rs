@@ -35,8 +35,8 @@ fn recurse(
     map: &DenseGrid,
     seen: &mut [u8],
 ) {
-    while map.contains(pos) {
-        let prev = &mut seen[pos.0 as usize + pos.1 as usize * map.width()];
+    while let Some(i) = map.index(pos) {
+        let prev = &mut seen[i];
         if *prev & dir.bit() != 0 {
             return;
         }

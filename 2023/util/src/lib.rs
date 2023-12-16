@@ -25,10 +25,7 @@ impl DenseGrid {
     /// [`DenseGrid::get`], but will never contain a value.
     #[inline]
     pub fn contains(&self, pos: (i64, i64)) -> bool {
-        pos.0 >= 0
-            && pos.0 < self.width() as i64
-            && pos.1 >= 0
-            && pos.1 < self.height() as i64
+        self.index(pos).is_some()
     }
 
     /// Builds a new empty grid
@@ -54,14 +51,14 @@ impl DenseGrid {
     ///
     /// Returns `None` if the position is outside the grid
     #[inline]
-    fn index(&self, pos: (i64, i64)) -> Option<usize> {
+    pub fn index(&self, pos: (i64, i64)) -> Option<usize> {
         let x: usize = pos.0.try_into().ok()?;
         let y: usize = pos.1.try_into().ok()?;
         if x >= self.width {
             None
         } else {
             let i = y * self.width + x;
-            if i > self.data.len() {
+            if i >= self.data.len() {
                 None
             } else {
                 Some(i)
