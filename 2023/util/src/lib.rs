@@ -85,11 +85,17 @@ impl DenseGrid {
         self.data[i] = c
     }
 
-    /// Looks up a value in the grid
+    /// Looks up a value in the grid by index
+    #[inline]
+    pub fn get_by_index(&self, i: usize) -> Option<&char> {
+        Some(&self.data[i]).filter(|c| **c != '.')
+    }
+
+    /// Looks up a value in the grid by (2D) position
     #[inline]
     pub fn get(&self, pos: &(i64, i64)) -> Option<&char> {
         let i = self.index(*pos)?;
-        Some(&self.data[i]).filter(|c| **c != '.')
+        self.get_by_index(i)
     }
 
     /// Returns an iterator over grid values

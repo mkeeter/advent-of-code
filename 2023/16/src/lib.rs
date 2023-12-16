@@ -41,7 +41,7 @@ fn recurse(
             return;
         }
         *prev |= dir.bit();
-        match map.get(&pos) {
+        match map.get_by_index(i) {
             Some('/') => {
                 dir = match dir {
                     Direction::North => Direction::East,
