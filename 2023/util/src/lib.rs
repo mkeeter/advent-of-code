@@ -19,6 +19,18 @@ impl DenseGrid {
         Self { data, width }
     }
 
+    /// Checks whether this position is contained within the dense grid
+    ///
+    /// Positions outside the dense grid can still be checked with
+    /// [`DenseGrid::get`], but will never contain a value.
+    #[inline]
+    pub fn contains(&self, pos: (i64, i64)) -> bool {
+        pos.0 >= 0
+            && pos.0 < self.width() as i64
+            && pos.1 >= 0
+            && pos.1 < self.height() as i64
+    }
+
     /// Builds a new empty grid
     #[inline]
     pub fn empty(width: usize, height: usize) -> Self {
