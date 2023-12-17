@@ -13,6 +13,15 @@ struct State {
     momentum: u8,
 }
 
+impl State {
+    fn key(&self) -> u32 {
+        let x: u8 = self.pos.0.try_into().unwrap();
+        let y: u8 = self.pos.1.try_into().unwrap();
+        let dir: u8 = self.dir.bit();
+        u32::from_le_bytes([x, y, dir, self.momentum])
+    }
+}
+
 pub fn solve(s: &str) -> (String, String) {
     let map: Vec<Vec<u8>> = s
         .lines()
@@ -51,7 +60,7 @@ pub fn solve(s: &str) -> (String, String) {
             let p = p.0;
             if p.pos == end {
                 return p.loss;
-            } else if !seen.insert((p.pos, p.dir, p.momentum)) {
+            } else if !seen.insert(p.key()) {
                 continue;
             }
             let turns = match p.dir {
