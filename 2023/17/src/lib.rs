@@ -3,6 +3,7 @@ use util::Direction;
 
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 struct State {
+    // Loss has to be first, because we use a BTreeSet as a priority queue
     loss: u64,
     pos: (i64, i64),
     dir: Direction,
