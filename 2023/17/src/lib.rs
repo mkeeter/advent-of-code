@@ -46,8 +46,7 @@ pub fn solve(s: &str) -> (String, String) {
         while let Some(p) = paths.pop_first() {
             if p.pos == end {
                 return p.loss;
-            }
-            if !seen.insert((p.pos, p.dir, p.momentum)) {
+            } else if !seen.insert((p.pos, p.dir, p.momentum)) {
                 continue;
             }
             let turns = match p.dir {
