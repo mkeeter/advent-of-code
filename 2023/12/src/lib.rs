@@ -1,10 +1,10 @@
 use rayon::prelude::*;
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 fn recurse(
     row: Row<u8>,
     target: Row<usize>,
-    seen: &mut BTreeMap<u32, usize>,
+    seen: &mut HashMap<u32, usize>,
 ) -> usize {
     // Build a single `u32` key by byte-packing the relevant values
     assert!(row.first != Some(0xFF));
@@ -87,7 +87,7 @@ impl<'a, T: Copy + Clone + std::fmt::Debug> Row<'a, T> {
 fn recurse_inner(
     mut row: Row<u8>,
     mut target: Row<usize>,
-    seen: &mut BTreeMap<u32, usize>,
+    seen: &mut HashMap<u32, usize>,
 ) -> usize {
     if row.len() < target.len() {
         return 0;
@@ -179,7 +179,7 @@ pub fn solve(s: &str) -> (String, String) {
     }
     let mut out = 0;
     for (row, run) in rows.iter_mut().zip(runs.iter_mut()) {
-        out += recurse(Row::new(row), Row::new(run), &mut BTreeMap::new());
+        out += recurse(Row::new(row), Row::new(run), &mut HashMap::new());
     }
     let p1 = out;
 
@@ -203,7 +203,7 @@ pub fn solve(s: &str) -> (String, String) {
         .zip(runs.iter_mut())
         .par_bridge()
         .map(|(row, run)| {
-            recurse(Row::new(row), Row::new(run), &mut BTreeMap::new())
+            recurse(Row::new(row), Row::new(run), &mut HashMap::new())
         })
         .sum::<usize>();
     let p2 = out;
