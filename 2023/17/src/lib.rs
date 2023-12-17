@@ -51,9 +51,7 @@ pub fn solve(s: &str) -> (String, String) {
         let mut seen = HashSet::new();
         let mut loss = 0;
         loop {
-            let mut group = std::mem::take(&mut paths[loss]);
-            group.sort();
-            group.dedup();
+            let group = std::mem::take(&mut paths[loss]);
             for p in group {
                 if p.pos == end {
                     return loss;
