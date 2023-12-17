@@ -1,13 +1,8 @@
-use std::{
-    cmp::Reverse,
-    collections::{BinaryHeap, HashSet},
-};
+use std::collections::HashSet;
 use util::Direction;
 
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 struct State {
-    // Loss has to be first, because we use a BinaryHeap as a priority queue
-    loss: u64,
     pos: (i64, i64),
     dir: Direction,
     momentum: u8,
@@ -40,64 +35,69 @@ pub fn solve(s: &str) -> (String, String) {
     let end = (map[0].len() as i64 - 1, map.len() as i64 - 1);
 
     let start = || {
-        [Direction::East, Direction::South]
+        vec![[Direction::East, Direction::South]
             .into_iter()
             .map(|dir| State {
-                loss: 0,
                 pos: (0, 0),
                 dir,
                 momentum: 0,
             })
-            .map(Reverse)
-            .collect::<BinaryHeap<_>>()
+            .collect::<Vec<State>>()]
     };
 
     let run = |min_momentum, max_momentum| {
         // Map of total heat loss -> current state, acting as a priority queue
         let mut paths = start();
         let mut seen = HashSet::new();
-        while let Some(p) = paths.pop() {
-            let p = p.0;
-            if p.pos == end {
-                return p.loss;
-            } else if !seen.insert(p.key()) {
-                continue;
+        let mut loss = 0;
+        loop {
+            let mut group = std::mem::take(&mut paths[loss]);
+            group.sort();
+            group.dedup();
+            for p in group {
+                if p.pos == end {
+                    return loss;
+                } else if !seen.insert(p.key()) {
+                    continue;
+                }
+                let turns = match p.dir {
+                    Direction::North | Direction::South => {
+                        [Direction::East, Direction::West]
+                    }
+                    Direction::East | Direction::West => {
+                        [Direction::North, Direction::South]
+                    }
+                };
+                for (dir, momentum) in turns
+                    .into_iter()
+                    .flat_map(|dir| {
+                        Some((dir, 1)).filter(|_| p.momentum >= min_momentum)
+                    })
+                    .chain(
+                        Some((p.dir, p.momentum + 1))
+                            .filter(|_| p.momentum < max_momentum)
+                            .into_iter(),
+                    )
+                {
+                    let pos = dir.next(p.pos);
+                    if let Some(new_loss) = get(pos) {
+                        let loss = loss + new_loss as usize;
+                        if loss >= paths.len() {
+                            paths.resize_with(loss + 1, Vec::new);
+                        }
+                        paths[loss].push(State { pos, dir, momentum });
+                    }
+                }
             }
-            let turns = match p.dir {
-                Direction::North | Direction::South => {
-                    [Direction::East, Direction::West]
-                }
-                Direction::East | Direction::West => {
-                    [Direction::North, Direction::South]
-                }
-            };
-            for (dir, momentum) in turns
-                .into_iter()
-                .flat_map(|dir| {
-                    Some((dir, 1)).filter(|_| p.momentum >= min_momentum)
-                })
-                .chain(
-                    Some((p.dir, p.momentum + 1))
-                        .filter(|_| p.momentum < max_momentum)
-                        .into_iter(),
-                )
-            {
-                let pos = dir.next(p.pos);
-                if let Some(new_loss) = get(pos) {
-                    paths.push(Reverse(State {
-                        loss: p.loss + new_loss as u64,
-                        pos,
-                        dir,
-                        momentum,
-                    }));
-                }
-            }
+            loss += 1;
         }
-        panic!("no path found")
     };
 
-    let p1 = run(0, 3);
-    let p2 = run(4, 10);
+    let (p1, p2) = std::thread::scope(|s| {
+        let h1 = s.spawn(|| run(0, 3));
+        let h2 = s.spawn(|| run(4, 10));
+        (h1.join().unwrap(), h2.join().unwrap())
+    });
 
     (p1.to_string(), p2.to_string())
 }
