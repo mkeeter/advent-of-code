@@ -83,12 +83,12 @@ pub fn solve(s: &str) -> (String, String) {
                     p.pos = p.dir.next(p.pos);
                     if let Some(nl) = get(p.pos) {
                         loss += nl as usize;
-                        for &dir in &turns {
-                            if loss >= paths.len() {
-                                paths.resize_with(loss + 1, Vec::new);
-                            }
-                            paths[loss].push(State { dir, ..p });
+                        if loss >= paths.len() {
+                            paths.resize_with(loss + 1, Vec::new);
                         }
+                        paths[loss].extend(
+                            turns.into_iter().map(|dir| State { dir, ..p }),
+                        );
                     } else {
                         continue 'outer;
                     }
