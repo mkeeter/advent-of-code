@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 util.workspace = true
+indoc.workspace = true

@@ -577,6 +577,7 @@ dependencies = [
 name = "day17"
 version = "0.1.0"
 dependencies = [
+ "indoc",
  "util",
 ]
 
@@ -967,6 +968,12 @@ dependencies = [
  "equivalent",
  "hashbrown",
 ]
+
+[[package]]
+name = "indoc"
+version = "2.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e186cfbae8084e513daff4240b4797e342f988cecda4fb6c939150f96315fd8"
 
 [[package]]
 name = "ipnet"
