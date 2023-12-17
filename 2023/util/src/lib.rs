@@ -157,7 +157,7 @@ pub struct Bounds {
 }
 
 /// 2D directions
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum Direction {
     North,
     South,

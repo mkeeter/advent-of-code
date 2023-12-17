@@ -1,9 +1,12 @@
-use std::collections::BTreeSet;
+use std::{
+    cmp::Reverse,
+    collections::{BinaryHeap, HashSet},
+};
 use util::Direction;
 
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 struct State {
-    // Loss has to be first, because we use a BTreeSet as a priority queue
+    // Loss has to be first, because we use a BinaryHeap as a priority queue
     loss: u64,
     pos: (i64, i64),
     dir: Direction,
@@ -36,14 +39,16 @@ pub fn solve(s: &str) -> (String, String) {
                 dir,
                 momentum: 0,
             })
-            .collect::<BTreeSet<_>>()
+            .map(Reverse)
+            .collect::<BinaryHeap<_>>()
     };
 
     let run = |min_momentum, max_momentum| {
         // Map of total heat loss -> current state, acting as a priority queue
         let mut paths = start();
-        let mut seen = BTreeSet::new();
-        while let Some(p) = paths.pop_first() {
+        let mut seen = HashSet::new();
+        while let Some(p) = paths.pop() {
+            let p = p.0;
             if p.pos == end {
                 return p.loss;
             } else if !seen.insert((p.pos, p.dir, p.momentum)) {
@@ -70,12 +75,12 @@ pub fn solve(s: &str) -> (String, String) {
             {
                 let pos = dir.next(p.pos);
                 if let Some(new_loss) = get(pos) {
-                    paths.insert(State {
+                    paths.push(Reverse(State {
                         loss: p.loss + new_loss as u64,
                         pos,
                         dir,
                         momentum,
-                    });
+                    }));
                 }
             }
         }
