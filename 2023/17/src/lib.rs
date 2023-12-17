@@ -1,24 +1,5 @@
 use std::collections::BTreeSet;
-
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
-enum Direction {
-    North,
-    South,
-    East,
-    West,
-}
-
-impl Direction {
-    fn next(&self, pos: (i64, i64)) -> (i64, i64) {
-        let (x, y) = pos;
-        match self {
-            Direction::North => (x, y - 1),
-            Direction::South => (x, y + 1),
-            Direction::East => (x + 1, y),
-            Direction::West => (x - 1, y),
-        }
-    }
-}
+use util::Direction;
 
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 struct State {

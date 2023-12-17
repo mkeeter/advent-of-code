@@ -1,33 +1,5 @@
 use rayon::prelude::*;
-use util::DenseGrid;
-
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
-enum Direction {
-    North,
-    South,
-    East,
-    West,
-}
-
-impl Direction {
-    fn next(&self, pos: (i64, i64)) -> (i64, i64) {
-        let (x, y) = pos;
-        match self {
-            Direction::North => (x, y - 1),
-            Direction::South => (x, y + 1),
-            Direction::East => (x + 1, y),
-            Direction::West => (x - 1, y),
-        }
-    }
-    fn bit(&self) -> u8 {
-        match self {
-            Direction::North => 0b0001,
-            Direction::South => 0b0010,
-            Direction::East => 0b0100,
-            Direction::West => 0b1000,
-        }
-    }
-}
+use util::{DenseGrid, Direction};
 
 fn recurse(
     mut pos: (i64, i64),
