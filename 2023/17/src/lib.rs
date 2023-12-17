@@ -60,19 +60,14 @@ pub fn solve(s: &str) -> (String, String) {
             };
             for (dir, momentum) in turns
                 .into_iter()
-                .map(|d| {
-                    if p.momentum >= min_momentum {
-                        Some((d, 1))
-                    } else {
-                        None
-                    }
+                .flat_map(|dir| {
+                    Some((dir, 1)).filter(|_| p.momentum >= min_momentum)
                 })
-                .chain(std::iter::once(if p.momentum < max_momentum {
+                .chain(
                     Some((p.dir, p.momentum + 1))
-                } else {
-                    None
-                }))
-                .flatten()
+                        .filter(|_| p.momentum < max_momentum)
+                        .into_iter(),
+                )
             {
                 let pos = dir.next(p.pos);
                 if let Some(new_loss) = get(pos) {
