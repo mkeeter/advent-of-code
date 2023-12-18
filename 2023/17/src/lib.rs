@@ -16,21 +16,29 @@ impl State {
 }
 
 pub fn solve(s: &str) -> (String, String) {
-    let map: Vec<Vec<u8>> = s
-        .lines()
-        .map(|line| {
-            line.chars()
-                .map(|c| c.to_digit(10).unwrap() as u8)
-                .collect()
-        })
-        .collect();
+    let mut map = vec![];
+    let mut width = None;
+    for line in s.lines() {
+        if let Some(w) = width {
+            assert_eq!(w, line.len());
+        } else {
+            width = Some(line.len());
+        }
+        map.extend(line.chars().map(|c| c.to_digit(10).unwrap() as u8));
+    }
+    let width = width.unwrap();
+
     let get = |pos: (i64, i64)| -> Option<u8> {
         let x: usize = pos.0.try_into().ok()?;
-        let y: usize = pos.1.try_into().ok()?;
-        map.get(y).and_then(|row: &Vec<u8>| row.get(x)).cloned()
+        if x >= width {
+            None
+        } else {
+            let y: usize = pos.1.try_into().ok()?;
+            map.get(x + y * width).cloned()
+        }
     };
 
-    let end = (map[0].len() as i64 - 1, map.len() as i64 - 1);
+    let end = (width as i64 - 1, (map.len() / width) as i64 - 1);
 
     let start = || {
         vec![[Direction::East, Direction::South]
