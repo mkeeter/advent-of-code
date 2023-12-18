@@ -24,7 +24,7 @@ impl Node {
     }
 }
 
-impl std::str::FromStr for Node {
+impl FromStr for Node {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
