@@ -1,10 +1,10 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{HashMap, HashSet};
 
 use arrayvec::ArrayVec;
 
 fn part1(numbers: &[((i64, i64), u32)], symbols: &[((i64, i64), char)]) -> u32 {
     // Find the 3x3 neighborhood around each symbol
-    let mut ns = BTreeSet::new();
+    let mut ns = HashSet::new();
     for ((x, y), _) in symbols {
         for dx in [-1, 0, 1] {
             for dy in [-1, 0, 1] {
@@ -24,7 +24,7 @@ fn part1(numbers: &[((i64, i64), u32)], symbols: &[((i64, i64), char)]) -> u32 {
 
 fn part2(numbers: &[((i64, i64), u32)], gears: &[(i64, i64)]) -> u32 {
     // Build a map from (x, y) -> index of number in `nums`
-    let mut numspan = BTreeMap::new();
+    let mut numspan = HashMap::new();
     let mut nums = vec![];
     for (i, ((x, y), v)) in numbers.iter().enumerate() {
         for dx in 0..=v.ilog10() as i64 {

@@ -1,4 +1,4 @@
-use std::collections::{btree_map::Entry, BTreeMap};
+use std::collections::{hash_map::Entry, HashMap};
 
 trait Grid {
     fn width(&self) -> usize;
@@ -143,7 +143,7 @@ fn part1(mut grid: Base) -> usize {
 }
 
 fn part2(mut grid: Base) -> usize {
-    let mut seen = BTreeMap::new();
+    let mut seen = HashMap::new();
     let mut c = 0;
     const N: usize = 1_000_000_000;
     while c < N {
