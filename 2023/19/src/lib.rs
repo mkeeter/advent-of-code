@@ -187,10 +187,7 @@ pub fn solve(s: &str) -> (String, String) {
             workflows.insert(label, Workflow(rules));
         }
     }
-    let mut parts: Vec<Part> = vec![];
-    for line in &mut iter {
-        parts.push(line.parse().unwrap());
-    }
+    let parts = iter.map(|line| line.parse().unwrap()).collect::<Vec<_>>();
 
     let mut accepted = vec![];
     for p in &parts {
@@ -207,7 +204,6 @@ pub fn solve(s: &str) -> (String, String) {
             }
         }
     }
-
     let p1 = accepted
         .iter()
         .flat_map(|a| "xmas".chars().map(|c| a[c]))
@@ -241,6 +237,7 @@ pub fn solve(s: &str) -> (String, String) {
                 .product::<usize>()
         })
         .sum::<usize>();
+
     (p1.to_string(), p2.to_string())
 }
 
