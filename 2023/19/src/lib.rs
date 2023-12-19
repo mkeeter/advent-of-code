@@ -76,31 +76,19 @@ impl Condition {
         match self {
             Condition::LessThan(c, v) => {
                 let p = &part[*c];
-                if p.end <= *v {
-                    (part.clone(), RangePart::empty())
-                } else if p.start >= *v {
-                    (RangePart::empty(), part.clone())
-                } else {
-                    let mut a = part.clone();
-                    let mut b = part.clone();
-                    a[*c] = p.start..*v;
-                    b[*c] = *v..p.end;
-                    (a, b)
-                }
+                let mut a = part.clone();
+                let mut b = part.clone();
+                a[*c] = p.start..*v;
+                b[*c] = *v..p.end;
+                (a, b)
             }
             Condition::GreaterThan(c, v) => {
                 let p = &part[*c];
-                if p.start > *v {
-                    (part.clone(), RangePart::empty())
-                } else if p.end <= *v {
-                    (RangePart::empty(), part.clone())
-                } else {
-                    let mut a = part.clone();
-                    let mut b = part.clone();
-                    a[*c] = *v + 1..p.end;
-                    b[*c] = p.start..*v + 1;
-                    (a, b)
-                }
+                let mut a = part.clone();
+                let mut b = part.clone();
+                a[*c] = *v + 1..p.end;
+                b[*c] = p.start..*v + 1;
+                (a, b)
             }
             Condition::Always => (part.clone(), RangePart::empty()),
         }
