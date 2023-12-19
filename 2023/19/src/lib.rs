@@ -11,17 +11,23 @@ struct GenericPart<T> {
     s: T,
 }
 
+impl<T: Clone> GenericPart<T> {
+    fn new(t: T) -> Self {
+        Self {
+            x: t.clone(),
+            m: t.clone(),
+            a: t.clone(),
+            s: t.clone(),
+        }
+    }
+}
+
 type Part = GenericPart<u64>;
 type RangePart = GenericPart<std::ops::Range<u64>>;
 
 impl RangePart {
     fn empty() -> Self {
-        Self {
-            x: 0..0,
-            m: 0..0,
-            a: 0..0,
-            s: 0..0,
-        }
+        Self::new(0..0)
     }
     fn is_empty(&self) -> bool {
         self.x.is_empty()
@@ -208,16 +214,7 @@ pub fn solve(s: &str) -> (String, String) {
         .sum::<u64>();
 
     let mut accepted = vec![];
-    let max_range = 1..4001;
-    let mut parts = vec![(
-        "in",
-        RangePart {
-            x: max_range.clone(),
-            m: max_range.clone(),
-            a: max_range.clone(),
-            s: max_range.clone(),
-        },
-    )];
+    let mut parts = vec![("in", RangePart::new(1..4001))];
     while let Some((w, mut p)) = parts.pop() {
         for rule in workflows[&w].0.iter() {
             let (acc, rej) = rule.cond.check_range(&p);
