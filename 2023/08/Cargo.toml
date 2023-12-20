@@ -7,3 +7,4 @@ edition = "2021"
 anyhow.workspace = true
 parse-display.workspace = true
 rayon.workspace = true
+util.workspace = true

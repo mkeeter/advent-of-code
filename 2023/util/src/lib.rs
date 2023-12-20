@@ -186,3 +186,22 @@ impl Direction {
         }
     }
 }
+
+/// Find the least common multiple of a set of values
+pub fn lcm(mut nums: Vec<usize>) -> usize {
+    while nums.len() > 1 {
+        let pa = nums.pop().unwrap();
+        let pb = nums.pop().unwrap();
+        let mut a = pa;
+        let mut b = pb;
+        while a != b {
+            if a < b {
+                a += (b - a).div_ceil(pa) * pa;
+            } else {
+                b += (a - b).div_ceil(pb) * pb;
+            }
+        }
+        nums.push(a);
+    }
+    nums[0]
+}

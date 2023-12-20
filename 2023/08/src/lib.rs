@@ -93,7 +93,7 @@ pub fn solve(s: &str) -> (String, String) {
         }
     }
 
-    let mut periods = nodes
+    let periods = nodes
         .par_iter()
         .filter(|n| n.is_start())
         .map(|start| {
@@ -123,21 +123,7 @@ pub fn solve(s: &str) -> (String, String) {
         .collect::<Vec<usize>>();
 
     // Hacky LCM calculation
-    while periods.len() > 1 {
-        let pa = periods.pop().unwrap();
-        let pb = periods.pop().unwrap();
-        let mut a = pa;
-        let mut b = pb;
-        while a != b {
-            if a < b {
-                a += (b - a).div_ceil(pa) * pa;
-            } else {
-                b += (a - b).div_ceil(pb) * pb;
-            }
-        }
-        periods.push(a);
-    }
-    let p2 = periods[0];
+    let p2 = util::lcm(periods);
 
     (p1.to_string(), p2.to_string())
 }
