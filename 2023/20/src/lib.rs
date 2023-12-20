@@ -8,39 +8,84 @@ enum Gate {
 }
 
 #[derive(Clone, Debug)]
-struct Node<'a> {
+struct Node {
     gate: Gate,
-    out: Vec<&'a str>,
+    out: Vec<u8>,
 }
 
 #[derive(Debug)]
 struct State<'a> {
-    nodes: &'a HashMap<&'a str, Node<'a>>,
-    todo: VecDeque<(&'a str, &'a str, bool)>,
-    conj_state: HashMap<&'a str, HashMap<&'a str, bool>>,
-    flip_state: HashMap<&'a str, bool>,
+    nodes: &'a FlatMap<Node>,
+    todo: VecDeque<(u8, u8, bool)>,
+    conj_state: FlatMap<FlatMap<bool>>,
+    flip_state: FlatMap<bool>,
+}
+
+#[derive(Debug)]
+struct FlatMap<T>([Option<T>; 256]);
+
+impl<T> FlatMap<T> {
+    fn new() -> Self {
+        Self([(); 256].map(|_| None))
+    }
+    fn get_mut(&mut self, i: u8) -> Option<&mut T> {
+        self.0[i as usize].as_mut()
+    }
+    fn get(&self, i: u8) -> Option<&T> {
+        self.0[i as usize].as_ref()
+    }
+    fn iter(&self) -> impl Iterator<Item = (u8, &T)> {
+        self.0
+            .iter()
+            .enumerate()
+            .filter(|(_, t)| t.is_some())
+            .map(|(i, t)| (i as u8, t.as_ref().unwrap()))
+    }
+    fn insert(&mut self, i: u8, t: T) {
+        self.0[i as usize] = Some(t)
+    }
+    fn values(&self) -> impl Iterator<Item = &T> {
+        self.0.iter().filter_map(|v| v.as_ref())
+    }
+}
+
+impl<T> FromIterator<(u8, T)> for FlatMap<T> {
+    fn from_iter<I: IntoIterator<Item = (u8, T)>>(iter: I) -> Self {
+        let mut c = Self::new();
+        for (i, t) in iter {
+            c.insert(i, t);
+        }
+        c
+    }
+}
+
+impl<T> std::ops::Index<u8> for FlatMap<T> {
+    type Output = T;
+    fn index(&self, i: u8) -> &Self::Output {
+        self.get(i).unwrap()
+    }
 }
 
 impl<'a> State<'a> {
-    fn new(nodes: &'a HashMap<&'a str, Node>) -> Self {
+    fn new(nodes: &'a FlatMap<Node>) -> Self {
         // Gate activation: the gate is active at 0 and inactive at > 0
-        let mut conj_state: HashMap<&str, HashMap<&str, bool>> = nodes
+        let mut conj_state: FlatMap<FlatMap<bool>> = nodes
             .iter()
             .filter(|(_k, v)| v.gate == Gate::Conjunction)
-            .map(|(k, _v)| (*k, HashMap::new()))
+            .map(|(k, _v)| (k, FlatMap::new()))
             .collect();
         for (k, n) in nodes.iter() {
             for t in &n.out {
                 if let Some(c) = conj_state.get_mut(*t) {
-                    c.insert(*k, false);
+                    c.insert(k, false);
                 }
             }
         }
 
-        let flip_state: HashMap<&str, bool> = nodes
+        let flip_state: FlatMap<bool> = nodes
             .iter()
             .filter(|(_k, v)| v.gate == Gate::FlipFlop)
-            .map(|(k, _v)| (*k, false))
+            .map(|(k, _v)| (k, false))
             .collect();
 
         Self {
@@ -82,7 +127,8 @@ impl<'a> State<'a> {
 }
 
 pub fn solve(s: &str) -> (String, String) {
-    let mut nodes = HashMap::new();
+    let mut raw_nodes = HashMap::new();
+    let mut has_rx = false;
     for line in s.lines() {
         let mut iter = line.split(" -> ");
         let name = iter.next().unwrap();
@@ -95,16 +141,39 @@ pub fn solve(s: &str) -> (String, String) {
         } else {
             panic!("invalid gate name {name}");
         };
-        let out = iter.next().unwrap().split(", ").collect();
-        nodes.insert(name, Node { gate, out });
+        let out = iter.next().unwrap().split(", ").collect::<Vec<&str>>();
+        has_rx |= out.contains(&"rx");
+        raw_nodes.insert(name, (gate, out));
     }
+
+    let node_names: HashMap<&str, u8> = raw_nodes
+        .keys()
+        .enumerate()
+        .map(|(i, n)| (*n, i.try_into().unwrap()))
+        .collect();
+
+    let nodes: FlatMap<_> = raw_nodes
+        .into_values()
+        .enumerate()
+        .map(|(i, (gate, out))| {
+            let node = Node {
+                gate,
+                out: out
+                    .iter()
+                    .map(|v| node_names.get(v).cloned().unwrap_or(u8::MAX))
+                    .collect(),
+            };
+            (i.try_into().unwrap(), node)
+        })
+        .collect();
+    let broadcast = node_names["broadcaster"];
 
     let mut state = State::new(&nodes);
 
     let mut high_pulses = 0;
     let mut low_pulses = 0;
     for _ in 0..1000 {
-        state.todo.push_front(("broadcaster", "", false));
+        state.todo.push_front((broadcast, u8::MAX, false));
         while let Some((_, _, pulse)) = state.todo.front() {
             if *pulse {
                 high_pulses += 1;
@@ -117,66 +186,74 @@ pub fn solve(s: &str) -> (String, String) {
     let p1 = (low_pulses * high_pulses).to_string();
 
     // Check for an rx output node, bailing out early otherwise
-    if !nodes.values().any(|v| v.out.iter().any(|c| *c == "rx")) {
+    if !has_rx {
         return (p1, "n/a".to_string());
-    }
+    };
 
     // The graph structure has a single accumulator feeding into `rx`, with the
     // accumulator being fed by 4 intermediate clusters.
-    let (&acc, _) = nodes.iter().find(|(_k, n)| n.out == ["rx"]).unwrap();
+    let (acc, _) = nodes.iter().find(|(_k, n)| n.out == [u8::MAX]).unwrap();
     let subs = nodes
         .iter()
         .filter(|(_k, n)| n.out == [acc])
-        .map(|(k, _)| *k)
+        .map(|(k, _)| k)
         .collect::<HashSet<_>>();
     let subsub = nodes
         .iter()
-        .filter(|(_k, n)| n.out.iter().any(|s| subs.contains(*s)))
-        .map(|(k, _)| *k)
+        .filter(|(_k, n)| n.out.iter().any(|s| subs.contains(s)))
+        .map(|(k, _)| k)
         .collect::<HashSet<_>>();
 
-    let mut lcm = vec![];
-    for root in &nodes["broadcaster"].out {
-        let n = &nodes[root];
-        // Output of this cluster
-        let out = n.out.iter().find(|s| subsub.contains(*s)).unwrap();
-        let mut todo = vec![*root];
-        let mut cluster = HashSet::new();
-        cluster.insert(*out);
-        while let Some(next) = todo.pop() {
-            if !cluster.insert(next) {
-                continue;
-            }
-            for n in &nodes[&next].out {
-                todo.push(*n);
-            }
-        }
-        let subgraph = nodes
-            .iter()
-            .filter(|(k, _v)| cluster.contains(*k))
-            .map(|(k, v)| (*k, v.clone()))
-            .collect::<HashMap<&str, Node>>();
-        let mut state = State::new(&subgraph);
-        let mut prev = None;
-        for i in 1.. {
-            let mut found = false;
-            state.todo.push_front((root, "", false));
-            while let Some((_dst, src, pulse)) = state.todo.front() {
-                if src == out && !pulse {
-                    found = true;
+    let subsub = &subsub;
+    let nodes = &nodes;
+    let lcm = std::thread::scope(|s| {
+        let mut threads = vec![];
+        for &root in &nodes[broadcast].out {
+            let h = s.spawn(move || {
+                let n = &nodes[root];
+                // Output of this cluster
+                let out = n.out.iter().find(|s| subsub.contains(s)).unwrap();
+                let mut todo = vec![root];
+                let mut cluster = HashSet::new();
+                cluster.insert(*out);
+                while let Some(next) = todo.pop() {
+                    if !cluster.insert(next) {
+                        continue;
+                    }
+                    for &n in &nodes[next].out {
+                        todo.push(n);
+                    }
                 }
-                state.step();
-            }
-            if found {
-                if let Some(p) = prev {
-                    assert_eq!(i - p, p);
-                    lcm.push(p);
-                    break;
+                let subgraph = nodes
+                    .iter()
+                    .filter(|(k, _v)| cluster.contains(k))
+                    .map(|(k, v)| (k, v.clone()))
+                    .collect::<FlatMap<Node>>();
+                let mut state = State::new(&subgraph);
+                let mut prev: Option<usize> = None;
+                for i in 1.. {
+                    let mut found = false;
+                    state.todo.push_front((root, u8::MAX, false));
+                    while let Some((_dst, src, pulse)) = state.todo.front() {
+                        if src == out && !pulse {
+                            found = true;
+                        }
+                        state.step();
+                    }
+                    if found {
+                        if let Some(p) = prev {
+                            assert_eq!(i - p, p);
+                            return i - p;
+                        }
+                        prev = Some(i);
+                    }
                 }
-                prev = Some(i);
-            }
+                panic!();
+            });
+            threads.push(h);
         }
-    }
+        threads.into_iter().map(|h| h.join().unwrap()).collect()
+    });
     let p2 = util::lcm(lcm);
 
     (p1, p2.to_string())
