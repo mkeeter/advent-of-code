@@ -163,51 +163,56 @@ pub fn solve(s: &str) -> (String, String) {
         .map(|(k, _)| k)
         .collect::<FlatSet>();
 
-    let subsub = &subsub;
-    let nodes = &nodes;
+    // Helper function to find the period of a particular subgraph, which begins
+    // at `root` and terminates at one of `subsub`.
+    let find_subgraph_period = |root| {
+        let n = &nodes[root];
+
+        // Output of this cluster
+        let out = n.out.iter().find(|s| subsub.contains(s)).unwrap();
+
+        // Find all nodes in this cluster
+        let mut todo = vec![root];
+        let mut cluster = [*out].into_iter().collect::<FlatSet>();
+        while let Some(next) = todo.pop() {
+            if !cluster.insert(next) {
+                continue;
+            }
+            todo.extend(nodes[next].out.iter().cloned());
+        }
+
+        // Build a subgraph that contains only those nodes
+        let subgraph = nodes
+            .iter()
+            .filter(|(k, _v)| cluster.contains(k))
+            .map(|(k, v)| (k, v.clone()))
+            .collect::<FlatMap<Node>>();
+
+        // Run that subgraph to find its period
+        let mut state = State::new(&subgraph);
+        let mut prev: Option<usize> = None;
+        for i in 1.. {
+            let mut found = false;
+            state.todo.push_front((root, u8::MAX, false));
+            while let Some((_dst, src, pulse)) = state.todo.front() {
+                if src == out && !pulse && !found {
+                    found = true;
+                    if let Some(p) = prev {
+                        assert_eq!(i - p, p);
+                        return i - p;
+                    }
+                    prev = Some(i);
+                }
+                state.step();
+            }
+        }
+        unreachable!();
+    };
+
     let lcm = std::thread::scope(|s| {
         let mut threads = vec![];
         for &root in &nodes[broadcast].out {
-            let h = s.spawn(move || {
-                let n = &nodes[root];
-                // Output of this cluster
-                let out = n.out.iter().find(|s| subsub.contains(s)).unwrap();
-                let mut todo = vec![root];
-                let mut cluster = FlatSet::new();
-                cluster.insert(*out);
-                while let Some(next) = todo.pop() {
-                    if !cluster.insert(next) {
-                        continue;
-                    }
-                    for &n in &nodes[next].out {
-                        todo.push(n);
-                    }
-                }
-                let subgraph = nodes
-                    .iter()
-                    .filter(|(k, _v)| cluster.contains(k))
-                    .map(|(k, v)| (k, v.clone()))
-                    .collect::<FlatMap<Node>>();
-                let mut state = State::new(&subgraph);
-                let mut prev: Option<usize> = None;
-                for i in 1.. {
-                    let mut found = false;
-                    state.todo.push_front((root, u8::MAX, false));
-                    while let Some((_dst, src, pulse)) = state.todo.front() {
-                        if src == out && !pulse && !found {
-                            found = true;
-                            if let Some(p) = prev {
-                                assert_eq!(i - p, p);
-                                return i - p;
-                            }
-                            prev = Some(i);
-                        }
-                        state.step();
-                    }
-                    if found {}
-                }
-                panic!();
-            });
+            let h = s.spawn(move || find_subgraph_period(root));
             threads.push(h);
         }
         threads.into_iter().map(|h| h.join().unwrap()).collect()
