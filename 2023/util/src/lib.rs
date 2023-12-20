@@ -205,3 +205,61 @@ pub fn lcm(mut nums: Vec<usize>) -> usize {
     }
     nums[0]
 }
+
+/// Trivial hash-map for < 256 items
+#[derive(Debug)]
+pub struct FlatMap<T>([Option<T>; 256]);
+
+impl<T> FlatMap<T> {
+    pub fn new() -> Self {
+        Self([(); 256].map(|_| None))
+    }
+    pub fn get_mut(&mut self, i: u8) -> Option<&mut T> {
+        self.0[i as usize].as_mut()
+    }
+    pub fn get(&self, i: u8) -> Option<&T> {
+        self.0[i as usize].as_ref()
+    }
+    pub fn iter(&self) -> impl Iterator<Item = (u8, &T)> {
+        self.0
+            .iter()
+            .enumerate()
+            .filter(|(_, t)| t.is_some())
+            .map(|(i, t)| (i as u8, t.as_ref().unwrap()))
+    }
+    pub fn insert(&mut self, i: u8, t: T) {
+        self.0[i as usize] = Some(t)
+    }
+    pub fn values(&self) -> impl Iterator<Item = &T> {
+        self.0.iter().filter_map(|v| v.as_ref())
+    }
+}
+
+impl<T> Default for FlatMap<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<T> FromIterator<(u8, T)> for FlatMap<T> {
+    fn from_iter<I: IntoIterator<Item = (u8, T)>>(iter: I) -> Self {
+        let mut c = Self::new();
+        for (i, t) in iter {
+            c.insert(i, t);
+        }
+        c
+    }
+}
+
+impl<T> std::ops::Index<u8> for FlatMap<T> {
+    type Output = T;
+    fn index(&self, i: u8) -> &Self::Output {
+        self.get(i).unwrap()
+    }
+}
+
+impl<T> std::ops::IndexMut<u8> for FlatMap<T> {
+    fn index_mut(&mut self, i: u8) -> &mut Self::Output {
+        self.get_mut(i).unwrap()
+    }
+}

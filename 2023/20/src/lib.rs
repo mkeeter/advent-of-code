@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet, VecDeque};
+use util::FlatMap;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum Gate {
@@ -19,51 +20,6 @@ struct State<'a> {
     todo: VecDeque<(u8, u8, bool)>,
     conj_state: FlatMap<FlatMap<bool>>,
     flip_state: FlatMap<bool>,
-}
-
-#[derive(Debug)]
-struct FlatMap<T>([Option<T>; 256]);
-
-impl<T> FlatMap<T> {
-    fn new() -> Self {
-        Self([(); 256].map(|_| None))
-    }
-    fn get_mut(&mut self, i: u8) -> Option<&mut T> {
-        self.0[i as usize].as_mut()
-    }
-    fn get(&self, i: u8) -> Option<&T> {
-        self.0[i as usize].as_ref()
-    }
-    fn iter(&self) -> impl Iterator<Item = (u8, &T)> {
-        self.0
-            .iter()
-            .enumerate()
-            .filter(|(_, t)| t.is_some())
-            .map(|(i, t)| (i as u8, t.as_ref().unwrap()))
-    }
-    fn insert(&mut self, i: u8, t: T) {
-        self.0[i as usize] = Some(t)
-    }
-    fn values(&self) -> impl Iterator<Item = &T> {
-        self.0.iter().filter_map(|v| v.as_ref())
-    }
-}
-
-impl<T> FromIterator<(u8, T)> for FlatMap<T> {
-    fn from_iter<I: IntoIterator<Item = (u8, T)>>(iter: I) -> Self {
-        let mut c = Self::new();
-        for (i, t) in iter {
-            c.insert(i, t);
-        }
-        c
-    }
-}
-
-impl<T> std::ops::Index<u8> for FlatMap<T> {
-    type Output = T;
-    fn index(&self, i: u8) -> &Self::Output {
-        self.get(i).unwrap()
-    }
 }
 
 impl<'a> State<'a> {
