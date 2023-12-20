@@ -1,5 +1,5 @@
-use std::collections::{HashMap, HashSet, VecDeque};
-use util::FlatMap;
+use std::collections::{HashMap, VecDeque};
+use util::{FlatMap, FlatSet};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum Gate {
@@ -11,7 +11,7 @@ enum Gate {
 #[derive(Clone, Debug)]
 struct Node {
     gate: Gate,
-    out: Vec<u8>,
+    out: smallvec::SmallVec<[u8; 8]>,
 }
 
 #[derive(Debug)]
@@ -148,17 +148,20 @@ pub fn solve(s: &str) -> (String, String) {
 
     // The graph structure has a single accumulator feeding into `rx`, with the
     // accumulator being fed by 4 intermediate clusters.
-    let (acc, _) = nodes.iter().find(|(_k, n)| n.out == [u8::MAX]).unwrap();
+    let (acc, _) = nodes
+        .iter()
+        .find(|(_k, n)| n.out.as_slice() == [u8::MAX])
+        .unwrap();
     let subs = nodes
         .iter()
-        .filter(|(_k, n)| n.out == [acc])
+        .filter(|(_k, n)| n.out.as_slice() == [acc])
         .map(|(k, _)| k)
-        .collect::<HashSet<_>>();
+        .collect::<FlatSet>();
     let subsub = nodes
         .iter()
         .filter(|(_k, n)| n.out.iter().any(|s| subs.contains(s)))
         .map(|(k, _)| k)
-        .collect::<HashSet<_>>();
+        .collect::<FlatSet>();
 
     let subsub = &subsub;
     let nodes = &nodes;
@@ -170,7 +173,7 @@ pub fn solve(s: &str) -> (String, String) {
                 // Output of this cluster
                 let out = n.out.iter().find(|s| subsub.contains(s)).unwrap();
                 let mut todo = vec![root];
-                let mut cluster = HashSet::new();
+                let mut cluster = FlatSet::new();
                 cluster.insert(*out);
                 while let Some(next) = todo.pop() {
                     if !cluster.insert(next) {
@@ -191,18 +194,17 @@ pub fn solve(s: &str) -> (String, String) {
                     let mut found = false;
                     state.todo.push_front((root, u8::MAX, false));
                     while let Some((_dst, src, pulse)) = state.todo.front() {
-                        if src == out && !pulse {
+                        if src == out && !pulse && !found {
                             found = true;
+                            if let Some(p) = prev {
+                                assert_eq!(i - p, p);
+                                return i - p;
+                            }
+                            prev = Some(i);
                         }
                         state.step();
                     }
-                    if found {
-                        if let Some(p) = prev {
-                            assert_eq!(i - p, p);
-                            return i - p;
-                        }
-                        prev = Some(i);
-                    }
+                    if found {}
                 }
                 panic!();
             });

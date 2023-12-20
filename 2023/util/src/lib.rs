@@ -227,8 +227,8 @@ impl<T> FlatMap<T> {
             .filter(|(_, t)| t.is_some())
             .map(|(i, t)| (i as u8, t.as_ref().unwrap()))
     }
-    pub fn insert(&mut self, i: u8, t: T) {
-        self.0[i as usize] = Some(t)
+    pub fn insert(&mut self, i: u8, t: T) -> Option<T> {
+        std::mem::replace(&mut self.0[i as usize], Some(t))
     }
     pub fn values(&self) -> impl Iterator<Item = &T> {
         self.0.iter().filter_map(|v| v.as_ref())
@@ -261,5 +261,37 @@ impl<T> std::ops::Index<u8> for FlatMap<T> {
 impl<T> std::ops::IndexMut<u8> for FlatMap<T> {
     fn index_mut(&mut self, i: u8) -> &mut Self::Output {
         self.get_mut(i).unwrap()
+    }
+}
+
+/// Tiny set of `u8` values
+#[derive(Debug)]
+pub struct FlatSet(FlatMap<()>);
+
+impl FlatSet {
+    pub fn new() -> Self {
+        Self(FlatMap::new())
+    }
+    pub fn insert(&mut self, i: u8) -> bool {
+        self.0.insert(i, ()).is_none()
+    }
+    pub fn contains(&self, i: &u8) -> bool {
+        self.0.get(*i).is_some()
+    }
+}
+
+impl Default for FlatSet {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl FromIterator<u8> for FlatSet {
+    fn from_iter<I: IntoIterator<Item = u8>>(iter: I) -> Self {
+        let mut c = Self::new();
+        for i in iter {
+            c.insert(i);
+        }
+        c
     }
 }
