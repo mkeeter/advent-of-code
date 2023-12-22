@@ -164,6 +164,8 @@ fn run_corner(
     // --|-------
     // y | z
     //   |
+    //
+    // y and z overlap with later cells and should only be counted once
     let mut np = 0;
     let mut nx = 0;
     let mut ny = 0;
@@ -184,28 +186,25 @@ fn run_corner(
         }
     }
 
-    // pd
-    // ub
-
     // O        gc = 0, 1 partial
     //
-    // SO       gc = 1, 2 partial, 1 even
-    // O
+    // Ep       gc = 1, 2 partial, 1 even
+    // p
     //
-    // SSO      gc = 2, 3 partial, 1 even, 2 odd
-    // SO
-    // O
+    // EOp      gc = 2, 3 partial, 1 even, 2 odd
+    // Op
+    // p
     //
-    // SSSO     gc = 3, 4 partial, 4 (1 + 3) even, 2 odd
-    // SSO
-    // SO
-    // O
+    // EOEp     gc = 3, 4 partial, 4 (1 + 3) even, 2 odd
+    // OEp
+    // Ep
+    // p
     //
-    // SSSSO    gc = 4, 5 partial, 4 (1 + 3) even, 6 (2 + 4) odd
-    // SSSO
-    // SSO
-    // SO
-    // O
+    // EOEOp    gc = 4, 5 partial, 4 (1 + 3) even, 6 (2 + 4) odd
+    // EOEp
+    // EOp
+    // Ep
+    // p
     let partial_grids = grid_count + 1;
 
     // Work out how many even and odd tiles are in this quadrant
@@ -234,31 +233,38 @@ fn run_up(
     size: usize,
     start: (usize, usize),
 ) -> usize {
+    // Find startup steps from each X position to (X, 0) in the (0, +1) grid
     let mut pos: HashSet<(usize, usize)> = [start].into_iter().collect();
-    let mut starting_steps = BTreeMap::new();
+    let mut starting_steps = vec![None; size];
     for i in 0.. {
         let mut next = HashSet::new();
         for p in pos.into_iter() {
             for n in neighbors(p) {
                 if map.contains(&n) {
                     next.insert(n);
-                } else if n.1 == size && !starting_steps.contains_key(&n.0) {
-                    starting_steps.insert(n.0, i + 1);
+                } else if n.1 == size && starting_steps[n.0].is_none() {
+                    starting_steps[n.0] = Some(i + 1);
                 }
             }
         }
-        pos = next;
-        if starting_steps.len() == size {
+        if starting_steps.iter().all(Option::is_some) {
             break;
         }
+        pos = next;
     }
+    let starting_steps: Vec<usize> =
+        starting_steps.into_iter().map(Option::unwrap).collect();
 
-    // Map from src_x to (dst_x, steps to get there)
-    let mut metamap = BTreeMap::new();
+    // Saturating steps for each X position
+    let sat_steps: Vec<usize> =
+        (0..size).map(|x| sat_steps_from(map, (x, 0))).collect();
+
+    // Map from [src_x][dst_x] to minimum steps it takes to get there
+    let mut metamap: Vec<Vec<usize>> = Vec::new();
     for x in 0..size {
         let start = (x, 0);
         let mut pos: HashSet<(usize, usize)> = [start].into_iter().collect();
-        let mut found = BTreeMap::new();
+        let mut found = vec![None; size];
         let mut seen = HashSet::new();
         for i in 0.. {
             let mut next = HashSet::new();
@@ -269,44 +275,62 @@ fn run_up(
                 for n in neighbors(p) {
                     if map.contains(&n) {
                         next.insert(n);
-                    } else if n.1 == size && !found.contains_key(&n.0) {
-                        found.insert(n.0, i + 1);
+                    } else if n.1 == size && found[n.0].is_none() {
+                        found[n.0] = Some(i + 1);
                     }
                 }
             }
-            pos = next;
-            if found.len() == size {
+            if found.iter().all(Option::is_some) {
                 break;
             }
+            pos = next;
         }
-        metamap.insert(x, found);
+        metamap.push(found.into_iter().map(Option::unwrap).collect());
     }
 
-    // Map from x position to number-of-steps it took to get there
+    // Running map from x position to number-of-steps it took to get there
     let mut pos = starting_steps;
     let mut manual_search = None;
-    'outer: for grid in 1.. {
-        let mut next = BTreeMap::new();
-        for new_x in 0..size {
-            let n: &mut usize = next.entry(new_x).or_insert(usize::MAX);
-            for (src_x, steps) in &pos {
-                *n = (*n).min(steps + metamap[&src_x][&new_x]);
+    for grid in 1.. {
+        if grid % 1000 == 0 {
+            println!(
+                "{} / {max_steps} {}",
+                pos.iter().max().unwrap(),
+                *pos.iter().max().unwrap() as f32 / max_steps as f32
+            );
+        }
+        let mut next = vec![usize::MAX; size];
+        for (new_x, n) in next.iter_mut().enumerate() {
+            for (src_x, steps) in pos.iter().enumerate() {
+                *n = (*n).min(steps + metamap[src_x][new_x]);
             }
-            if *n >= max_steps {
-                manual_search = Some((grid, pos));
-                break 'outer;
-            }
+        }
+        if next
+            .iter()
+            .enumerate()
+            .all(|(x, steps)| steps + sat_steps[x] >= max_steps)
+        {
+            manual_search = Some((grid, pos));
+            break;
         }
         pos = next;
     }
 
-    let (grid, mut pts) = manual_search.unwrap();
-    pts.retain(|_x, steps| *steps < max_steps);
+    let (grid, pts) = manual_search.unwrap();
 
-    let mut todo: Vec<(usize, usize, usize)> =
-        pts.into_iter().map(|(x, steps)| (x, 0, steps)).collect();
+    let mut todo: Vec<(usize, usize, usize)> = pts
+        .into_iter()
+        .enumerate()
+        .map(|(x, steps)| (x, 0, steps))
+        .filter(|(_, _, steps)| *steps <= max_steps)
+        .collect();
+    println!("got todo: {}", todo.len());
     let mut ends = HashSet::new();
+    let mut seen = HashSet::new();
     while let Some((x, y, steps)) = todo.pop() {
+        if !seen.insert((x, y, steps)) {
+            continue;
+        }
         if steps == max_steps {
             ends.insert((x, y));
             continue;
@@ -351,27 +375,6 @@ fn search_from(
     pos.len()
 }
 
-fn search_from_wrapping(
-    map: &HashSet<(usize, usize)>,
-    start: (usize, usize),
-    size: usize,
-    max_steps: usize,
-) -> HashSet<(usize, usize)> {
-    let mut pos: HashSet<(usize, usize)> = [start].into_iter().collect();
-    for _ in 0..max_steps {
-        let mut next = HashSet::new();
-        for p in pos.into_iter() {
-            for n in neighbors(p) {
-                if map.contains(&(n.0 % size, n.1 % size)) {
-                    next.insert(n);
-                }
-            }
-        }
-        pos = next;
-    }
-    pos
-}
-
 pub fn solve(s: &str) -> (String, String) {
     let mut map = HashSet::new();
     let mut start = None;
@@ -409,48 +412,22 @@ pub fn solve(s: &str) -> (String, String) {
 
     let mut rot = map.clone();
     let mut sum = 0;
-    const MAX_STEPS: usize = 50;
+    const MAX_STEPS: usize = 26501365;
     for _ in 0..4 {
         let corner = run_corner(&rot, MAX_STEPS, size, start);
-        for y in 0..size {
-            for x in 0..size {
-                if (x, y) == start {
-                    print!("S");
-                } else if rot.contains(&(x, y)) {
-                    print!(".");
-                } else {
-                    print!("#");
-                }
-            }
-            println!();
-        }
         sum += corner;
-        let up = run_up(&rot, MAX_STEPS, size, start);
-        println!("up: {up}");
-        sum += run_up(&rot, MAX_STEPS, size, start);
 
-        let manual = search_from_wrapping(&rot, start, size, MAX_STEPS);
-        println!(
-            "manual up: {}",
-            manual
-                .iter()
-                .filter(|&&(x, y)| x < size && y >= size)
-                .count()
-        );
-        println!("corner: {corner}");
-        println!(
-            "manual corner: {}",
-            manual
-                .iter()
-                .filter(|&&(x, y)| x >= size && y >= size)
-                .count()
-        );
+        let up = run_up(&rot, MAX_STEPS, size, start);
+        sum += up;
 
         rot = rot.into_iter().map(|(x, y)| (size - y - 1, x)).collect();
     }
-    sum += search_from(&map, start, MAX_STEPS);
+    sum += sat_even_odd(&map, start).0; //search_from(&map, start, MAX_STEPS);
     let p2 = sum;
-    println!("{:?}", sat_even_odd(&map, start));
+    // 596734610917443 is too low
+    // 596734610917575 is also too low
+    // 596734610917443
+    // 596734610917575
 
     (p1.to_string(), p2.to_string())
 }
