@@ -9,6 +9,36 @@ fn neighbors(pos: (usize, usize)) -> impl Iterator<Item = (usize, usize)> {
     [n, s, e, w].into_iter().flatten()
 }
 
+fn wrapping_neighbors(
+    pos: ((usize, usize), (i64, i64)),
+    size: usize,
+) -> impl Iterator<Item = ((usize, usize), (i64, i64))> {
+    let ((x, y), (a, b)) = pos;
+    let n = if y == 0 {
+        ((x, size - 1), (a, b - 1))
+    } else {
+        ((x, y - 1), (a, b))
+    };
+    let s = if y == size - 1 {
+        ((x, 0), (a, b + 1))
+    } else {
+        ((x, y + 1), (a, b))
+    };
+
+    let w = if x == 0 {
+        ((size - 1, y), (a - 1, b))
+    } else {
+        ((x - 1, y), (a, b))
+    };
+    let e = if x == size - 1 {
+        ((0, y), (a + 1, b))
+    } else {
+        ((x + 1, y), (a, b))
+    };
+
+    [n, s, e, w].into_iter()
+}
+
 /// Returns the maximum number of tiles that can be filled
 fn sat_count(map: &HashSet<(usize, usize)>) -> usize {
     let mut pos: HashSet<(usize, usize)> = [(0, 0)].into_iter().collect();
@@ -132,23 +162,42 @@ fn run_corner(
 
     // Find how many steps it takes to get from the start to the corner
     let corner_steps = steps_to_corner(map, size, start);
+    assert_eq!(corner_steps, size - 1 + 2);
+
+    let mut remaining_steps = max_steps;
+    remaining_steps -= corner_steps;
 
     let (sat_even, sat_odd) = sat_even_odd(map, start);
+    let (sat_even, sat_odd) = if remaining_steps % 2 == 1 {
+        (sat_odd, sat_even)
+    } else {
+        (sat_even, sat_odd)
+    };
 
     // Find out how many steps it takes to saturate the map starting from that
     // corner
     let sat_steps = sat_steps(map);
-    println!("got {corner_steps} corner steps; {sat_steps} sat steps");
+    println!(
+        "sat even: {sat_even}, sat_odd: {sat_odd}, sat steps: {sat_steps}"
+    );
+    let mut grid = 0;
+    let mut count_even = 0;
+    let mut count_odd = 0;
+    println!("got to corner with {remaining_steps} remaining");
+    while remaining_steps > sat_steps {
+        if grid % 2 == 0 {
+            count_even += grid + 1;
+        } else {
+            count_odd += grid + 1;
+        }
+        remaining_steps -= size;
+        grid += 1;
+    }
+    println!("got to remaining grid with {remaining_steps} remaining");
 
-    // Find max number of grid cells that we can walk to
-    let grid_count =
-        (max_steps.saturating_sub(sat_steps + corner_steps)).div_ceil(size);
-
-    let steps_remaining = max_steps - (corner_steps + grid_count * size);
-    println!("grid count: {grid_count}, steps remaining: {steps_remaining}");
-
+    // flood-fill remaining steps
     let mut pos: HashSet<(usize, usize)> = [(0, 0)].into_iter().collect();
-    for _ in 0..steps_remaining {
+    for _ in 0..remaining_steps {
         let mut next = HashSet::new();
         for p in pos.into_iter() {
             for n in neighbors(p) {
@@ -163,7 +212,8 @@ fn run_corner(
     // p-|x---->
     // --|-------
     // y | z
-    //   |
+    // | |
+    // V |
     //
     // y and z overlap with later cells and should only be counted once
     let mut np = 0;
@@ -174,14 +224,10 @@ fn run_corner(
         if px < size && py < size {
             np += 1;
         } else if px >= size && py < size {
-            assert!(px < 2 * size);
             nx += 1;
         } else if px < size && py >= size {
-            assert!(py < 2 * size);
             ny += 1;
         } else {
-            assert!(px < 2 * size);
-            assert!(py < 2 * size);
             nz += 1;
         }
     }
@@ -205,21 +251,12 @@ fn run_corner(
     // EOp
     // Ep
     // p
-    let partial_grids = grid_count + 1;
 
     // Work out how many even and odd tiles are in this quadrant
-    let mut count_even = 0;
-    let mut count_odd = 0;
-    for i in 0..grid_count {
-        if i % 2 == 0 {
-            count_even += i + 1;
-        } else {
-            count_odd += i + 1;
-        }
-    }
-    println!("{np} {nx} {ny} {nz}");
-    println!("{count_even} {count_odd} {partial_grids}");
-    println!("{sat_even} {sat_odd}");
+    println!(
+        "grid: {grid}, partial: {np}, sat even: {sat_even} x {count_even}, sat odd: {sat_odd} x {count_odd}"
+    );
+    let partial_grids = grid + 1;
     count_even * sat_even
         + count_odd * sat_odd
         + (np + nx) * partial_grids
@@ -305,11 +342,9 @@ fn run_up(
                 *n = (*n).min(steps + metamap[src_x][new_x]);
             }
         }
-        if next
-            .iter()
-            .enumerate()
-            .all(|(x, steps)| steps + sat_steps[x] >= max_steps)
-        {
+        if next.iter().enumerate().all(|(x, steps)| {
+            steps + sat_steps[x] > max_steps.saturating_sub(1000)
+        }) {
             manual_search = Some((grid, pos));
             break;
         }
@@ -324,7 +359,6 @@ fn run_up(
         .map(|(x, steps)| (x, 0, steps))
         .filter(|(_, _, steps)| *steps <= max_steps)
         .collect();
-    println!("got todo: {}", todo.len());
     let mut ends = HashSet::new();
     let mut seen = HashSet::new();
     while let Some((x, y, steps)) = todo.pop() {
@@ -406,13 +440,114 @@ pub fn solve(s: &str) -> (String, String) {
     ////////////////////////////////////////////////////////////////////////////
 
     let (se, so) = sat_even_odd(&map, start);
+    let start_steps = sat_steps(&map);
     let sat = sat_count(&map);
     assert_eq!(se + so, sat);
-    println!("sat steps: {}", sat_steps(&map));
+    println!(
+        "sat even: {se}, sat odd: {so}, sat: {sat}, sat_steps {start_steps}"
+    );
 
+    /*
+    for max_steps in start_steps..500 {
+        println!("--------- {max_steps} ----------");
+        let mut rot = map.clone();
+        let mut sum = 0;
+        for _ in 0..4 {
+            let corner = run_corner(&rot, max_steps, size, start);
+            sum += corner;
+
+            let up = run_up(&rot, max_steps, size, start);
+            sum += up;
+
+            println!("corner: {corner} up: {up}");
+            rot = rot.into_iter().map(|(x, y)| (size - y - 1, x)).collect();
+        }
+        let base = sat_even_odd(&map, start);
+        let base = if max_steps % 2 == 0 { base.0 } else { base.1 };
+
+        println!("basic: {base}");
+        sum += base; // TODO this is a hack, only valid for > saturating steps
+        let p2 = sum;
+
+        let brute = search_from_wrapping(&map, size, start, max_steps);
+        let brute: BTreeSet<_> = brute.into_iter().collect();
+        if brute.len() != p2 {
+            println!("mismatch at {max_steps}");
+            println!(
+                "base: {}",
+                brute
+                    .iter()
+                    .filter(|(_, (gx, gy))| *gx == 0 && *gy == 0)
+                    .count()
+            );
+            println!(
+                "up0: {}",
+                brute
+                    .iter()
+                    .filter(|(_, (gx, gy))| *gx == 0 && *gy > 0)
+                    .count()
+            );
+            println!(
+                "up1: {}",
+                brute
+                    .iter()
+                    .filter(|(_, (gx, gy))| *gy == 0 && *gx > 0)
+                    .count()
+            );
+            println!(
+                "up2: {}",
+                brute
+                    .iter()
+                    .filter(|(_, (gx, gy))| *gx == 0 && *gy < 0)
+                    .count()
+            );
+            println!(
+                "up3: {}",
+                brute
+                    .iter()
+                    .filter(|(_, (gx, gy))| *gy == 0 && *gx < 0)
+                    .count()
+            );
+            println!(
+                "corner0: {}",
+                brute
+                    .iter()
+                    .filter(|(_, (gx, gy))| *gx > 0 && *gy > 0)
+                    .map(|a| {
+                        println!("  {a:?}");
+                        a
+                    })
+                    .count()
+            );
+            println!(
+                "corner1: {}",
+                brute
+                    .iter()
+                    .filter(|(_, (gx, gy))| *gx > 0 && *gy < 0)
+                    .count()
+            );
+            println!(
+                "corner2: {}",
+                brute
+                    .iter()
+                    .filter(|(_, (gx, gy))| *gx < 0 && *gy > 0)
+                    .count()
+            );
+            println!(
+                "corner3: {}",
+                brute
+                    .iter()
+                    .filter(|(_, (gx, gy))| *gx < 0 && *gy < 0)
+                    .count()
+            );
+            assert_eq!(brute.len(), p2);
+        }
+    }
+    let p2 = 0;
+    */
+    const MAX_STEPS: usize = 26501365;
     let mut rot = map.clone();
     let mut sum = 0;
-    const MAX_STEPS: usize = 26501365;
     for _ in 0..4 {
         let corner = run_corner(&rot, MAX_STEPS, size, start);
         sum += corner;
@@ -420,14 +555,37 @@ pub fn solve(s: &str) -> (String, String) {
         let up = run_up(&rot, MAX_STEPS, size, start);
         sum += up;
 
+        println!("corner: {corner} up: {up}");
         rot = rot.into_iter().map(|(x, y)| (size - y - 1, x)).collect();
     }
-    sum += sat_even_odd(&map, start).0; //search_from(&map, start, MAX_STEPS);
+    let base = sat_even_odd(&map, start);
+    let base = if MAX_STEPS % 2 == 0 { base.0 } else { base.1 };
+
+    println!("basic: {base}");
+    sum += base; // TODO this is a hack, only valid for > saturating steps
     let p2 = sum;
-    // 596734610917443 is too low
-    // 596734610917575 is also too low
-    // 596734610917443
-    // 596734610917575
 
     (p1.to_string(), p2.to_string())
+}
+
+fn search_from_wrapping(
+    map: &HashSet<(usize, usize)>,
+    size: usize,
+    start: (usize, usize),
+    max_steps: usize,
+) -> HashSet<((usize, usize), (i64, i64))> {
+    let mut pos: HashSet<((usize, usize), (i64, i64))> =
+        [(start, (0, 0))].into_iter().collect();
+    for _ in 0..max_steps {
+        let mut next = HashSet::new();
+        for p in pos.into_iter() {
+            for n in wrapping_neighbors(p, size) {
+                if map.contains(&n.0) {
+                    next.insert(n);
+                }
+            }
+        }
+        pos = next;
+    }
+    pos
 }
