@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
@@ -26,12 +27,14 @@ struct Brick {
 }
 
 impl Brick {
-    fn pos(&self) -> impl Iterator<Item = Pos> + '_ {
-        (self.start.x..=self.end.x)
-            .flat_map(|x| (self.start.y..=self.end.y).map(move |y| (x, y)))
-            .flat_map(|(x, y)| {
-                (self.start.z..=self.end.z).map(move |z| Pos { x, y, z })
+    fn top(&self) -> impl Iterator<Item = Pos> + '_ {
+        (self.start.x..=self.end.x).flat_map(move |x| {
+            (self.start.y..=self.end.y).map(move |y| Pos {
+                x,
+                y,
+                z: self.end.z,
             })
+        })
     }
     fn bottom(&self) -> impl Iterator<Item = Pos> + '_ {
         (self.start.x..=self.end.x).flat_map(move |x| {
@@ -66,27 +69,50 @@ pub fn solve(s: &str) -> (String, String) {
     let mut map: HashMap<Pos, usize> = bricks
         .iter()
         .enumerate()
-        .flat_map(|(i, b)| b.pos().map(move |p| (p, i)))
+        .flat_map(|(i, b)| b.top().map(move |p| (p, i)))
         .collect();
 
     let mut changed = true;
+    let mut stable = vec![false; bricks.len()];
     while changed {
         changed = false;
         for (i, b) in bricks.iter_mut().enumerate() {
-            // Can this brick fall?
-            if b.bottom().all(|p| {
-                p.z != 1 && !map.contains_key(&Pos { z: p.z - 1, ..p })
-            }) {
+            if stable[i] {
+                continue;
+            }
+            // Drop this brick as far as possible, marking as stable if it ends
+            // up supported by a stable brick.
+            let orig = *b;
+            loop {
+                if b.start.z == 1 {
+                    stable[i] = true;
+                    break;
+                }
+                let mut supported = false;
+                for p in b.bottom() {
+                    // If the bottom is supported, then we can't fall
+                    if let Some(j) = map.get(&Pos { z: p.z - 1, ..p }) {
+                        stable[i] |= stable[*j];
+                        supported = true;
+                    }
+                }
+                if supported {
+                    break;
+                } else {
+                    // Otherwise, fall
+                    b.start.z -= 1;
+                    b.end.z -= 1;
+                }
+            }
+            // If we fell, then update the top map
+            if orig.start.z != b.start.z {
                 // Remove the previous brick positions
-                for p in b.pos() {
+                for p in orig.top() {
                     let prev = map.remove(&p).unwrap();
                     assert_eq!(prev, i);
                 }
-                // Adjust the brick downward
-                b.start.z -= 1;
-                b.end.z -= 1;
                 // Add the new brick positions
-                for p in b.pos() {
+                for p in b.top() {
                     let prev = map.insert(p, i);
                     assert!(prev.is_none());
                 }
@@ -118,25 +144,47 @@ pub fn solve(s: &str) -> (String, String) {
         .collect::<HashSet<usize>>();
     let p1 = bricks.len() - critical.len();
 
-    let mut out = 0;
-    for c in critical {
-        let mut falling = HashSet::new();
-        falling.insert(c);
-        let mut changed = true;
-        while changed {
-            changed = false;
-            for (i, sup) in supported_by.iter().enumerate() {
-                if !sup.is_empty()
-                    && sup.iter().all(|b| falling.contains(b))
-                    && falling.insert(i)
-                {
-                    changed = true;
+    let p2: usize = critical
+        .par_iter()
+        .map(|&c| {
+            let mut falling = HashSet::new();
+            falling.insert(c);
+            let mut changed = true;
+            while changed {
+                changed = false;
+                for (i, sup) in supported_by.iter().enumerate() {
+                    if !sup.is_empty()
+                        && sup.iter().all(|b| falling.contains(b))
+                        && falling.insert(i)
+                    {
+                        changed = true;
+                    }
                 }
             }
-        }
-        out += falling.len() - 1;
-    }
-    let p2 = out;
+            falling.len() - 1
+        })
+        .sum();
 
     (p1.to_string(), p2.to_string())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn run_jenga() {
+        let s = indoc::indoc! {"
+            1,0,1~1,2,1
+            0,0,2~2,0,2
+            0,2,3~2,2,3
+            0,0,4~0,2,4
+            2,0,5~2,2,5
+            0,1,6~2,1,6
+            1,1,8~1,1,9
+        "};
+        let (p1, p2) = solve(s);
+        assert_eq!(p1, "5");
+        assert_eq!(p2, "7");
+    }
 }
