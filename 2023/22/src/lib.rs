@@ -1,18 +1,18 @@
 use rayon::prelude::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 struct Pos {
-    x: usize,
-    y: usize,
-    z: usize,
+    x: u16,
+    y: u16,
+    z: u16,
 }
 
 impl std::str::FromStr for Pos {
     type Err = std::convert::Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut iter = s.split(',').map(|v| v.parse::<usize>().unwrap());
+        let mut iter = s.split(',').map(|v| v.parse::<_>().unwrap());
         let x = iter.next().unwrap();
         let y = iter.next().unwrap();
         let z = iter.next().unwrap();
@@ -144,20 +144,35 @@ pub fn solve(s: &str) -> (String, String) {
         .collect::<HashSet<usize>>();
     let p1 = bricks.len() - critical.len();
 
+    ////////////////////////////////////////////////////////////////////////////
+
+    // Flip the `supported_by` array!
+    // `supporting[i]` returns bricks that brick `i` is supporting
+    let mut supporting = (0..bricks.len())
+        .map(|_| Vec::new())
+        .collect::<Vec<Vec<usize>>>();
+    for (i, bs) in supported_by.iter().enumerate() {
+        for s in bs {
+            supporting[*s].push(i);
+        }
+    }
+
     let p2: usize = critical
         .par_iter()
         .map(|&c| {
             let mut falling = HashSet::new();
-            falling.insert(c);
-            let mut changed = true;
-            while changed {
-                changed = false;
-                for (i, sup) in supported_by.iter().enumerate() {
+            let mut todo = VecDeque::new();
+            todo.push_front(c);
+            while let Some(c) = todo.pop_front() {
+                if !falling.insert(c) {
+                    continue;
+                }
+                for &s in &supporting[c] {
+                    let sup = &supported_by[s];
                     if !sup.is_empty()
                         && sup.iter().all(|b| falling.contains(b))
-                        && falling.insert(i)
                     {
-                        changed = true;
+                        todo.push_back(s);
                     }
                 }
             }
