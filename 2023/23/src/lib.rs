@@ -55,34 +55,42 @@ fn run(
 fn recurse(
     pos: usize,
     end: usize,
-    weights: &[Vec<Option<usize>>],
+    weights: &[Vec<Link>],
     seen: &mut [bool],
-) -> usize {
+) -> Option<usize> {
     if pos == end {
-        return 0;
+        return Some(0);
     }
+    assert!(!seen[pos]);
     seen[pos] = true;
-    let mut best = 0;
-    for (j, steps) in weights[pos].iter().enumerate() {
-        if seen[j] {
+
+    let mut best = None;
+    for link in weights[pos].iter() {
+        if seen[link.dst] {
             continue;
         }
-        let Some(steps) = steps else {
-            continue;
-        };
-        let w = recurse(j, end, weights, seen) + steps;
-        best = best.max(w);
+        if let Some(w) = recurse(link.dst, end, weights, seen) {
+            let w = w + link.steps;
+            if let Some(prev) = best {
+                if w > prev {
+                    best = Some(w);
+                }
+            } else {
+                best = Some(w);
+            }
+        }
     }
+    assert!(seen[pos]);
     seen[pos] = false;
     best
 }
 
 /// Find the (single) path from `pos` to `end`
-fn search_for(
+fn search_from_node(
     map: &HashSet<(i64, i64)>,
+    nodes: &HashSet<(i64, i64)>,
     pos: (i64, i64),
-    end: (i64, i64),
-) -> Option<usize> {
+) -> Vec<((i64, i64), usize)> {
     let mut next = vec![];
     for (dx, dy) in DIRECTIONS {
         let n = (pos.0 + dx, pos.1 + dy);
@@ -90,46 +98,47 @@ fn search_for(
             next.push(n);
         }
     }
-    assert!(!next.is_empty());
-    let mut out = None;
+    assert!(next.len() == 1 || next.len() > 2);
+    let mut out = HashMap::new();
     for n in next {
-        if let Some(v) = search_for_inner(map, pos, n, end) {
-            assert!(out.is_none());
-            out = Some(v + 1)
+        if let Some((end, steps)) = explore_from_node(map, nodes, pos, n) {
+            let prev = out.insert(end, steps + 1);
+            assert!(prev.is_none());
         }
     }
-    out
+    out.into_iter().collect()
 }
 
-fn search_for_inner(
+fn explore_from_node(
     map: &HashSet<(i64, i64)>,
+    nodes: &HashSet<(i64, i64)>,
     mut prev: (i64, i64),
     mut pos: (i64, i64),
-    end: (i64, i64),
-) -> Option<usize> {
+) -> Option<((i64, i64), usize)> {
     for steps in 0.. {
-        if pos == end {
-            return Some(steps);
+        if nodes.contains(&pos) {
+            return Some((pos, steps));
         }
-
         let (x, y) = pos;
         let mut next = None;
         for (dx, dy) in DIRECTIONS {
             let n = (x + dx, y + dy);
             if map.contains(&n) && n != prev {
-                if next.is_some() {
-                    return None; // hit a node
-                }
+                assert!(next.is_none());
                 next = Some(n);
             }
         }
-        let Some(next) = next else {
-            return None;
-        };
+        let next = next.unwrap();
         prev = pos;
         pos = next;
     }
-    unreachable!()
+    unreachable!();
+}
+
+#[derive(Copy, Clone, Debug)]
+struct Link {
+    dst: usize,
+    steps: usize,
 }
 
 pub fn solve(s: &str) -> (String, String) {
@@ -147,8 +156,7 @@ pub fn solve(s: &str) -> (String, String) {
     let p1 = run(map.clone(), start, end);
 
     let map = map.into_keys().collect::<HashSet<_>>();
-    println!("map has {} tiles", map.len());
-    let mut nodes: Vec<(i64, i64)> = map
+    let mut nodes: HashSet<(i64, i64)> = map
         .iter()
         .cloned()
         .filter(|(x, y)| {
@@ -164,28 +172,41 @@ pub fn solve(s: &str) -> (String, String) {
             }
         })
         .collect();
-    nodes.sort();
-    nodes.dedup();
     assert!(!nodes.contains(&start));
     assert!(!nodes.contains(&end));
 
-    nodes.insert(0, start);
-    nodes.push(end);
+    nodes.insert(start);
+    nodes.insert(end);
 
-    let start = nodes.iter().position(|n| *n == start).unwrap();
-    let end = nodes.iter().position(|n| *n == end).unwrap();
-
-    let mut weights = vec![];
-    for a in &nodes {
-        let mut ws = vec![];
-        for b in &nodes {
-            let r = search_for(&map, *a, *b);
-            println!("{a:?} -> {b:?}: {r:?}");
-            ws.push(r);
-        }
-        weights.push(ws);
+    let mut connections = HashMap::new();
+    for &a in &nodes {
+        let conn = search_from_node(&map, &nodes, a);
+        connections.insert(a, conn);
     }
-    let p2 = recurse(start, end, &weights, &mut vec![false; nodes.len()]);
+
+    // Convert from (i64, i64) -> usize so that we can use flat Vecs
+    let index = nodes
+        .iter()
+        .enumerate()
+        .map(|(i, pos)| (*pos, i))
+        .collect::<HashMap<(i64, i64), usize>>();
+
+    let start = *index.get(&start).unwrap();
+    let end = *index.get(&end).unwrap();
+
+    let mut cs = Vec::new();
+    cs.resize_with(nodes.len(), Vec::new);
+    for (start, c) in connections {
+        cs[index[&start]] = c
+            .iter()
+            .map(|(pos, steps)| Link {
+                dst: index[&pos],
+                steps: *steps,
+            })
+            .collect();
+    }
+
+    let p2 = recurse(start, end, &cs, &mut vec![false; nodes.len()]).unwrap();
 
     // 6593 is too high
     (p1.to_string(), p2.to_string())
