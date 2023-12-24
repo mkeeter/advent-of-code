@@ -100,7 +100,7 @@ pub fn solve(s: &str) -> (String, String) {
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
-        .expect("Failed to spawn child process");
+        .expect("failed to call `z3`; is it installed?");
 
     let mut stdin = z3.stdin.take().expect("Failed to open stdin");
     stdin
