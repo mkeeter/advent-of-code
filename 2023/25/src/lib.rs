@@ -62,16 +62,10 @@ fn contract(mut g: Graph, n: usize) -> Graph {
 
 fn search(g: &Graph, done: &AtomicBool) -> Option<usize> {
     while !done.load(Ordering::Acquire) {
-        let mut g = g.clone();
+        let g = contract(g.clone(), 6);
+        for _ in 0..10 {
+            let g = contract(g.clone(), 2);
 
-        while g.nodes.len() > 6 {
-            let n = ((g.nodes.len() as f64) / 2f64.sqrt()).round() as usize + 1;
-            g = contract(g, n);
-        }
-        let ga = contract(g.clone(), 2);
-        let gb = contract(g.clone(), 2);
-
-        for g in [ga, gb] {
             let mut iter = g.nodes.keys();
             let src = iter.next().unwrap();
             let dst = iter.next().unwrap();
