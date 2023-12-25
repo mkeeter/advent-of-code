@@ -22,17 +22,13 @@ impl<'a> Graph<'a> {
         self.edges.entry(dst).or_default().insert(src, 1);
     }
     fn random_edge(&self) -> (&'a str, &'a str) {
-        let num_edges = self.edges.values().map(|e| e.len()).sum();
-        let mut i = rand::thread_rng().gen_range(0..num_edges);
-        for (src, edges) in &self.edges {
-            if i < edges.len() {
-                let (dst, _) = edges.iter().nth(i).unwrap();
-                return (src, dst);
-            } else {
-                i -= edges.len();
-            }
-        }
-        unreachable!();
+        let mut rng = rand::thread_rng();
+        let i = rng.gen_range(0..self.edges.len());
+        let (src, e) = self.edges.iter().nth(i).unwrap();
+        let j = rng.gen_range(0..e.len());
+        let (dst, _) = e.iter().nth(j).unwrap();
+
+        (src, dst)
     }
     fn remove_edge(&mut self, edge: (&'a str, &'a str)) {
         let (src, dst) = edge;
