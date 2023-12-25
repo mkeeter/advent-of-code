@@ -10,6 +10,7 @@ indoc = "2.0.4"
 itertools = "0.10"
 nom = "7"
 parse-display = "0.6"
+rand = "0.8.5"
 rayon = "1.6"
 regex = "1.10"
 smallvec = "1"
@@ -18,3 +19,4 @@ util.path = "util"
 
 [profile.release]
 overflow-checks = true
+debug = true
