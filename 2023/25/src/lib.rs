@@ -43,14 +43,12 @@ impl Graph {
             let m = neighbor.remove(&dst).unwrap();
             assert_eq!(*n, m);
             *neighbor.entry(src).or_default() += n;
-            *self
-                .edges
-                .get_mut(&src)
-                .unwrap()
-                .entry(*neighbor_name)
-                .or_default() += n;
         }
-        self.edges.get_mut(&src).unwrap().remove(&src).unwrap();
+        let src_conns = self.edges.get_mut(&src).unwrap();
+        for (neighbor_name, n) in &e {
+            *src_conns.entry(*neighbor_name).or_default() += n;
+        }
+        src_conns.remove(&src).unwrap();
     }
 }
 
