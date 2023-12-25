@@ -103,7 +103,7 @@ pub fn solve(s: &str) -> (String, String) {
         }
     }
 
-    let done = std::sync::atomic::AtomicBool::new(false);
+    let done = AtomicBool::new(false);
     let p1 = std::thread::scope(|s| {
         let mut h = vec![];
         for _ in 0..available_parallelism().unwrap().into() {
