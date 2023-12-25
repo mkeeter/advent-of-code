@@ -1,17 +1,17 @@
 use rand::Rng;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     sync::atomic::{AtomicBool, Ordering},
     thread::available_parallelism,
 };
 
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 struct Key(u16);
 
 #[derive(Clone, Default, Debug)]
 struct Graph {
-    nodes: BTreeMap<Key, usize>,
-    edges: BTreeMap<Key, BTreeMap<Key, usize>>,
+    nodes: HashMap<Key, usize>,
+    edges: HashMap<Key, HashMap<Key, usize>>,
 }
 
 impl Graph {
