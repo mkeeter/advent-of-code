@@ -55,23 +55,40 @@ impl<'a> Graph<'a> {
     }
 }
 
-fn search(g: &Graph, done: &AtomicBool) -> Option<usize> {
-    'outer: while !done.load(Ordering::Acquire) {
-        let mut g = g.clone();
-        while g.nodes.len() > 2 {
-            // Short-circuit if all cuts are > 3
-            if g.edges.values().all(|g| g.values().all(|e| *e > 3)) {
-                continue 'outer;
+fn contract(mut g: Graph, n: usize) -> Graph {
+    while g.nodes.len() > n {
+        let e = g.random_edge();
+        g.remove_edge(e);
+    }
+    g
+}
+
+fn recurse(g: Graph) -> Option<usize> {
+    let n = ((g.nodes.len() as f64) / 2f64.sqrt()).round() as usize + 1;
+    if n < 6 {
+        let ga = contract(g.clone(), 2);
+        let gb = contract(g.clone(), 2);
+
+        for g in [ga, gb] {
+            let mut iter = g.nodes.keys();
+            let src = iter.next().unwrap();
+            let dst = iter.next().unwrap();
+            if g.edges[src][dst] == 3 {
+                return Some(g.nodes[src] * g.nodes[dst]);
             }
-            let e = g.random_edge();
-            g.remove_edge(e);
         }
-        let mut iter = g.nodes.keys();
-        let src = iter.next().unwrap();
-        let dst = iter.next().unwrap();
-        if g.edges[src][dst] == 3 {
+        None
+    } else {
+        let g = contract(g, n);
+        recurse(g)
+    }
+}
+
+fn search(g: &Graph, done: &AtomicBool) -> Option<usize> {
+    while !done.load(Ordering::Acquire) {
+        if let Some(out) = recurse(g.clone()) {
             done.store(true, Ordering::Release);
-            return Some(g.nodes[src] * g.nodes[dst]);
+            return Some(out);
         }
     }
     None
