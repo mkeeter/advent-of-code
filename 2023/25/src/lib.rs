@@ -31,7 +31,7 @@ impl Graph {
         let j = rng.gen_range(0..e.len());
         let (dst, _) = e.iter().nth(j).unwrap();
 
-        (*src, *dst)
+        (*src, *dst) // not uniform, but good enough!
     }
     fn remove_edge(&mut self, edge: (Key, Key)) {
         let (src, dst) = edge;
