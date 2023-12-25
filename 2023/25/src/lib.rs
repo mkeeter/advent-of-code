@@ -62,30 +62,25 @@ fn contract(mut g: Graph, n: usize) -> Graph {
     g
 }
 
-fn recurse(mut g: Graph) -> Option<usize> {
-    while g.nodes.len() > 6 {
-        let n = ((g.nodes.len() as f64) / 2f64.sqrt()).round() as usize + 1;
-        g = contract(g, n);
-    }
-    let ga = contract(g.clone(), 2);
-    let gb = contract(g.clone(), 2);
-
-    for g in [ga, gb] {
-        let mut iter = g.nodes.keys();
-        let src = iter.next().unwrap();
-        let dst = iter.next().unwrap();
-        if g.edges[src][dst] == 3 {
-            return Some(g.nodes[src] * g.nodes[dst]);
-        }
-    }
-    None
-}
-
 fn search(g: &Graph, done: &AtomicBool) -> Option<usize> {
     while !done.load(Ordering::Acquire) {
-        if let Some(out) = recurse(g.clone()) {
-            done.store(true, Ordering::Release);
-            return Some(out);
+        let mut g = g.clone();
+
+        while g.nodes.len() > 6 {
+            let n = ((g.nodes.len() as f64) / 2f64.sqrt()).round() as usize + 1;
+            g = contract(g, n);
+        }
+        let ga = contract(g.clone(), 2);
+        let gb = contract(g.clone(), 2);
+
+        for g in [ga, gb] {
+            let mut iter = g.nodes.keys();
+            let src = iter.next().unwrap();
+            let dst = iter.next().unwrap();
+            if g.edges[src][dst] == 3 {
+                done.store(true, Ordering::Release);
+                return Some(g.nodes[src] * g.nodes[dst]);
+            }
         }
     }
     None
