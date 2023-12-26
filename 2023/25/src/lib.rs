@@ -1,3 +1,4 @@
+use indexmap::IndexMap;
 use rand::Rng;
 use std::{
     collections::HashMap,
@@ -10,8 +11,8 @@ struct Key(u16);
 
 #[derive(Clone, Default, Debug)]
 struct Graph {
-    nodes: HashMap<Key, usize>,
-    edges: HashMap<Key, HashMap<Key, usize>>,
+    nodes: IndexMap<Key, usize>,
+    edges: IndexMap<Key, IndexMap<Key, usize>>,
 }
 
 impl Graph {
@@ -27,9 +28,9 @@ impl Graph {
     fn random_edge(&self) -> (Key, Key) {
         let mut rng = rand::thread_rng();
         let i = rng.gen_range(0..self.edges.len());
-        let (src, e) = self.edges.iter().nth(i).unwrap();
+        let (src, e) = self.edges.get_index(i).unwrap();
         let j = rng.gen_range(0..e.len());
-        let (dst, _) = e.iter().nth(j).unwrap();
+        let (dst, _) = e.get_index(j).unwrap();
 
         (*src, *dst) // not uniform, but good enough!
     }
@@ -60,19 +61,35 @@ fn contract(mut g: Graph, n: usize) -> Graph {
     g
 }
 
-fn search(g: &Graph, done: &AtomicBool) -> Option<usize> {
-    while !done.load(Ordering::Acquire) {
-        let g = contract(g.clone(), 6);
-        for _ in 0..10 {
+fn recurse(g: &Graph) -> Option<usize> {
+    if g.nodes.len() <= 6 {
+        for _ in 0..2 {
             let g = contract(g.clone(), 2);
-
             let mut iter = g.nodes.keys();
             let src = iter.next().unwrap();
             let dst = iter.next().unwrap();
             if g.edges[src][dst] == 3 {
-                done.store(true, Ordering::Release);
                 return Some(g.nodes[src] * g.nodes[dst]);
             }
+        }
+        return None;
+    }
+
+    let n = g.nodes.len() / 4;
+    let g = contract(g.clone(), n);
+    for _ in 0..2 {
+        if let Some(out) = recurse(&g) {
+            return Some(out);
+        }
+    }
+    None
+}
+
+fn search(g: &Graph, done: &AtomicBool) -> Option<usize> {
+    while !done.load(Ordering::Acquire) {
+        if let Some(out) = recurse(g) {
+            done.store(true, Ordering::Release);
+            return Some(out);
         }
     }
     None
