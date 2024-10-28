@@ -1,0 +1,44 @@
+[package]
+name = "aoc"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+
+chrono = "0.4"
+clap = { version = "4.4", features = ["derive"] }
+criterion = "0.5.1"
+dirs = "5.0.1"
+reqwest = { version = "0.11", features = ["cookies"] }
+tokio = { version = "1", features = ["macros", "rt"] }
+url = "2.5.0"
+
+day01.path = "../01"
+day02.path = "../02"
+day03.path = "../03"
+day04.path = "../04"
+day05.path = "../05"
+day06.path = "../06"
+day07.path = "../07"
+day08.path = "../08"
+day09.path = "../09"
+day10.path = "../10"
+day11.path = "../11"
+day12.path = "../12"
+day13.path = "../13"
+day14.path = "../14"
+day15.path = "../15"
+day16.path = "../16"
+day17.path = "../17"
+day18.path = "../18"
+day19.path = "../19"
+day20.path = "../20"
+day21.path = "../21"
+day22.path = "../22"
+day23.path = "../23"
+day24.path = "../24"
+day25.path = "../25"
+
+[target.'cfg(not(target_os = "illumos"))'.dependencies]
+copypasta = "0.10.0"

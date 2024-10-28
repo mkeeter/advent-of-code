@@ -1,0 +1,21 @@
+[workspace]
+members = ["aoc"]
+resolver = "2"
+
+[workspace.dependencies]
+anyhow = "1"
+arrayvec = "0.7"
+bimap = "0.6.2"
+indexmap = "2.1.0"
+indoc = "2.0.4"
+itertools = "0.10"
+nom = "7"
+parse-display = "0.6"
+rand = "0.8.5"
+rayon = "1.6"
+regex = "1.10"
+smallvec = "1"
+
+[profile.release]
+overflow-checks = true
+debug = true
