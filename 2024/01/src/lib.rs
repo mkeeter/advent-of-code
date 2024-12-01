@@ -1,14 +1,48 @@
+struct GetIntegers<'a> {
+    bytes: &'a [u8],
+    index: usize,
+}
+
+impl Iterator for GetIntegers<'_> {
+    type Item = usize;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.bytes.len() {
+            let mut v = 0;
+            while self.index < self.bytes.len()
+                && self.bytes[self.index].is_ascii_digit()
+            {
+                v = v * 10 + (self.bytes[self.index] - b'0') as usize;
+                self.index += 1;
+            }
+            while self.index < self.bytes.len()
+                && !self.bytes[self.index].is_ascii_digit()
+            {
+                self.index += 1;
+            }
+            Some(v)
+        } else {
+            None
+        }
+    }
+}
+
+fn get_integers(s: &str) -> impl Iterator<Item = usize> + '_ {
+    GetIntegers {
+        bytes: s.as_bytes(),
+        index: 0,
+    }
+}
+
 pub fn solve(s: &str) -> (usize, usize) {
     let mut list1 = vec![];
     let mut list2 = vec![];
+    let mut iter = get_integers(s);
     let mut max_item = 0usize;
-    for line in s.lines() {
-        let mut iter = line.split_ascii_whitespace();
-        let a = iter.next().and_then(|s| s.parse::<usize>().ok()).unwrap();
-        let b = iter.next().and_then(|s| s.parse::<usize>().ok()).unwrap();
+    while let Some(a) = iter.next() {
         list1.push(a);
-        list2.push(b);
+        let b = iter.next().unwrap();
         max_item = max_item.max(b);
+        list2.push(b);
     }
     assert_eq!(list1.len(), list2.len());
     list1.sort_unstable();
