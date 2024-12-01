@@ -5,33 +5,46 @@ use clap::Parser;
 #[cfg(not(target_os = "illumos"))]
 use copypasta::{ClipboardContext, ClipboardProvider};
 
-type Solver = fn(&str) -> (String, String);
+/// Helper function to wrap a solver into something returning strings
+const fn wrap<A, B, F>(f: F) -> impl Fn(&str) -> (String, String)
+where
+    A: std::fmt::Display,
+    B: std::fmt::Display,
+    F: Fn(&str) -> (A, B),
+{
+    move |s: &str| {
+        let (a, b) = f(s);
+        (a.to_string(), b.to_string())
+    }
+}
+
+type Solver = &'static dyn Fn(&str) -> (String, String);
 const DAYS: [Solver; 25] = [
-    day01::solve,
-    day02::solve,
-    day03::solve,
-    day04::solve,
-    day05::solve,
-    day06::solve,
-    day07::solve,
-    day08::solve,
-    day09::solve,
-    day10::solve,
-    day11::solve,
-    day12::solve,
-    day13::solve,
-    day14::solve,
-    day15::solve,
-    day16::solve,
-    day17::solve,
-    day18::solve,
-    day19::solve,
-    day20::solve,
-    day21::solve,
-    day22::solve,
-    day23::solve,
-    day24::solve,
-    day25::solve,
+    &wrap(day01::solve),
+    &wrap(day02::solve),
+    &wrap(day03::solve),
+    &wrap(day04::solve),
+    &wrap(day05::solve),
+    &wrap(day06::solve),
+    &wrap(day07::solve),
+    &wrap(day08::solve),
+    &wrap(day09::solve),
+    &wrap(day10::solve),
+    &wrap(day11::solve),
+    &wrap(day12::solve),
+    &wrap(day13::solve),
+    &wrap(day14::solve),
+    &wrap(day15::solve),
+    &wrap(day16::solve),
+    &wrap(day17::solve),
+    &wrap(day18::solve),
+    &wrap(day19::solve),
+    &wrap(day20::solve),
+    &wrap(day21::solve),
+    &wrap(day22::solve),
+    &wrap(day23::solve),
+    &wrap(day24::solve),
+    &wrap(day25::solve),
 ];
 
 const YEAR: i32 = 2024;

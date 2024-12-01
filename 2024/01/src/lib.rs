@@ -1,4 +1,4 @@
-pub fn solve(s: &str) -> (String, String) {
+pub fn solve(s: &str) -> (usize, usize) {
     let mut list1 = vec![];
     let mut list2 = vec![];
     let mut max_item = 0usize;
@@ -39,5 +39,5 @@ pub fn solve(s: &str) -> (String, String) {
         }
     }
 
-    (distance.to_string(), score.to_string())
+    (distance, score)
 }
