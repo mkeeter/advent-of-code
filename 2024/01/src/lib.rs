@@ -14,17 +14,30 @@ pub fn solve(s: &str) -> (String, String) {
     list1.sort_unstable();
     list2.sort_unstable();
 
-    let mut count = vec![0u16; max_item + 1];
     let distance: usize = list1
         .iter()
         .zip(list2.iter())
         .map(|(a, b)| a.abs_diff(*b))
         .sum();
 
-    for b in list2 {
-        count[b] += 1;
+    let mut score = 0;
+    let mut i = 0;
+    let mut j = 0;
+    while j < list2.len() {
+        let v = list2[j];
+        while i < list1.len() && list1[i] < v {
+            i += 1;
+        }
+        let mut count = 0;
+        while i < list1.len() && list1[i] == v {
+            i += 1;
+            count += v;
+        }
+        while j < list2.len() && list2[j] == v {
+            j += 1;
+            score += count;
+        }
     }
-    let score: usize = list1.into_iter().map(|a| a * count[a] as usize).sum();
 
     (distance.to_string(), score.to_string())
 }
