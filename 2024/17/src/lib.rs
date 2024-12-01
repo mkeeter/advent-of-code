@@ -1,3 +1,3 @@
-pub fn solve(s: &str) -> (String, String) {
+pub fn solve(_s: &str) -> (String, String) {
     unimplemented!()
 }
