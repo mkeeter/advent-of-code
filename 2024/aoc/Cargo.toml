@@ -10,9 +10,9 @@ chrono = "0.4"
 clap = { version = "4.4", features = ["derive"] }
 criterion = "0.5.1"
 dirs = "5.0.1"
-reqwest = { version = "0.11", features = ["cookies"] }
+reqwest = { version = "0.12", features = ["cookies"] }
 tokio = { version = "1", features = ["macros", "rt"] }
-url = "2.5.0"
+url = "2.5"
 
 day01.path = "../01"
 day02.path = "../02"
