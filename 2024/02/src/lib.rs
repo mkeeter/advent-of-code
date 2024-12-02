@@ -46,3 +46,23 @@ pub fn solve(s: &str) -> (usize, usize) {
 
     (safe, modified)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn example() {
+        let e = indoc::indoc! {"
+            7 6 4 2 1
+            1 2 7 8 9
+            9 7 6 2 1
+            1 3 2 4 5
+            8 6 4 4 1
+            1 3 6 7 9
+        "};
+        let (a, b) = solve(e);
+        assert_eq!(a, 2);
+        assert_eq!(b, 4);
+    }
+}

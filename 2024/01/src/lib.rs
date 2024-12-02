@@ -75,3 +75,23 @@ pub fn solve(s: &str) -> (usize, usize) {
 
     (distance, score)
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn example() {
+        let s = indoc::indoc! {"
+            3   4
+            4   3
+            2   5
+            1   3
+            3   9
+            3   3
+        "};
+        let (a, b) = solve(s);
+        assert_eq!(a, 11);
+        assert_eq!(b, 31);
+    }
+}
