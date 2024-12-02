@@ -1,9 +1,71 @@
-fn is_safe(row: &[i8]) -> bool {
+#[derive(Clone)]
+struct SkipBuf<'a> {
+    data: &'a [i8],
+    skip: usize,
+}
+
+impl std::ops::Index<usize> for SkipBuf<'_> {
+    type Output = i8;
+    fn index(&self, index: usize) -> &Self::Output {
+        if index >= self.skip {
+            &self.data[index + 1]
+        } else {
+            &self.data[index]
+        }
+    }
+}
+
+impl SkipBuf<'_> {
+    fn len(&self) -> usize {
+        self.data.len() - 1
+    }
+}
+
+impl<'a, 'b> IntoIterator for &'a SkipBuf<'b>
+where
+    'a: 'b,
+{
+    type Item = &'b i8;
+    type IntoIter = SkipBufIter<'a, 'b>;
+    fn into_iter(self) -> Self::IntoIter {
+        SkipBufIter {
+            buf: self,
+            index: 0,
+        }
+    }
+}
+
+struct SkipBufIter<'a, 'b> {
+    buf: &'a SkipBuf<'b>,
+    index: usize,
+}
+
+impl<'a, 'b> Iterator for SkipBufIter<'a, 'b>
+where
+    'a: 'b,
+{
+    type Item = &'b i8;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.buf.len() {
+            let out = &self.buf[self.index];
+            self.index += 1;
+            Some(out)
+        } else {
+            None
+        }
+    }
+}
+
+fn is_safe<'a, T>(row: &'a T) -> bool
+where
+    T: std::ops::Index<usize, Output = i8>,
+    &'a T: IntoIterator<Item = &'a i8>,
+{
     let sign = (row[1] - row[0]).signum();
     if sign == 0 {
         return false;
     }
-    for (a, b) in row.iter().zip(row.iter().skip(1)) {
+    for (a, b) in row.into_iter().zip(row.into_iter().skip(1)) {
         let d = *b - *a;
         if d.signum() != sign || d.abs() > 3 {
             return false;
@@ -12,15 +74,10 @@ fn is_safe(row: &[i8]) -> bool {
     true
 }
 
-fn any_safe(row: &[i8], scratch: &mut Vec<i8>) -> bool {
+fn any_safe(row: &[i8]) -> bool {
     for i in 0..row.len() {
-        scratch.clear();
-        for (j, v) in row.iter().enumerate() {
-            if j != i {
-                scratch.push(*v)
-            }
-        }
-        if is_safe(scratch) {
+        let skip = SkipBuf { data: row, skip: i };
+        if is_safe(&skip) {
             return true;
         }
     }
@@ -37,12 +94,8 @@ pub fn solve(s: &str) -> (usize, usize) {
         );
     }
 
-    let safe = rows.iter().filter(|row| is_safe(row)).count();
-    let mut scratch = vec![];
-    let modified = rows
-        .iter()
-        .filter(|row| any_safe(row, &mut scratch))
-        .count();
+    let safe = rows.iter().filter(|row| is_safe(*row)).count();
+    let modified = rows.iter().filter(|row| any_safe(row)).count();
 
     (safe, modified)
 }
