@@ -65,23 +65,15 @@ where
     if sign == 0 {
         return false;
     }
-    for (a, b) in row.into_iter().zip(row.into_iter().skip(1)) {
+
+    row.into_iter().zip(row.into_iter().skip(1)).all(|(a, b)| {
         let d = *b - *a;
-        if d.signum() != sign || d.abs() > 3 {
-            return false;
-        }
-    }
-    true
+        d.signum() == sign && d.abs() <= 3
+    })
 }
 
 fn any_safe(row: &[i8]) -> bool {
-    for i in 0..row.len() {
-        let skip = SkipBuf { data: row, skip: i };
-        if is_safe(&skip) {
-            return true;
-        }
-    }
-    false
+    (0..row.len()).any(|skip| is_safe(&SkipBuf { data: row, skip }))
 }
 
 pub fn solve(s: &str) -> (usize, usize) {
