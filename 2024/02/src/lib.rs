@@ -3,8 +3,8 @@ fn is_safe(row: &[i8]) -> bool {
     if sign == 0 {
         return false;
     }
-    for i in 1..row.len() {
-        let d = row[i] - row[i - 1];
+    for (a, b) in row.iter().zip(row.iter().skip(1)) {
+        let d = *b - *a;
         if d.signum() != sign || d.abs() > 3 {
             return false;
         }
