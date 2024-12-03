@@ -1,30 +1,19 @@
 pub fn solve(s: &str) -> (u64, u64) {
-    let re = regex::Regex::new(r"mul\((\d+),(\d+)\)").unwrap();
-    let p1 = re
-        .captures_iter(s)
-        .map(|m| {
-            let a = m[1].parse::<u64>().unwrap();
-            let b = m[2].parse::<u64>().unwrap();
-            a * b
-        })
-        .sum();
-
     let re =
         regex::Regex::new(r"(do\(\)|mul\((\d+),(\d+)\)|don't\(\))").unwrap();
-    let (p2, _) =
+    let (p1, p2, _) =
         re.captures_iter(s)
-            .fold((0, true), |(sum, enabled), m| match &m[0] {
-                "do()" => (sum, true),
-                "don't()" => (sum, false),
+            .fold((0, 0, true), |(p1, p2, enabled), m| match &m[0] {
+                "do()" => (p1, p2, true),
+                "don't()" => (p1, p2, false),
                 _ => {
-                    let d = if enabled {
+                    let d = {
                         let a = m[2].parse::<u64>().unwrap();
                         let b = m[3].parse::<u64>().unwrap();
+                        assert!(a <= 999 && b <= 999);
                         a * b
-                    } else {
-                        0
                     };
-                    (sum + d, enabled)
+                    (p1 + d, p2 + if enabled { d } else { 0 }, enabled)
                 }
             });
     (p1, p2)
