@@ -23,12 +23,13 @@ impl std::ops::Index<(i64, i64)> for Grid<'_> {
 
 impl<'a> Grid<'a> {
     fn new(s: &'a str) -> Self {
+        assert!(s.is_ascii());
         let mut width = None;
         let mut height = 0;
         for row in s.lines() {
             let w = row.len();
-            assert!(width.map(|width| width == w).unwrap_or(true));
-            width = Some(w);
+            let prev = *width.get_or_insert(w);
+            assert_eq!(prev, w);
             height += 1;
         }
         Self {
