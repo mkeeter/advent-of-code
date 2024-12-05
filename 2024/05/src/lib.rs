@@ -23,29 +23,35 @@ fn check(row: &[u8], illegal: &TupleSet) -> bool {
 }
 
 fn sort(row: &mut [u8], illegal: &TupleSet) -> u8 {
-    // Sort enough of the list to find the middle item
-    for n in 0..row.len() / 2 + 1 {
-        // Find an item that would be valid if placed at the end
-        let i = (0..row.len() - n)
-            .position(|i| {
-                (0..row.len() - n).all(|j| !illegal.get(row[i], row[j]))
-            })
-            .unwrap();
-        row.swap(row.len() - n - 1, i);
-    }
+    sort_recurse(row, illegal);
     row[row.len() / 2]
 }
 
+fn sort_recurse(row: &mut [u8], illegal: &TupleSet) {
+    if !row.is_empty() {
+        let n = row.len();
+        // Find an item that would be valid if placed at the end
+        let i = (0..n)
+            .position(|i| (0..n).all(|j| !illegal.get(row[i], row[j])))
+            .unwrap();
+        row.swap(n - 1, i);
+        sort_recurse(&mut row[..n - 1], illegal);
+    }
+}
+
 pub fn solve(s: &str) -> (u64, u64) {
+    let mut rules = true;
     let mut illegal = TupleSet::new();
     let mut runs: Vec<Vec<u8>> = vec![];
     for line in s.lines() {
-        if line.contains('|') {
+        if line.is_empty() {
+            rules = false;
+        } else if rules {
             let mut iter = line.split('|');
             let a = iter.next().and_then(|s| s.parse::<u8>().ok()).unwrap();
             let b = iter.next().and_then(|s| s.parse::<u8>().ok()).unwrap();
             illegal.set(b, a);
-        } else if line.contains(',') {
+        } else {
             runs.push(
                 line.split(',').map(|i| i.parse::<u8>().unwrap()).collect(),
             );
