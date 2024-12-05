@@ -1,29 +1,34 @@
-use std::collections::{HashMap, HashSet};
+struct TupleSet([[u64; 4]; 256]);
 
-fn check(row: &[u8], illegal: &HashMap<u8, HashSet<u8>>) -> bool {
+impl TupleSet {
+    fn new() -> Self {
+        Self([[0; 4]; 256])
+    }
+    fn get(&self, a: u8, b: u8) -> bool {
+        (self.0[a as usize][b as usize / 64] & (1 << (b as usize % 64))) != 0
+    }
+    fn set(&mut self, a: u8, b: u8) {
+        self.0[a as usize][b as usize / 64] |= 1 << (b as usize % 64)
+    }
+}
+
+fn check(row: &[u8], illegal: &TupleSet) -> bool {
     if row.is_empty() {
         true
-    } else if row[1..]
-        .iter()
-        .any(|b| illegal.get(&row[0]).map(|v| v.contains(b)).unwrap_or(false))
-    {
+    } else if row[1..].iter().any(|&b| illegal.get(row[0], b)) {
         false
     } else {
         check(&row[1..], illegal)
     }
 }
 
-fn sort(row: &mut [u8], illegal: &HashMap<u8, HashSet<u8>>) -> u8 {
+fn sort(row: &mut [u8], illegal: &TupleSet) -> u8 {
     // Sort enough of the list to find the middle item
     for n in 0..row.len() / 2 + 1 {
+        // Find an item that would be valid if placed at the end
         let i = (0..row.len() - n)
             .position(|i| {
-                (0..row.len() - n).all(|j| {
-                    illegal
-                        .get(&row[i])
-                        .map(|v| !v.contains(&row[j]))
-                        .unwrap_or(true)
-                })
+                (0..row.len() - n).all(|j| !illegal.get(row[i], row[j]))
             })
             .unwrap();
         row.swap(row.len() - n - 1, i);
@@ -32,14 +37,14 @@ fn sort(row: &mut [u8], illegal: &HashMap<u8, HashSet<u8>>) -> u8 {
 }
 
 pub fn solve(s: &str) -> (u64, u64) {
-    let mut illegal: HashMap<u8, HashSet<u8>> = HashMap::new();
+    let mut illegal = TupleSet::new();
     let mut runs: Vec<Vec<u8>> = vec![];
     for line in s.lines() {
         if line.contains('|') {
             let mut iter = line.split('|');
             let a = iter.next().and_then(|s| s.parse::<u8>().ok()).unwrap();
             let b = iter.next().and_then(|s| s.parse::<u8>().ok()).unwrap();
-            illegal.entry(b).or_default().insert(a);
+            illegal.set(b, a);
         } else if line.contains(',') {
             runs.push(
                 line.split(',').map(|i| i.parse::<u8>().unwrap()).collect(),
