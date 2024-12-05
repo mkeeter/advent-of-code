@@ -25,19 +25,19 @@ fn check(row: &[u8], illegal: &TupleSet) -> bool {
 }
 
 fn sort(row: &mut [u8], illegal: &TupleSet) -> u8 {
-    sort_recurse(row, illegal);
+    sort_recurse(row, illegal, row.len() / 2);
     row[row.len() / 2]
 }
 
-fn sort_recurse(row: &mut [u8], illegal: &TupleSet) {
-    if !row.is_empty() {
+fn sort_recurse(row: &mut [u8], illegal: &TupleSet, stop: usize) {
+    if row.len() > stop {
         let n = row.len();
         // Find an item that would be valid if placed at the end
         let i = (0..n)
             .position(|i| (0..n).all(|j| !illegal.get(row[i], row[j])))
             .unwrap();
         row.swap(n - 1, i);
-        sort_recurse(&mut row[..n - 1], illegal);
+        sort_recurse(&mut row[..n - 1], illegal, stop);
     }
 }
 
