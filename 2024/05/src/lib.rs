@@ -1,3 +1,5 @@
+use util::get_integers;
+
 struct TupleSet([[u64; 4]; 256]);
 
 impl TupleSet {
@@ -47,14 +49,12 @@ pub fn solve(s: &str) -> (u64, u64) {
         if line.is_empty() {
             rules = false;
         } else if rules {
-            let mut iter = line.split('|');
-            let a = iter.next().and_then(|s| s.parse::<u8>().ok()).unwrap();
-            let b = iter.next().and_then(|s| s.parse::<u8>().ok()).unwrap();
+            let mut iter = get_integers::<u8>(line);
+            let a = iter.next().unwrap();
+            let b = iter.next().unwrap();
             illegal.set(b, a);
         } else {
-            runs.push(
-                line.split(',').map(|i| i.parse::<u8>().unwrap()).collect(),
-            );
+            runs.push(get_integers::<u8>(line).collect());
         }
     }
 

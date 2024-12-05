@@ -1,37 +1,4 @@
-struct GetIntegers<'a> {
-    bytes: &'a [u8],
-    index: usize,
-}
-
-impl Iterator for GetIntegers<'_> {
-    type Item = usize;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.bytes.len() {
-            let mut v = 0;
-            while self.index < self.bytes.len()
-                && self.bytes[self.index].is_ascii_digit()
-            {
-                v = v * 10 + (self.bytes[self.index] - b'0') as usize;
-                self.index += 1;
-            }
-            while self.index < self.bytes.len()
-                && !self.bytes[self.index].is_ascii_digit()
-            {
-                self.index += 1;
-            }
-            Some(v)
-        } else {
-            None
-        }
-    }
-}
-
-fn get_integers(s: &str) -> impl Iterator<Item = usize> + '_ {
-    GetIntegers {
-        bytes: s.as_bytes(),
-        index: 0,
-    }
-}
+use util::get_integers;
 
 pub fn solve(s: &str) -> (usize, usize) {
     let mut list1 = vec![];
