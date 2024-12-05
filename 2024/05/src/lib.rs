@@ -14,27 +14,24 @@ fn check(row: &[u8], illegal: &HashMap<u8, HashSet<u8>>) -> bool {
 }
 
 fn sort(row: &mut [u8], illegal: &HashMap<u8, HashSet<u8>>) -> u8 {
-    for n in 0..row.len() {
-        let mut found = None;
-        for i in 0..row.len() - n {
-            let invalid = (0..row.len() - n).any(|b| {
-                illegal
-                    .get(&row[i])
-                    .map(|v| v.contains(&row[b]))
-                    .unwrap_or(false)
-            });
-            if !invalid {
-                assert!(found.is_none());
-                found = Some(i);
-            }
-        }
-        row.swap(row.len() - n - 1, found.unwrap());
+    // Sort enough of the list to find the middle item
+    for n in 0..row.len() / 2 + 1 {
+        let i = (0..row.len() - n)
+            .position(|i| {
+                (0..row.len() - n).all(|j| {
+                    illegal
+                        .get(&row[i])
+                        .map(|v| !v.contains(&row[j]))
+                        .unwrap_or(true)
+                })
+            })
+            .unwrap();
+        row.swap(row.len() - n - 1, i);
     }
     row[row.len() / 2]
 }
 
 pub fn solve(s: &str) -> (u64, u64) {
-    let mut legal: HashMap<u8, HashSet<u8>> = HashMap::new();
     let mut illegal: HashMap<u8, HashSet<u8>> = HashMap::new();
     let mut runs: Vec<Vec<u8>> = vec![];
     for line in s.lines() {
@@ -42,7 +39,6 @@ pub fn solve(s: &str) -> (u64, u64) {
             let mut iter = line.split('|');
             let a = iter.next().and_then(|s| s.parse::<u8>().ok()).unwrap();
             let b = iter.next().and_then(|s| s.parse::<u8>().ok()).unwrap();
-            legal.entry(a).or_default().insert(b);
             illegal.entry(b).or_default().insert(a);
         } else if line.contains(',') {
             runs.push(
