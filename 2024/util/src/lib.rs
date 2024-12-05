@@ -30,6 +30,10 @@ where
     }
 }
 
+/// Returns a list of integers that appear in the string
+///
+/// This function does not check for overflow; it's recommended to compile with
+/// `overflow-checks = true` (even in release mode) for additional safety.
 pub fn get_integers<T>(s: &str) -> impl Iterator<Item = T> + '_
 where
     T: 'static
