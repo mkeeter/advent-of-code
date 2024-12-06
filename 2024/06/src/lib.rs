@@ -15,13 +15,15 @@ pub fn solve(s: &str) -> (usize, usize) {
     let Some(start) = pos else {
         panic!("could not find guard's starting position");
     };
+    assert_eq!(g.width(), g.height());
+    let stride = (g.width() as usize).next_power_of_two() as i64;
 
-    let mut seen = BitSet::new((g.width() * g.height()) as usize);
+    let mut seen = BitSet::new(stride.pow(2) as usize);
     {
         let (mut x, mut y) = start;
         let (mut dx, mut dy) = (0i64, -1i64);
         loop {
-            seen.set((x + y * g.height()) as usize);
+            seen.set((x + y * stride) as usize);
             match g.get(x + dx, y + dy) {
                 Some(&b'#') => {
                     (dx, dy) = (-dy, dx);
@@ -46,7 +48,7 @@ pub fn solve(s: &str) -> (usize, usize) {
             let (mut x, mut y) = start;
             let (mut dx, mut dy) = (0i64, -1i64);
             let mut angle = 0;
-            let mut seen = BitSet::new((g.width() * g.height() * 4) as usize);
+            let mut seen = BitSet::new((stride.pow(2) * 4) as usize);
             loop {
                 let rot = (x + dx == bx && y + dy == by)
                     || match g.get(x + dx, y + dy) {
@@ -55,7 +57,7 @@ pub fn solve(s: &str) -> (usize, usize) {
                         None => return false,
                     };
                 if rot {
-                    let i = (x + (y + angle * g.height()) * g.width()) as usize;
+                    let i = (x + (y + angle * stride) * stride) as usize;
                     if !seen.insert(i) {
                         break true;
                     }
