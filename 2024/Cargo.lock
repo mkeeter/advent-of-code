@@ -517,6 +517,7 @@ name = "day04"
 version = "0.1.0"
 dependencies = [
  "indoc",
+ "util",
 ]
 
 [[package]]
@@ -530,6 +531,10 @@ dependencies = [
 [[package]]
 name = "day06"
 version = "0.1.0"
+dependencies = [
+ "indoc",
+ "util",
+]
 
 [[package]]
 name = "day07"
