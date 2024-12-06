@@ -108,3 +108,29 @@ impl<'a> Grid<'a> {
         self.height
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+pub struct BitSet(Vec<u64>);
+impl BitSet {
+    #[inline]
+    pub fn new(size: usize) -> Self {
+        Self(vec![0u64; size.div_ceil(64)])
+    }
+    #[inline]
+    pub fn get(&self, i: usize) -> bool {
+        (self.0[i / 64] & (1 << (i % 64))) != 0
+    }
+    #[inline]
+    pub fn set(&mut self, i: usize) {
+        self.0[i / 64] |= 1 << (i % 64)
+    }
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.0.iter().map(|b| b.count_ones() as usize).sum()
+    }
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.0.iter().all(|b| *b == 0)
+    }
+}

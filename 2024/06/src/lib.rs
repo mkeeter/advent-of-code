@@ -1,21 +1,5 @@
 use rayon::prelude::*;
-use util::Grid;
-
-struct BitSet(Vec<u64>);
-impl BitSet {
-    fn new(size: usize) -> Self {
-        Self(vec![0u64; size.div_ceil(64)])
-    }
-    fn get(&self, i: usize) -> bool {
-        (self.0[i / 64] & (1 << (i % 64))) != 0
-    }
-    fn set(&mut self, i: usize) {
-        self.0[i / 64] |= 1 << (i % 64)
-    }
-    fn len(&self) -> usize {
-        self.0.iter().map(|b| b.count_ones() as usize).sum()
-    }
-}
+use util::{BitSet, Grid};
 
 pub fn solve(s: &str) -> (usize, usize) {
     let g = Grid::new(s);
