@@ -3,8 +3,8 @@ use util::Grid;
 pub fn solve(s: &str) -> (usize, usize) {
     let g = Grid::new(s);
     let mut found = 0;
-    for y in 0..g.height() as i64 {
-        for x in 0..g.width() as i64 {
+    for y in 0..g.height() {
+        for x in 0..g.width() {
             for dx in [-1i64, 0, 1] {
                 for dy in [-1i64, 0, 1] {
                     found += b"XMAS".iter().enumerate().all(|(i, c)| {
@@ -17,8 +17,8 @@ pub fn solve(s: &str) -> (usize, usize) {
     }
 
     let mut diag = 0;
-    for y in 0..g.height() as i64 {
-        for x in 0..g.width() as i64 {
+    for y in 0..g.height() {
+        for x in 0..g.width() {
             if g[(x, y)] != b'A' {
                 continue;
             }

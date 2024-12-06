@@ -100,13 +100,13 @@ impl<'a> Grid<'a> {
     }
 
     #[inline]
-    pub fn width(&self) -> usize {
-        self.width
+    pub fn width(&self) -> i64 {
+        self.width as i64
     }
 
     #[inline]
-    pub fn height(&self) -> usize {
-        self.height
+    pub fn height(&self) -> i64 {
+        self.height as i64
     }
 }
 
@@ -126,6 +126,15 @@ impl BitSet {
     #[inline]
     pub fn set(&mut self, i: usize) {
         self.0[i / 64] |= 1 << (i % 64)
+    }
+    /// Inserts `true` at the given position
+    ///
+    /// Returns whether the value was newly inserted
+    #[inline]
+    pub fn insert(&mut self, i: usize) -> bool {
+        let prev = self.get(i);
+        self.set(i);
+        !prev
     }
     #[inline]
     pub fn len(&self) -> usize {

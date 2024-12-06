@@ -6,8 +6,8 @@ pub fn solve(s: &str) -> (usize, usize) {
     let mut pos = None;
     for y in 0..g.height() {
         for x in 0..g.width() {
-            if g[(x as i64, y as i64)] == b'^' {
-                pos = Some((x as i64, y as i64));
+            if g[(x, y)] == b'^' {
+                pos = Some((x, y));
                 break;
             }
         }
@@ -16,12 +16,12 @@ pub fn solve(s: &str) -> (usize, usize) {
         panic!("could not find guard's starting position");
     };
 
-    let mut seen = BitSet::new(g.width() * g.height());
+    let mut seen = BitSet::new((g.width() * g.height()) as usize);
     {
         let (mut x, mut y) = start;
         let (mut dx, mut dy) = (0i64, -1i64);
         loop {
-            seen.set(x as usize + y as usize * g.height());
+            seen.set((x + y * g.height()) as usize);
             match g.get(x + dx, y + dy) {
                 Some(&b'#') => {
                     (dx, dy) = (-dy, dx);
@@ -40,26 +40,25 @@ pub fn solve(s: &str) -> (usize, usize) {
         .into_par_iter()
         .flat_map(|by| (0..g.width()).into_par_iter().map(move |bx| (bx, by)))
         .filter(|&(bx, by)| {
-            if !seen.get(bx + by * g.height()) {
+            if !seen.get((bx + by * g.height()) as usize) {
                 return false;
             }
             let (mut x, mut y) = start;
             let (mut dx, mut dy) = (0i64, -1i64);
             let mut angle = 0;
-            let mut seen = BitSet::new(g.width() * g.height() * 4);
+            let mut seen = BitSet::new((g.width() * g.height() * 4) as usize);
             loop {
-                let rot = (x + dx == bx as i64 && y + dy == by as i64)
+                let rot = (x + dx == bx && y + dy == by)
                     || match g.get(x + dx, y + dy) {
                         Some(&b'#') => true,
                         Some(_) => false,
                         None => return false,
                     };
                 if rot {
-                    let i = angle + (x as usize + y as usize * g.width()) * 4;
-                    if seen.get(i) {
+                    let i = (x + (y + angle * g.height()) * g.width()) as usize;
+                    if !seen.insert(i) {
                         break true;
                     }
-                    seen.set(i);
                     (dx, dy) = (-dy, dx);
                     angle = (angle + 1) % 4;
                 } else {
