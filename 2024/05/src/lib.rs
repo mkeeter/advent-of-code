@@ -1,16 +1,16 @@
-use util::get_integers;
+use util::{get_integers, BitSet};
 
-struct TupleSet([[u64; 4]; 256]);
+struct TupleSet(BitSet);
 
 impl TupleSet {
     fn new() -> Self {
-        Self([[0; 4]; 256])
+        Self(BitSet::new(256 * 256))
     }
     fn get(&self, a: u8, b: u8) -> bool {
-        (self.0[a as usize][b as usize / 64] & (1 << (b as usize % 64))) != 0
+        self.0.get(a as usize * 256 + b as usize)
     }
     fn set(&mut self, a: u8, b: u8) {
-        self.0[a as usize][b as usize / 64] |= 1 << (b as usize % 64)
+        self.0.set(a as usize * 256 + b as usize)
     }
 }
 

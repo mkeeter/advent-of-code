@@ -50,6 +50,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/// Dense immutable grid based on a borrowed string
 pub struct Grid<'a> {
     bytes: &'a [u8],
     width: usize,
@@ -111,6 +112,7 @@ impl<'a> Grid<'a> {
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/// Dense fixed-length bitset
 pub struct BitSet(Vec<u64>);
 impl BitSet {
     #[inline]
