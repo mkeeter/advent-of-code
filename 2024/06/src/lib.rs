@@ -42,7 +42,7 @@ pub fn solve(s: &str) -> (usize, usize) {
         .into_par_iter()
         .flat_map(|by| (0..g.width()).into_par_iter().map(move |bx| (bx, by)))
         .filter(|&(bx, by)| {
-            if !seen.get((bx + by * g.height()) as usize) {
+            if !seen.get((bx + by * stride) as usize) {
                 return false;
             }
             let (mut x, mut y) = start;
