@@ -44,25 +44,21 @@ impl Equation {
 }
 
 pub fn solve(s: &str) -> (u64, u64) {
-    let mut eqns = vec![];
-    for line in s.lines() {
-        let mut iter = get_integers::<u64>(line);
-        let total = iter.next().unwrap();
-        let values = iter.collect::<Vec<_>>();
-        eqns.push(Equation { total, values })
-    }
-    let valid: u64 = eqns
-        .par_iter()
-        .filter(|e| e.is_valid())
-        .map(|e| e.total)
-        .sum();
-    let any_valid: u64 = eqns
-        .par_iter()
-        .filter(|e| e.is_valid_concat())
-        .map(|e| e.total)
-        .sum();
-
-    (valid, any_valid)
+    s.par_lines()
+        .map(|line| {
+            let mut iter = get_integers::<u64>(line);
+            let total = iter.next().unwrap();
+            let values = iter.collect::<Vec<_>>();
+            let e = Equation { total, values };
+            if e.is_valid() {
+                (e.total, e.total)
+            } else if e.is_valid_concat() {
+                (0, e.total)
+            } else {
+                (0, 0)
+            }
+        })
+        .reduce(|| (0, 0), |(a, b), (c, d)| (a + c, b + d))
 }
 
 #[cfg(test)]
