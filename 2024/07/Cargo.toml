@@ -2,3 +2,8 @@
 name = "day07"
 version = "0.1.0"
 edition = "2021"
+
+[dependencies]
+indoc.workspace = true
+rayon.workspace = true
+util.workspace = true

@@ -11,7 +11,7 @@ Solutions to [Advent of Code](https://adventofcode.com) for all years (2015-2023
 | [2021](https://adventofcode.com/2021) | 50      | Rust                |
 | [2022](https://adventofcode.com/2022) | 50      | Rust                |
 | [2023](https://adventofcode.com/2023) | 50      | Rust                |
-| [2024](https://adventofcode.com/2024) | 10       | Rust                |
+| [2024](https://adventofcode.com/2024) | 14      | Rust                |
 
 2017-2023 were solved live;
 2015 and 2016 were solved after 2019;
