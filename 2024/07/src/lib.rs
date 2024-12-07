@@ -9,16 +9,13 @@ struct Equation {
 
 impl Equation {
     fn is_valid(&self) -> bool {
-        Self::recurse(self.total, &self.values, false)
+        Self::recurse(self.total, self.values[0], &self.values[1..], false)
     }
     fn is_valid_concat(&self) -> bool {
-        Self::recurse(self.total, &self.values, true)
+        Self::recurse(self.total, self.values[0], &self.values[1..], true)
     }
-    fn recurse(accum: u64, slice: &[u64], concat: bool) -> bool {
-        if slice.len() == 1 {
-            slice[0] == accum
-        } else {
-            let (v, next) = slice.split_last().unwrap();
+    fn recurse(accum: u64, target: u64, slice: &[u64], concat: bool) -> bool {
+        if let Some((v, next)) = slice.split_last() {
             [
                 if accum > *v { Some(accum - *v) } else { None },
                 if accum % *v == 0 {
@@ -39,7 +36,9 @@ impl Equation {
             ]
             .iter()
             .flatten()
-            .any(|i| Self::recurse(*i, next, concat))
+            .any(|i| Self::recurse(*i, target, next, concat))
+        } else {
+            accum == target
         }
     }
 }
