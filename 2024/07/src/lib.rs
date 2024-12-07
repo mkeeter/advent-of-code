@@ -9,32 +9,37 @@ struct Equation {
 
 impl Equation {
     fn is_valid(&self) -> bool {
-        Self::recurse(self.total, self.values[0], &self.values[1..])
+        Self::recurse(self.total, &self.values, false)
     }
-    fn is_valid_any(&self) -> bool {
-        Self::recurse_any(self.total, self.values[0], &self.values[1..])
+    fn is_valid_concat(&self) -> bool {
+        Self::recurse(self.total, &self.values, true)
     }
-    fn recurse(total: u64, accum: u64, slice: &[u64]) -> bool {
-        if slice.is_empty() {
-            total == accum
+    fn recurse(accum: u64, slice: &[u64], concat: bool) -> bool {
+        if slice.len() == 1 {
+            slice[0] == accum
         } else {
-            Self::recurse(total, accum * slice[0], &slice[1..])
-                || Self::recurse(total, accum + slice[0], &slice[1..])
-        }
-    }
-    fn recurse_any(total: u64, accum: u64, slice: &[u64]) -> bool {
-        if slice.is_empty() {
-            total == accum
-        } else if accum > total {
-            false
-        } else {
-            Self::recurse_any(total, accum * slice[0], &slice[1..])
-                || Self::recurse_any(total, accum + slice[0], &slice[1..])
-                || Self::recurse_any(
-                    total,
-                    accum * 10u64.pow(slice[0].ilog10() + 1) + slice[0],
-                    &slice[1..],
-                )
+            let (v, next) = slice.split_last().unwrap();
+            [
+                if accum > *v { Some(accum - *v) } else { None },
+                if accum % *v == 0 {
+                    Some(accum / *v)
+                } else {
+                    None
+                },
+                if concat {
+                    let p = 10u64.pow(v.ilog10() + 1);
+                    if accum % p == *v {
+                        Some(accum / p)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                },
+            ]
+            .iter()
+            .flatten()
+            .any(|i| Self::recurse(*i, next, concat))
         }
     }
 }
@@ -54,7 +59,7 @@ pub fn solve(s: &str) -> (u64, u64) {
         .sum();
     let any_valid: u64 = eqns
         .par_iter()
-        .filter(|e| e.is_valid_any())
+        .filter(|e| e.is_valid_concat())
         .map(|e| e.total)
         .sum();
 
