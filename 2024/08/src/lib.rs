@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use util::{BitSet, Grid};
 
 pub fn solve(s: &str) -> (usize, usize) {
@@ -12,7 +12,7 @@ pub fn solve(s: &str) -> (usize, usize) {
             }
         }
     }
-    let mut antinodes = HashSet::new();
+    let mut antinodes = BitSet::new((g.width() * g.height()) as usize);
     for pos in antennas.values() {
         for (a, b) in pos
             .iter()
@@ -21,18 +21,17 @@ pub fn solve(s: &str) -> (usize, usize) {
         {
             let dx = b.0 - a.0;
             let dy = b.1 - a.1;
-            antinodes.insert((a.0 - dx, a.1 - dy));
-            antinodes.insert((b.0 + dx, b.1 + dy));
+            for sign in [-1, 2] {
+                let x = a.0 + sign * dx;
+                let y = a.1 + sign * dy;
+                if x >= 0 && x < g.width() && y >= 0 && y < g.height() {
+                    antinodes.insert((x + y * g.width()) as usize);
+                }
+            }
         }
     }
-    let antinode_count = antinodes
-        .iter()
-        .filter(|(x, y)| {
-            *x >= 0 && *x < g.width() && *y >= 0 && *y < g.height()
-        })
-        .count();
+    let antinode_count = antinodes.len();
 
-    let mut many_antinodes = HashSet::new();
     for pos in antennas.values() {
         for (a, b) in pos
             .iter()
@@ -44,14 +43,16 @@ pub fn solve(s: &str) -> (usize, usize) {
             for sign in [1, -1] {
                 let (mut x, mut y) = a;
                 while x >= 0 && x < g.width() && y >= 0 && y < g.height() {
-                    many_antinodes.insert((x, y));
+                    antinodes.insert((x + y * g.width()) as usize);
                     x += dx * sign;
                     y += dy * sign;
                 }
             }
         }
     }
-    (antinode_count, many_antinodes.len())
+    let many_antinode_count = antinodes.len();
+
+    (antinode_count, many_antinode_count)
 }
 
 #[cfg(test)]
