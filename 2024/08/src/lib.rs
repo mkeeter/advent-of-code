@@ -1,19 +1,25 @@
-use std::collections::HashMap;
 use util::{BitSet, Grid};
 
 pub fn solve(s: &str) -> (usize, usize) {
     let g = Grid::new(s);
-    let mut antennas: HashMap<u8, Vec<(i64, i64)>> = HashMap::new();
+
+    // Dense set specialized for [a-zA-Z0-9]
+    let mut antennas: Vec<Vec<(i64, i64)>> =
+        std::iter::repeat_with(Vec::new).take(26 * 2 + 10).collect();
     for y in 0..g.height() {
         for x in 0..g.width() {
             let c = g[(x, y)];
-            if c != b'.' {
-                antennas.entry(c).or_default().push((x, y));
-            }
+            let i = match c {
+                b'a'..=b'z' => c - b'a',
+                b'A'..=b'Z' => c - b'A' + 26,
+                b'0'..=b'9' => c - b'0' + 26 * 2,
+                _ => continue,
+            };
+            antennas[i as usize].push((x, y));
         }
     }
     let mut antinodes = BitSet::new((g.width() * g.height()) as usize);
-    for pos in antennas.values() {
+    for pos in &antennas {
         for (a, b) in pos
             .iter()
             .enumerate()
@@ -32,7 +38,7 @@ pub fn solve(s: &str) -> (usize, usize) {
     }
     let antinode_count = antinodes.len();
 
-    for pos in antennas.values() {
+    for pos in &antennas {
         for (a, b) in pos
             .iter()
             .enumerate()
