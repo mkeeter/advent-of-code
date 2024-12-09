@@ -55,7 +55,7 @@ impl GapTree {
             let new_gap_pos = i + f.length();
             self.0.remove(&i);
             if new_gap_length > 0 {
-                self.insert(
+                self.0.insert(
                     new_gap_pos,
                     Gap {
                         length: new_gap_length,
@@ -65,27 +65,6 @@ impl GapTree {
             Some(i)
         } else {
             None
-        }
-    }
-    fn insert(&mut self, index: usize, g: Gap) {
-        let end = index + g.length;
-        // Merge gaps forwards
-        if let Some(v) = self.0.remove(&end) {
-            self.0.insert(
-                index,
-                Gap {
-                    length: g.length + v.length,
-                },
-            );
-        } else {
-            // Merge gaps in reverse
-            let mut prev = self.0.range_mut(..index);
-            match prev.next_back() {
-                Some((i, p)) if i + p.length == index => p.length += g.length,
-                _ => {
-                    self.0.insert(index, g);
-                }
-            }
         }
     }
     fn trim(&mut self, index: usize) {
@@ -112,21 +91,14 @@ impl FileTree {
 }
 
 fn pack_files(mut files: FileTree, mut gaps: GapTree) -> u64 {
-    let mut out = vec![];
+    let mut out = BTreeMap::new();
     while let Some((index, f)) = files.pop_last() {
         gaps.trim(index);
-        match gaps.find_space_for(f) {
-            // If we can pack this file before its previous position, then do it
-            Some(i) => {
-                files.insert(i, f);
-                gaps.insert(index, Gap { length: f.length() });
-            }
-            // Otherwise, it's done and can be removed
-            _ => out.push((index, f)),
-        }
+        let i = gaps.find_space_for(f).unwrap_or(index);
+        out.insert(i, f);
     }
     let mut checksum = 0;
-    for &(pos, v) in out.iter().rev() {
+    for (&pos, v) in out.iter().rev() {
         for i in pos..pos + v.length() {
             checksum += v.index as u64 * i as u64;
         }
@@ -153,12 +125,12 @@ pub fn solve(s: &str) -> (u64, u64) {
             if let Some(index) = index {
                 files.insert(pos, File { index, length })
             } else if length > 0 {
-                gaps.insert(
+                gaps.0.insert(
                     pos,
                     Gap {
                         length: usize::from(length),
                     },
-                )
+                );
             }
             pos += usize::from(length);
         }
