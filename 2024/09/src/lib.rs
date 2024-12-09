@@ -52,26 +52,24 @@ fn pack_one_file(data: &mut BTreeMap<usize, Span>) -> Option<(usize, Span)> {
             break (i, last);
         }
     };
-    println!("packing {f:?}");
     if let Some((i, d)) = data
         .iter_mut()
         .find(|(_i, d)| matches!(d.data, Data::Gap) && d.length >= f.length)
     {
-        println!("found gap at {i}, {d:?}");
         let new_gap_length = d.length - f.length;
         let new_gap_pos = i + f.length;
         *d = f; // put the file at the beginning of the gap
-        println!("inserting {new_gap_length} gap at {new_gap_pos}");
-        data.insert(
-            new_gap_pos,
-            Span {
-                data: Data::Gap,
-                length: new_gap_length,
-            },
-        );
+        if new_gap_length > 0 {
+            data.insert(
+                new_gap_pos,
+                Span {
+                    data: Data::Gap,
+                    length: new_gap_length,
+                },
+            );
+        }
         None
     } else {
-        println!("did not find gap");
         Some((index, f))
     }
 }
@@ -125,6 +123,6 @@ mod test {
     #[test]
     fn example() {
         const EXAMPLE: &str = "2333133121414131402";
-        assert_eq!(solve(EXAMPLE), (1928, 0));
+        assert_eq!(solve(EXAMPLE), (1928, 2858));
     }
 }
