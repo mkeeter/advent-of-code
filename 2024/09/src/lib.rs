@@ -32,6 +32,7 @@ struct File {
     length: usize,
 }
 
+#[derive(Copy, Clone, Debug)]
 struct Gap {
     length: usize,
 }
@@ -81,6 +82,15 @@ impl GapTree {
             }
         }
     }
+    fn trim(&mut self, index: usize) {
+        while let Some((i, g)) = self.0.last_key_value() {
+            if i + g.length > index {
+                self.0.pop_last();
+            } else {
+                break;
+            }
+        }
+    }
 }
 
 #[derive(Default)]
@@ -98,9 +108,10 @@ impl FileTree {
 fn pack_files(mut files: FileTree, mut gaps: GapTree) -> usize {
     let mut out = vec![];
     while let Some((index, f)) = files.pop_last() {
+        gaps.trim(index);
         match gaps.find_space_for(f) {
             // If we can pack this file before its previous position, then do it
-            Some(i) if i < index => {
+            Some(i) => {
                 files.insert(i, f);
                 gaps.insert(index, Gap { length: f.length });
             }
