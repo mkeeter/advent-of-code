@@ -144,4 +144,8 @@ impl BitSet {
     pub fn is_empty(&self) -> bool {
         self.0.iter().all(|b| *b == 0)
     }
+    #[inline]
+    pub fn clear(&mut self) {
+        self.0.fill(0)
+    }
 }

@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 fn pack_blocks(data: &[Option<u16>]) -> u64 {
     let mut forward = 0;
@@ -38,60 +38,47 @@ impl File {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
-struct Gap {
-    length: usize,
-}
-
 #[derive(Default)]
-struct GapTree(BTreeMap<usize, Gap>);
+struct GapTree([BTreeSet<usize>; 10]);
 
 impl GapTree {
+    fn insert(&mut self, size: u8, pos: usize) {
+        self.0[usize::from(size)].insert(pos);
+    }
     fn find_space_for(&mut self, f: File) -> Option<usize> {
-        if let Some((&i, ref d)) =
-            self.0.iter_mut().find(|(_i, g)| g.length >= f.length())
-        {
-            let new_gap_length = d.length - f.length();
-            let new_gap_pos = i + f.length();
-            self.0.remove(&i);
-            if new_gap_length > 0 {
-                self.0.insert(
-                    new_gap_pos,
-                    Gap {
-                        length: new_gap_length,
-                    },
-                );
-            }
-            Some(i)
-        } else {
-            None
+        let (size, index) = self
+            .0
+            .iter()
+            .enumerate()
+            .filter(|(size, _m)| *size >= f.length())
+            .flat_map(|(size, m)| m.first().map(|k| (size, *k)))
+            .min_by_key(|(_size, k)| *k)?;
+
+        let new_gap_length = size - f.length();
+        let new_gap_pos = index + f.length();
+        self.0[size].remove(&index);
+        if new_gap_length > 0 {
+            self.0[new_gap_length].insert(new_gap_pos);
         }
+        Some(index)
     }
     fn trim(&mut self, index: usize) {
-        while let Some((i, g)) = self.0.last_key_value() {
-            if i + g.length > index {
-                self.0.pop_last();
-            } else {
-                break;
+        for (size, b) in self.0.iter_mut().enumerate() {
+            while let Some(i) = b.last() {
+                if i + size > index {
+                    b.pop_last();
+                } else {
+                    break;
+                }
             }
         }
     }
 }
 
-#[derive(Default)]
-struct FileTree(BTreeMap<usize, File>);
-
-impl FileTree {
-    fn pop_last(&mut self) -> Option<(usize, File)> {
-        self.0.pop_last()
-    }
-    fn insert(&mut self, index: usize, f: File) {
-        self.0.insert(index, f);
-    }
-}
+type FileTree = BTreeMap<usize, File>;
 
 fn pack_files(mut files: FileTree, mut gaps: GapTree) -> u64 {
-    let mut out = BTreeMap::new();
+    let mut out = FileTree::new();
     while let Some((index, f)) = files.pop_last() {
         gaps.trim(index);
         let i = gaps.find_space_for(f).unwrap_or(index);
@@ -123,14 +110,9 @@ pub fn solve(s: &str) -> (u64, u64) {
                 data.push(index);
             }
             if let Some(index) = index {
-                files.insert(pos, File { index, length })
+                files.insert(pos, File { index, length });
             } else if length > 0 {
-                gaps.0.insert(
-                    pos,
-                    Gap {
-                        length: usize::from(length),
-                    },
-                );
+                gaps.insert(length, pos);
             }
             pos += usize::from(length);
         }
