@@ -93,36 +93,20 @@ impl FileTree {
     fn insert(&mut self, index: usize, f: File) {
         self.0.insert(index, f);
     }
-    fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-
-/// Tries to pack the last file into the `data` tree
-///
-/// Returns the file if there are no gaps that can fit it, otherwise, returns
-/// `None` and moves the file to the leftmost gap of appropriate size.
-fn pack_one_file(
-    files: &mut FileTree,
-    gaps: &mut GapTree,
-) -> Option<(usize, File)> {
-    let (index, f) = files.pop_last().unwrap();
-    if let Some(i) = gaps.find_space_for(f) {
-        if i >= index {
-            return Some((index, f));
-        }
-        files.insert(i, f);
-        gaps.insert(index, Gap { length: f.length });
-        None
-    } else {
-        Some((index, f))
-    }
 }
 
 fn pack_files(mut files: FileTree, mut gaps: GapTree) -> usize {
     let mut out = vec![];
-    while !files.is_empty() {
-        out.extend(pack_one_file(&mut files, &mut gaps));
+    while let Some((index, f)) = files.pop_last() {
+        match gaps.find_space_for(f) {
+            // If we can pack this file before its previous position, then do it
+            Some(i) if i < index => {
+                files.insert(i, f);
+                gaps.insert(index, Gap { length: f.length });
+            }
+            // Otherwise, it's done and can be removed
+            _ => out.push((index, f)),
+        }
     }
     let mut checksum = 0;
     for &(pos, v) in out.iter().rev() {
