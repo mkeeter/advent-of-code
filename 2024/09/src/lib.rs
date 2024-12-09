@@ -49,7 +49,7 @@ impl GapTree {
             let new_gap_pos = i + f.length;
             self.0.remove(&i);
             if new_gap_length > 0 {
-                self.0.insert(
+                self.insert(
                     new_gap_pos,
                     Gap {
                         length: new_gap_length,
@@ -142,7 +142,7 @@ pub fn solve(s: &str) -> (usize, usize) {
             }
             if let Some(index) = index {
                 files.insert(pos, File { index, length })
-            } else {
+            } else if length > 0 {
                 gaps.insert(pos, Gap { length })
             }
             pos += length;
