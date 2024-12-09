@@ -27,65 +27,107 @@ fn pack_blocks(data: &[Option<usize>]) -> usize {
 }
 
 #[derive(Copy, Clone, Debug)]
-enum Data {
-    File { index: usize },
-    Gap,
+struct File {
+    index: usize,
+    length: usize,
 }
 
-#[derive(Copy, Clone, Debug)]
-struct Span {
-    data: Data,
+struct Gap {
     length: usize,
+}
+
+#[derive(Default)]
+struct GapTree(BTreeMap<usize, Gap>);
+
+impl GapTree {
+    fn find_space_for(&mut self, f: File) -> Option<usize> {
+        if let Some((&i, ref d)) =
+            self.0.iter_mut().find(|(_i, g)| g.length >= f.length)
+        {
+            let new_gap_length = d.length - f.length;
+            let new_gap_pos = i + f.length;
+            self.0.remove(&i);
+            if new_gap_length > 0 {
+                self.0.insert(
+                    new_gap_pos,
+                    Gap {
+                        length: new_gap_length,
+                    },
+                );
+            }
+            Some(i)
+        } else {
+            None
+        }
+    }
+    fn insert(&mut self, index: usize, g: Gap) {
+        let end = index + g.length;
+        // Merge gaps forwards
+        if let Some(v) = self.0.remove(&end) {
+            self.0.insert(
+                index,
+                Gap {
+                    length: g.length + v.length,
+                },
+            );
+        } else {
+            // Merge gaps in reverse
+            let mut prev = self.0.range_mut(..index);
+            match prev.next_back() {
+                Some((i, p)) if i + p.length == index => p.length += g.length,
+                _ => {
+                    self.0.insert(index, g);
+                }
+            }
+        }
+    }
+}
+
+#[derive(Default)]
+struct FileTree(BTreeMap<usize, File>);
+
+impl FileTree {
+    fn pop_last(&mut self) -> Option<(usize, File)> {
+        self.0.pop_last()
+    }
+    fn insert(&mut self, index: usize, f: File) {
+        self.0.insert(index, f);
+    }
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 /// Tries to pack the last file into the `data` tree
 ///
 /// Returns the file if there are no gaps that can fit it, otherwise, returns
 /// `None` and moves the file to the leftmost gap of appropriate size.
-fn pack_one_file(data: &mut BTreeMap<usize, Span>) -> Option<(usize, Span)> {
-    // Remove the last file from the tree
-    let (index, f) = loop {
-        let (i, last) = data.pop_last().unwrap();
-        if matches!(last.data, Data::Gap) {
-            continue;
-        } else {
-            break (i, last);
+fn pack_one_file(
+    files: &mut FileTree,
+    gaps: &mut GapTree,
+) -> Option<(usize, File)> {
+    let (index, f) = files.pop_last().unwrap();
+    if let Some(i) = gaps.find_space_for(f) {
+        if i >= index {
+            return Some((index, f));
         }
-    };
-    if let Some((i, d)) = data
-        .iter_mut()
-        .find(|(_i, d)| matches!(d.data, Data::Gap) && d.length >= f.length)
-    {
-        let new_gap_length = d.length - f.length;
-        let new_gap_pos = i + f.length;
-        *d = f; // put the file at the beginning of the gap
-        if new_gap_length > 0 {
-            data.insert(
-                new_gap_pos,
-                Span {
-                    data: Data::Gap,
-                    length: new_gap_length,
-                },
-            );
-        }
+        files.insert(i, f);
+        gaps.insert(index, Gap { length: f.length });
         None
     } else {
         Some((index, f))
     }
 }
 
-fn pack_files(mut data: BTreeMap<usize, Span>) -> usize {
+fn pack_files(mut files: FileTree, mut gaps: GapTree) -> usize {
     let mut out = vec![];
-    while !data.is_empty() {
-        out.extend(pack_one_file(&mut data));
+    while !files.is_empty() {
+        out.extend(pack_one_file(&mut files, &mut gaps));
     }
     let mut checksum = 0;
     for &(pos, v) in out.iter().rev() {
-        let Data::File { index } = v.data else {
-            panic!();
-        };
         for i in pos..pos + v.length {
-            checksum += index * i;
+            checksum += v.index * i;
         }
     }
     checksum
@@ -93,7 +135,8 @@ fn pack_files(mut data: BTreeMap<usize, Span>) -> usize {
 
 pub fn solve(s: &str) -> (usize, usize) {
     let mut data = vec![];
-    let mut tree = BTreeMap::new();
+    let mut files = FileTree::default();
+    let mut gaps = GapTree::default();
     let mut pos = 0;
     for (i, c) in s.chars().enumerate() {
         if c.is_ascii_digit() {
@@ -102,19 +145,15 @@ pub fn solve(s: &str) -> (usize, usize) {
             for _ in 0..length {
                 data.push(if i % 2 == 0 { Some(i / 2) } else { None });
             }
-            tree.insert(
-                pos,
-                Span {
-                    data: index
-                        .map(|index| Data::File { index })
-                        .unwrap_or(Data::Gap),
-                    length,
-                },
-            );
+            if let Some(index) = index {
+                files.insert(pos, File { index, length })
+            } else {
+                gaps.insert(pos, Gap { length })
+            }
             pos += length;
         }
     }
-    (pack_blocks(&data), pack_files(tree))
+    (pack_blocks(&data), pack_files(files, gaps))
 }
 
 #[cfg(test)]
