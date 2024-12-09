@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-fn pack_blocks(data: &[Option<usize>]) -> usize {
+fn pack_blocks(data: &[Option<u16>]) -> u64 {
     let mut forward = 0;
     let mut reverse = data.len() - 1;
     let mut data = data.to_vec();
@@ -22,14 +22,20 @@ fn pack_blocks(data: &[Option<usize>]) -> usize {
     }
     data.iter()
         .enumerate()
-        .map(|(i, v)| i * v.unwrap_or(0))
+        .map(|(i, v)| i as u64 * u64::from(v.unwrap_or(0)))
         .sum()
 }
 
 #[derive(Copy, Clone, Debug)]
 struct File {
-    index: usize,
-    length: usize,
+    index: u16,
+    length: u8,
+}
+
+impl File {
+    fn length(&self) -> usize {
+        usize::from(self.length)
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -43,10 +49,10 @@ struct GapTree(BTreeMap<usize, Gap>);
 impl GapTree {
     fn find_space_for(&mut self, f: File) -> Option<usize> {
         if let Some((&i, ref d)) =
-            self.0.iter_mut().find(|(_i, g)| g.length >= f.length)
+            self.0.iter_mut().find(|(_i, g)| g.length >= f.length())
         {
-            let new_gap_length = d.length - f.length;
-            let new_gap_pos = i + f.length;
+            let new_gap_length = d.length - f.length();
+            let new_gap_pos = i + f.length();
             self.0.remove(&i);
             if new_gap_length > 0 {
                 self.insert(
@@ -105,7 +111,7 @@ impl FileTree {
     }
 }
 
-fn pack_files(mut files: FileTree, mut gaps: GapTree) -> usize {
+fn pack_files(mut files: FileTree, mut gaps: GapTree) -> u64 {
     let mut out = vec![];
     while let Some((index, f)) = files.pop_last() {
         gaps.trim(index);
@@ -113,7 +119,7 @@ fn pack_files(mut files: FileTree, mut gaps: GapTree) -> usize {
             // If we can pack this file before its previous position, then do it
             Some(i) => {
                 files.insert(i, f);
-                gaps.insert(index, Gap { length: f.length });
+                gaps.insert(index, Gap { length: f.length() });
             }
             // Otherwise, it's done and can be removed
             _ => out.push((index, f)),
@@ -121,31 +127,40 @@ fn pack_files(mut files: FileTree, mut gaps: GapTree) -> usize {
     }
     let mut checksum = 0;
     for &(pos, v) in out.iter().rev() {
-        for i in pos..pos + v.length {
-            checksum += v.index * i;
+        for i in pos..pos + v.length() {
+            checksum += v.index as u64 * i as u64;
         }
     }
     checksum
 }
 
-pub fn solve(s: &str) -> (usize, usize) {
+pub fn solve(s: &str) -> (u64, u64) {
     let mut data = vec![];
     let mut files = FileTree::default();
     let mut gaps = GapTree::default();
     let mut pos = 0;
     for (i, c) in s.chars().enumerate() {
         if c.is_ascii_digit() {
-            let index = if i % 2 == 0 { Some(i / 2) } else { None };
-            let length = (c as u8 - b'0') as usize;
+            let index = if i % 2 == 0 {
+                Some(u16::try_from(i / 2).unwrap())
+            } else {
+                None
+            };
+            let length = c as u8 - b'0';
             for _ in 0..length {
-                data.push(if i % 2 == 0 { Some(i / 2) } else { None });
+                data.push(index);
             }
             if let Some(index) = index {
                 files.insert(pos, File { index, length })
             } else if length > 0 {
-                gaps.insert(pos, Gap { length })
+                gaps.insert(
+                    pos,
+                    Gap {
+                        length: usize::from(length),
+                    },
+                )
             }
-            pos += length;
+            pos += usize::from(length);
         }
     }
     (pack_blocks(&data), pack_files(files, gaps))
