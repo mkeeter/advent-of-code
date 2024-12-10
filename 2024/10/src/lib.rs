@@ -7,8 +7,7 @@ fn find_trails(g: &Grid, x: i64, y: i64, seen: &mut BitSet) -> (usize, usize) {
     let mut score = 0;
     while let Some((a, x, y)) = todo.pop() {
         for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
-            let x = x + dx;
-            let y = y + dy;
+            let (x, y) = (x + dx, y + dy);
             let b = g[(x, y)];
             if b == a + 1 {
                 if b == b'9' {
