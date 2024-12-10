@@ -1,28 +1,25 @@
 use util::{BitSet, Grid};
 
 fn find_trails(g: &Grid, x: i64, y: i64, seen: &mut BitSet) -> (usize, usize) {
-    let mut todo = vec![(x, y)];
+    let mut todo = vec![(b'0', x, y)];
     seen.clear();
     let mut count = 0;
     let mut score = 0;
-    while let Some((x, y)) = todo.pop() {
-        match g[(x, y)] {
-            b'9' => {
-                if seen.insert((x + y * g.width()) as usize) {
-                    count += 1;
-                }
-                score += 1;
-                continue;
-            }
-            v @ b'0'..=b'8' => {
-                for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
-                    let next = (x + dx, y + dy);
-                    if g[next] == v + 1 {
-                        todo.push(next);
+    while let Some((a, x, y)) = todo.pop() {
+        for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+            let x = x + dx;
+            let y = y + dy;
+            let b = g[(x, y)];
+            if b == a + 1 {
+                if b == b'9' {
+                    if seen.insert((x + y * g.width()) as usize) {
+                        count += 1;
                     }
+                    score += 1;
+                } else {
+                    todo.push((b, x, y));
                 }
             }
-            _ => (),
         }
     }
     (count, score)
