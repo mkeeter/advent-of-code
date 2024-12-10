@@ -149,3 +149,42 @@ impl BitSet {
         self.0.fill(0)
     }
 }
+
+/// Dense fixed-length bitset for a grid
+pub struct GridSet {
+    set: BitSet,
+    width: i64,
+    height: i64,
+}
+impl GridSet {
+    #[inline]
+    pub fn new(g: &Grid) -> Self {
+        Self {
+            set: BitSet::new(usize::try_from(g.width() * g.height()).unwrap()),
+            width: g.width(),
+            height: g.height(),
+        }
+    }
+    /// Inserts `true` at the given position
+    ///
+    /// Returns whether the value was newly inserted
+    #[inline]
+    pub fn insert(&mut self, x: i64, y: i64) -> bool {
+        assert!(x >= 0 && x < self.width);
+        assert!(y >= 0 && y < self.height);
+        self.set
+            .insert(usize::try_from(x + y * self.width).unwrap())
+    }
+    #[inline]
+    pub fn clear(&mut self) {
+        self.set.clear()
+    }
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.set.len()
+    }
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.set.is_empty()
+    }
+}

@@ -1,4 +1,4 @@
-use util::{BitSet, Grid};
+use util::{Grid, GridSet};
 
 pub fn solve(s: &str) -> (usize, usize) {
     let g = Grid::new(s);
@@ -18,7 +18,7 @@ pub fn solve(s: &str) -> (usize, usize) {
             antennas[i as usize].push((x, y));
         }
     }
-    let mut antinodes = BitSet::new((g.width() * g.height()) as usize);
+    let mut antinodes = GridSet::new(&g);
     for pos in &antennas {
         for (a, b) in pos
             .iter()
@@ -31,7 +31,7 @@ pub fn solve(s: &str) -> (usize, usize) {
                 let x = a.0 + sign * dx;
                 let y = a.1 + sign * dy;
                 if x >= 0 && x < g.width() && y >= 0 && y < g.height() {
-                    antinodes.insert((x + y * g.width()) as usize);
+                    antinodes.insert(x, y);
                 }
             }
         }
@@ -49,7 +49,7 @@ pub fn solve(s: &str) -> (usize, usize) {
             for sign in [1, -1] {
                 let (mut x, mut y) = a;
                 while x >= 0 && x < g.width() && y >= 0 && y < g.height() {
-                    antinodes.insert((x + y * g.width()) as usize);
+                    antinodes.insert(x, y);
                     x += dx * sign;
                     y += dy * sign;
                 }
