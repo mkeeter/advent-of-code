@@ -33,13 +33,14 @@ fn recurse<const N: usize>(
         let d = i.ilog10() + 1;
         if d % 2 == 0 {
             if let Some(v) = cache.get(i, steps) {
-                return *v;
+                *v
+            } else {
+                let scale = 10u64.pow(d / 2);
+                let v = recurse(i % scale, steps - 1, cache)
+                    + recurse(i / scale, steps - 1, cache);
+                cache.insert(i, steps, v);
+                v
             }
-            let scale = 10u64.pow(d / 2);
-            let v = recurse(i % scale, steps - 1, cache)
-                + recurse(i / scale, steps - 1, cache);
-            cache.insert(i, steps, v);
-            v
         } else {
             recurse(i * 2024, steps - 1, cache)
         }
