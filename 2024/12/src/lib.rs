@@ -26,14 +26,15 @@ fn check_region(x: i64, y: i64, g: &Grid, seen: &mut GridSet) -> (u64, u64) {
                 edge_count += 1;
             }
         }
-        let mut corners = 0;
-        for (dx, dy) in [(-1, -1), (-1, 1), (1, 1), (1, -1)] {
-            let convex_corner = g[(x + dx, y)] != c && g[(x, y + dy)] != c;
-            let concave_corner = g[(x + dx, y + dy)] != c
-                && (g[(x + dx, y)] == c && g[(x, y + dy)] == c);
-            corners += (convex_corner || concave_corner) as u64;
-        }
-        side_count += corners;
+        side_count += [(-1, -1), (-1, 1), (1, 1), (1, -1)]
+            .iter()
+            .filter(|(dx, dy)| {
+                let convex_corner = g[(x + dx, y)] != c && g[(x, y + dy)] != c;
+                let concave_corner = g[(x + dx, y + dy)] != c
+                    && (g[(x + dx, y)] == c && g[(x, y + dy)] == c);
+                convex_corner || concave_corner
+            })
+            .count() as u64;
     }
     (edge_count * cell_count, side_count * cell_count)
 }
