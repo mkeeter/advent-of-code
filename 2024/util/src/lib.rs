@@ -176,6 +176,12 @@ impl GridSet {
             .insert(usize::try_from(x + y * self.width).unwrap())
     }
     #[inline]
+    pub fn contains(&mut self, x: i64, y: i64) -> bool {
+        assert!(x >= 0 && x < self.width);
+        assert!(y >= 0 && y < self.height);
+        self.set.get(usize::try_from(x + y * self.width).unwrap())
+    }
+    #[inline]
     pub fn clear(&mut self) {
         self.set.clear()
     }
