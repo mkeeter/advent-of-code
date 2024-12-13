@@ -18,14 +18,20 @@ where
                 v = v * T::from(10) + T::from(self.bytes[self.index] - b'0');
                 self.index += 1;
             }
-            while self.index < self.bytes.len()
-                && !self.bytes[self.index].is_ascii_digit()
-            {
-                self.index += 1;
-            }
+            self.skip_non_ascii();
             Some(v)
         } else {
             None
+        }
+    }
+}
+
+impl<T> GetIntegers<'_, T> {
+    fn skip_non_ascii(&mut self) {
+        while self.index < self.bytes.len()
+            && !self.bytes[self.index].is_ascii_digit()
+        {
+            self.index += 1;
         }
     }
 }
@@ -41,11 +47,13 @@ where
         + std::ops::Mul<T, Output = T>
         + std::ops::Add<T, Output = T>,
 {
-    GetIntegers::<'_, T> {
+    let mut out = GetIntegers::<'_, T> {
         bytes: s.as_bytes(),
         index: 0,
         _tag: std::marker::PhantomData,
-    }
+    };
+    out.skip_non_ascii();
+    out
 }
 
 ////////////////////////////////////////////////////////////////////////////////
