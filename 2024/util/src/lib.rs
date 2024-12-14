@@ -173,6 +173,14 @@ impl GridSet {
             height: g.height(),
         }
     }
+    #[inline]
+    pub fn from_width_and_height(width: i64, height: i64) -> Self {
+        Self {
+            set: BitSet::new(usize::try_from(width * height).unwrap()),
+            width,
+            height,
+        }
+    }
     /// Inserts `true` at the given position
     ///
     /// Returns whether the value was newly inserted
@@ -184,7 +192,7 @@ impl GridSet {
             .insert(usize::try_from(x + y * self.width).unwrap())
     }
     #[inline]
-    pub fn contains(&mut self, x: i64, y: i64) -> bool {
+    pub fn contains(&self, x: i64, y: i64) -> bool {
         assert!(x >= 0 && x < self.width);
         assert!(y >= 0 && y < self.height);
         self.set.get(usize::try_from(x + y * self.width).unwrap())
