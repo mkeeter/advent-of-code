@@ -62,11 +62,13 @@ pub fn solve(s: &str) -> (u64, u64) {
         (x, y) = (nx, ny);
     }
 
-    let part1 = grid
-        .iter()
-        .filter(|(_p, v)| **v == 'O')
-        .map(|((x, y), _v)| (y * 100 + x) as u64)
-        .sum();
+    let score = |grid: &HashMap<(i64, i64), char>, c| {
+        grid.iter()
+            .filter(|(_p, v)| **v == c)
+            .map(|((x, y), _v)| (y * 100 + x) as u64)
+            .sum()
+    };
+    let part1 = score(&grid, 'O');
 
     // reparse into a wiiiiiiiiiiide grid
     let mut grid = HashMap::new();
@@ -126,12 +128,7 @@ pub fn solve(s: &str) -> (u64, u64) {
         assert!(!grid.contains_key(&(nx, ny)));
         (x, y) = (nx, ny);
     }
-
-    let part2 = grid
-        .iter()
-        .filter(|(_p, v)| **v == '[')
-        .map(|((x, y), _v)| (y * 100 + x) as u64)
-        .sum();
+    let part2 = score(&grid, '[');
 
     (part1, part2)
 }
@@ -165,7 +162,6 @@ fn push_hbox(
     true
 }
 
-/// Tries to push a single box
 fn push_vbox(
     corner: (i64, i64),
     dy: i64,
