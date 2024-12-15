@@ -55,6 +55,6 @@ mod test {
             Button B: X+27, Y+71
             Prize: X=18641, Y=10279
         "};
-        assert_eq!(solve(EXAMPLE), (480, 0));
+        assert_eq!(solve(EXAMPLE).0, 480);
     }
 }

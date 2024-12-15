@@ -600,6 +600,10 @@ dependencies = [
 [[package]]
 name = "day15"
 version = "0.1.0"
+dependencies = [
+ "indoc",
+ "util",
+]
 
 [[package]]
 name = "day16"
