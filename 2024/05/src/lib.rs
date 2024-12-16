@@ -1,8 +1,8 @@
 use util::{get_integers, BitSet};
 
-struct TupleSet(BitSet);
+struct PairSet(BitSet);
 
-impl TupleSet {
+impl PairSet {
     fn new() -> Self {
         Self(BitSet::new(256 * 256))
     }
@@ -14,7 +14,7 @@ impl TupleSet {
     }
 }
 
-fn check(row: &[u8], illegal: &TupleSet) -> bool {
+fn check(row: &[u8], illegal: &PairSet) -> bool {
     if row.is_empty() {
         true
     } else if row[1..].iter().any(|&b| illegal.get(row[0], b)) {
@@ -24,12 +24,12 @@ fn check(row: &[u8], illegal: &TupleSet) -> bool {
     }
 }
 
-fn sort(row: &mut [u8], illegal: &TupleSet) -> u8 {
+fn sort(row: &mut [u8], illegal: &PairSet) -> u8 {
     sort_recurse(row, illegal, row.len() / 2);
     row[row.len() / 2]
 }
 
-fn sort_recurse(row: &mut [u8], illegal: &TupleSet, stop: usize) {
+fn sort_recurse(row: &mut [u8], illegal: &PairSet, stop: usize) {
     if row.len() > stop {
         let n = row.len();
         // Find an item that would be valid if placed at the end
@@ -43,7 +43,7 @@ fn sort_recurse(row: &mut [u8], illegal: &TupleSet, stop: usize) {
 
 pub fn solve(s: &str) -> (u64, u64) {
     let mut rules = true;
-    let mut illegal = TupleSet::new();
+    let mut illegal = PairSet::new();
     let mut runs: Vec<Vec<u8>> = vec![];
     for line in s.lines() {
         if line.is_empty() {
