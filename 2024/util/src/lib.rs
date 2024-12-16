@@ -159,54 +159,150 @@ impl BitSet {
 }
 
 /// Dense fixed-length bitset for a grid
-pub struct GridSet {
-    set: BitSet,
-    width: i64,
-    height: i64,
-}
+pub struct GridSet(TupleSet<(i64, i64)>);
 impl GridSet {
     #[inline]
     pub fn new(g: &Grid) -> Self {
-        Self {
-            set: BitSet::new(usize::try_from(g.width() * g.height()).unwrap()),
-            width: g.width(),
-            height: g.height(),
-        }
+        Self(TupleSet::new((g.width(), g.height())))
     }
     #[inline]
     pub fn from_width_and_height(width: i64, height: i64) -> Self {
-        Self {
-            set: BitSet::new(usize::try_from(width * height).unwrap()),
-            width,
-            height,
-        }
+        Self(TupleSet::new((width, height)))
     }
     /// Inserts `true` at the given position
     ///
     /// Returns whether the value was newly inserted
     #[inline]
     pub fn insert(&mut self, x: i64, y: i64) -> bool {
-        assert!(x >= 0 && x < self.width);
-        assert!(y >= 0 && y < self.height);
-        self.set
-            .insert(usize::try_from(x + y * self.width).unwrap())
+        self.0.insert((x, y))
     }
     #[inline]
     pub fn contains(&self, x: i64, y: i64) -> bool {
-        assert!(x >= 0 && x < self.width);
-        assert!(y >= 0 && y < self.height);
-        self.set.get(usize::try_from(x + y * self.width).unwrap())
+        self.0.contains((x, y))
     }
     #[inline]
     pub fn clear(&mut self) {
-        self.set.clear()
+        self.0.clear()
     }
     #[inline]
     pub fn len(&self) -> usize {
-        self.set.len()
+        self.0.len()
     }
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.set.is_empty()
+        self.0.is_empty()
+    }
+}
+
+pub struct TupleSet<T> {
+    data: BitSet,
+    sizes: T,
+}
+
+impl<T: SizedTuple> TupleSet<T> {
+    #[inline]
+    pub fn new(sizes: T) -> Self {
+        let mut total_size = 1;
+        for i in 0..T::LEN {
+            total_size *= sizes.get(i);
+        }
+        Self {
+            data: BitSet::new(total_size),
+            sizes,
+        }
+    }
+
+    #[inline]
+    fn get_index(&self, k: T) -> usize {
+        let mut index = 0;
+        for i in 0..T::LEN {
+            assert!(k.get(i) < self.sizes.get(i));
+            index = index * self.sizes.get(i) + k.get(i);
+        }
+        index
+    }
+
+    /// Inserts `true` at the given position
+    ///
+    /// Returns whether the value was newly inserted
+    #[inline]
+    pub fn insert(&mut self, k: T) -> bool {
+        self.data.insert(self.get_index(k))
+    }
+
+    #[inline]
+    pub fn contains(&self, k: T) -> bool {
+        self.data.get(self.get_index(k))
+    }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        self.data.clear()
+    }
+
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+}
+
+#[allow(clippy::len_without_is_empty)]
+pub trait SizedTuple {
+    const LEN: usize;
+    fn get(&self, i: usize) -> usize;
+}
+
+impl<A, B> SizedTuple for (A, B)
+where
+    A: SizedTupleElement,
+    B: SizedTupleElement,
+{
+    const LEN: usize = 2;
+
+    #[inline]
+    fn get(&self, i: usize) -> usize {
+        match i {
+            0 => self.0.get(),
+            1 => self.1.get(),
+            _ => panic!("invalid index {i}"),
+        }
+    }
+}
+
+impl<A, B, C> SizedTuple for (A, B, C)
+where
+    A: SizedTupleElement,
+    B: SizedTupleElement,
+    C: SizedTupleElement,
+{
+    const LEN: usize = 3;
+
+    #[inline]
+    fn get(&self, i: usize) -> usize {
+        match i {
+            0 => self.0.get(),
+            1 => self.1.get(),
+            2 => self.2.get(),
+            _ => panic!("invalid index {i}"),
+        }
+    }
+}
+
+trait SizedTupleElement {
+    fn get(&self) -> usize;
+}
+
+impl<T> SizedTupleElement for T
+where
+    T: TryInto<usize> + Copy,
+    <T as TryInto<usize>>::Error: std::fmt::Debug,
+{
+    fn get(&self) -> usize {
+        (*self).try_into().unwrap()
     }
 }

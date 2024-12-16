@@ -1,5 +1,5 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
-use util::Grid;
+use std::collections::{BTreeSet, HashMap};
+use util::{Grid, GridSet, TupleSet};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 enum Dir {
@@ -38,6 +38,14 @@ impl Dir {
             Dir::E | Dir::W => 0,
             Dir::S => 1,
             Dir::N => -1,
+        }
+    }
+    fn index(&self) -> usize {
+        match self {
+            Dir::N => 0,
+            Dir::E => 1,
+            Dir::S => 2,
+            Dir::W => 3,
         }
     }
 }
@@ -83,20 +91,20 @@ pub fn solve(s: &str) -> (u64, u64) {
     let end = end.unwrap();
 
     let mut out = None;
-    let mut seen = HashSet::new();
-    let mut prev: HashMap<_, HashSet<_>> = HashMap::new();
+    let mut seen = TupleSet::new((g.width(), g.height(), 4usize));
+    let mut prev: HashMap<_, smallvec::SmallVec<[_; 4]>> = HashMap::new();
     while let Some((score, x, y, d)) = todo.pop_first() {
-        let mut push = |t| {
-            prev.entry(t).or_default().insert((score, x, y, d));
-            todo.insert(t);
-        };
-        if !seen.insert((x, y, d)) {
-            continue;
-        }
         if (x, y) == end {
             out = Some((score, d));
             break;
+        } else if !seen.insert((x, y, d.index())) {
+            continue;
         }
+
+        let mut push = |t| {
+            prev.entry(t).or_default().push((score, x, y, d));
+            todo.insert(t);
+        };
         let (nx, ny) = (x + d.dx(), y + d.dy());
         if g[(nx, ny)] != b'#' {
             push((score + 1, nx, ny, d));
@@ -111,9 +119,9 @@ pub fn solve(s: &str) -> (u64, u64) {
 
     let (best_score, best_d) = out.unwrap();
     let mut todo = vec![(best_score, end.0, end.1, best_d)];
-    let mut seen = HashSet::new();
+    let mut seen = GridSet::new(&g);
     while let Some(t) = todo.pop() {
-        seen.insert((t.1, t.2));
+        seen.insert(t.1, t.2);
         todo.extend(prev.get(&t).iter().flat_map(|i| i.iter().cloned()));
     }
 
