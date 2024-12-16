@@ -101,8 +101,12 @@ pub fn solve(s: &str) -> (u64, u64) {
         if g[(nx, ny)] != b'#' {
             push((score + 1, nx, ny, d));
         }
-        push((score + 1000, x, y, d.cw()));
-        push((score + 1000, x, y, d.ccw()));
+        for d in [d.cw(), d.ccw()] {
+            // Only turn if there's not a wall right there
+            if g[(x + d.dx(), y + d.dy())] != b'#' {
+                push((score + 1000, x, y, d));
+            }
+        }
     }
 
     let (best_score, best_d) = out.unwrap();
