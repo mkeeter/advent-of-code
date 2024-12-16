@@ -237,7 +237,6 @@ mod test {
         "};
         assert_eq!(solve(SMALL).0, 2028);
 
-        println!("\n------------------\n");
         const LARGE: &str = indoc::indoc! {"
             ##########
             #..O..O.O#

@@ -609,7 +609,8 @@ dependencies = [
 name = "day16"
 version = "0.1.0"
 dependencies = [
- "rayon",
+ "indoc",
+ "util",
 ]
 
 [[package]]
