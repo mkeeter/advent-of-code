@@ -306,3 +306,83 @@ where
         (*self).try_into().unwrap()
     }
 }
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub enum Dir {
+    N,
+    E,
+    S,
+    W,
+}
+
+impl TryFrom<char> for Dir {
+    type Error = char;
+    fn try_from(c: char) -> Result<Self, Self::Error> {
+        Ok(match c {
+            'v' => Self::S,
+            '^' => Self::N,
+            '>' => Self::E,
+            '<' => Self::W,
+            _ => return Err(c),
+        })
+    }
+}
+
+impl Dir {
+    pub fn iter() -> impl Iterator<Item = Self> {
+        [Dir::N, Dir::E, Dir::S, Dir::W].into_iter()
+    }
+    pub fn left(&self) -> Self {
+        match self {
+            Dir::N => Dir::E,
+            Dir::E => Dir::S,
+            Dir::S => Dir::W,
+            Dir::W => Dir::N,
+        }
+    }
+    pub fn right(&self) -> Self {
+        match self {
+            Dir::E => Dir::N,
+            Dir::S => Dir::E,
+            Dir::W => Dir::S,
+            Dir::N => Dir::W,
+        }
+    }
+    pub fn x(&self) -> i64 {
+        match self {
+            Dir::E => 1,
+            Dir::W => -1,
+            Dir::S | Dir::N => 0,
+        }
+    }
+    pub fn y(&self) -> i64 {
+        match self {
+            Dir::E | Dir::W => 0,
+            Dir::S => 1,
+            Dir::N => -1,
+        }
+    }
+    pub fn index(&self) -> usize {
+        match self {
+            Dir::N => 0,
+            Dir::E => 1,
+            Dir::S => 2,
+            Dir::W => 3,
+        }
+    }
+}
+
+impl std::fmt::Display for Dir {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                Dir::N => 'N',
+                Dir::E => 'E',
+                Dir::S => 'S',
+                Dir::W => 'N',
+            }
+        )
+    }
+}

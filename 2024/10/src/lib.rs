@@ -1,4 +1,4 @@
-use util::{Grid, GridSet};
+use util::{Dir, Grid, GridSet};
 
 fn find_trails(g: &Grid, x: i64, y: i64, seen: &mut GridSet) -> (usize, usize) {
     let mut todo = vec![(b'0', x, y)];
@@ -6,8 +6,8 @@ fn find_trails(g: &Grid, x: i64, y: i64, seen: &mut GridSet) -> (usize, usize) {
     let mut count = 0;
     let mut score = 0;
     while let Some((a, x, y)) = todo.pop() {
-        for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
-            let (nx, ny) = (x + dx, y + dy);
+        for d in Dir::iter() {
+            let (nx, ny) = (x + d.x(), y + d.y());
             let b = g[(nx, ny)];
             if b == a + 1 {
                 if b == b'9' {

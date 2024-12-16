@@ -1,4 +1,4 @@
-use util::{Grid, GridSet};
+use util::{Dir, Grid, GridSet};
 
 fn check_region(x: i64, y: i64, g: &Grid, seen: &mut GridSet) -> (u64, u64) {
     if seen.contains(x, y) {
@@ -16,8 +16,8 @@ fn check_region(x: i64, y: i64, g: &Grid, seen: &mut GridSet) -> (u64, u64) {
             continue;
         }
         cell_count += 1;
-        for (dx, dy) in [(1, 0), (0, 1), (-1, 0), (0, -1)] {
-            let (nx, ny) = (x + dx, y + dy);
+        for d in Dir::iter() {
+            let (nx, ny) = (x + d.x(), y + d.y());
             if g[(nx, ny)] == c {
                 if !seen.contains(nx, ny) {
                     todo.push((nx, ny));

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use util::Dir;
 
 enum Cell {
     Box,
@@ -39,29 +40,23 @@ pub fn solve(s: &str) -> (u64, u64) {
             }
         } else {
             for c in line.chars() {
-                commands.push(match c {
-                    'v' => (0, 1),
-                    '^' => (0, -1),
-                    '>' => (1, 0),
-                    '<' => (-1, 0),
-                    _ => panic!("invalid direction '{c}'"),
-                })
+                commands.push(Dir::try_from(c).expect("invalid direction"));
             }
         }
     }
 
     let (mut x, mut y) = start.expect("could not find start");
-    'outer: for &(dx, dy) in &commands {
-        let nx = x + dx;
-        let ny = y + dy;
+    'outer: for &d in &commands {
+        let nx = x + d.x();
+        let ny = y + d.y();
         match grid.get(&(nx, ny)) {
             None => (),
             Some(Cell::Wall) => continue, // bonk
             Some(Cell::Box) => {
                 let (mut gx, mut gy) = (nx, ny);
                 let (gx, gy) = loop {
-                    gx += dx;
-                    gy += dy;
+                    gx += d.x();
+                    gy += d.y();
                     match grid.get(&(gx, gy)) {
                         None => break (gx, gy),
                         Some(Cell::Wall) => continue 'outer,
@@ -109,28 +104,28 @@ pub fn solve(s: &str) -> (u64, u64) {
         }
     }
     let (mut x, mut y) = start.expect("could not find start");
-    for &(dx, dy) in &commands {
+    for &d in &commands {
         assert!(!grid.contains_key(&(x, y)));
-        let nx = x + dx;
-        let ny = y + dy;
+        let nx = x + d.x();
+        let ny = y + d.y();
         match grid.get(&(nx, ny)) {
             None => (),
             Some(WideCell::Wall) => continue, // bonk
-            Some(WideCell::LeftBox | WideCell::RightBox) if dy == 0 => {
-                if !push_hbox((nx, ny), dx, &mut grid) {
+            Some(WideCell::LeftBox | WideCell::RightBox) if d.y() == 0 => {
+                if !push_hbox((nx, ny), d.x(), &mut grid) {
                     continue;
                 }
             }
             Some(WideCell::LeftBox) => {
                 let mut temp = grid.clone();
-                if !push_vbox((nx, ny), dy, &mut temp) {
+                if !push_vbox((nx, ny), d.y(), &mut temp) {
                     continue;
                 }
                 grid = temp;
             }
             Some(WideCell::RightBox) => {
                 let mut temp = grid.clone();
-                if !push_vbox((nx - 1, ny), dy, &mut temp) {
+                if !push_vbox((nx - 1, ny), d.y(), &mut temp) {
                     continue;
                 }
                 grid = temp;

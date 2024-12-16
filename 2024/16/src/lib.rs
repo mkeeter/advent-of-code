@@ -1,69 +1,5 @@
 use std::collections::{BTreeSet, HashMap};
-use util::{Grid, GridSet, TupleSet};
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
-enum Dir {
-    N,
-    E,
-    S,
-    W,
-}
-
-impl Dir {
-    fn cw(&self) -> Self {
-        match self {
-            Dir::N => Dir::E,
-            Dir::E => Dir::S,
-            Dir::S => Dir::W,
-            Dir::W => Dir::N,
-        }
-    }
-    fn ccw(&self) -> Self {
-        match self {
-            Dir::E => Dir::N,
-            Dir::S => Dir::E,
-            Dir::W => Dir::S,
-            Dir::N => Dir::W,
-        }
-    }
-    fn dx(&self) -> i64 {
-        match self {
-            Dir::E => 1,
-            Dir::W => -1,
-            Dir::S | Dir::N => 0,
-        }
-    }
-    fn dy(&self) -> i64 {
-        match self {
-            Dir::E | Dir::W => 0,
-            Dir::S => 1,
-            Dir::N => -1,
-        }
-    }
-    fn index(&self) -> usize {
-        match self {
-            Dir::N => 0,
-            Dir::E => 1,
-            Dir::S => 2,
-            Dir::W => 3,
-        }
-    }
-}
-
-impl std::fmt::Display for Dir {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Dir::N => 'N',
-                Dir::E => 'E',
-                Dir::S => 'S',
-                Dir::W => 'N',
-            }
-        )
-    }
-}
+use util::{Dir, Grid, GridSet, TupleSet};
 
 pub fn solve(s: &str) -> (u64, u64) {
     let g = Grid::new(s);
@@ -105,13 +41,13 @@ pub fn solve(s: &str) -> (u64, u64) {
             prev.entry(t).or_default().push((score, x, y, d));
             todo.insert(t);
         };
-        let (nx, ny) = (x + d.dx(), y + d.dy());
+        let (nx, ny) = (x + d.x(), y + d.y());
         if g[(nx, ny)] != b'#' {
             push((score + 1, nx, ny, d));
         }
-        for d in [d.cw(), d.ccw()] {
+        for d in [d.left(), d.right()] {
             // Only turn if there's not a wall right there
-            if g[(x + d.dx(), y + d.dy())] != b'#' {
+            if g[(x + d.x(), y + d.y())] != b'#' {
                 push((score + 1000, x, y, d));
             }
         }
