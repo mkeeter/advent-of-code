@@ -55,13 +55,18 @@ pub fn solve(s: &str) -> (u64, u64) {
 
     let (best_score, best_d) = out.unwrap();
     let mut todo = vec![(best_score, end.0, end.1, best_d)];
-    let mut seen = GridSet::new(&g);
+    let mut seen = TupleSet::new((g.width(), g.height(), 4));
     while let Some(t) = todo.pop() {
-        seen.insert(t.1, t.2);
-        todo.extend(prev.get(&t).iter().flat_map(|i| i.iter().cloned()));
+        if seen.insert((t.1, t.2, t.3.index())) {
+            todo.extend(prev.get(&t).iter().flat_map(|i| i.iter().cloned()));
+        }
+    }
+    let mut tiles = GridSet::new(&g);
+    for (x, y, _d) in seen.iter() {
+        tiles.insert(x, y);
     }
 
-    (best_score, seen.len() as u64)
+    (best_score, tiles.len() as u64)
 }
 
 #[cfg(test)]

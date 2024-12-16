@@ -121,19 +121,27 @@ impl<'a> Grid<'a> {
 ////////////////////////////////////////////////////////////////////////////////
 
 /// Dense fixed-length bitset
-pub struct BitSet(Vec<u64>);
+pub struct BitSet {
+    data: Vec<u64>,
+    size: usize,
+}
 impl BitSet {
     #[inline]
     pub fn new(size: usize) -> Self {
-        Self(vec![0u64; size.div_ceil(64)])
+        Self {
+            data: vec![0u64; size.div_ceil(64)],
+            size,
+        }
     }
     #[inline]
     pub fn get(&self, i: usize) -> bool {
-        (self.0[i / 64] & (1 << (i % 64))) != 0
+        assert!(i < self.size);
+        (self.data[i / 64] & (1 << (i % 64))) != 0
     }
     #[inline]
     pub fn set(&mut self, i: usize) {
-        self.0[i / 64] |= 1 << (i % 64)
+        assert!(i < self.size);
+        self.data[i / 64] |= 1 << (i % 64)
     }
     /// Inserts `true` at the given position
     ///
@@ -146,15 +154,43 @@ impl BitSet {
     }
     #[inline]
     pub fn len(&self) -> usize {
-        self.0.iter().map(|b| b.count_ones() as usize).sum()
+        self.data.iter().map(|b| b.count_ones() as usize).sum()
     }
     #[inline]
     pub fn is_empty(&self) -> bool {
-        self.0.iter().all(|b| *b == 0)
+        self.data.iter().all(|b| *b == 0)
     }
     #[inline]
     pub fn clear(&mut self) {
-        self.0.fill(0)
+        self.data.fill(0)
+    }
+
+    #[inline]
+    pub fn iter(&self) -> BitSetIter<'_> {
+        BitSetIter {
+            data: self,
+            index: 0,
+        }
+    }
+}
+
+pub struct BitSetIter<'a> {
+    data: &'a BitSet,
+    index: usize,
+}
+
+impl Iterator for BitSetIter<'_> {
+    type Item = usize;
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.index < self.data.size {
+            if self.data.get(self.index) {
+                let prev = self.index;
+                self.index += 1;
+                return Some(prev);
+            }
+            self.index += 1;
+        }
+        None
     }
 }
 
@@ -199,7 +235,7 @@ pub struct TupleSet<T> {
     sizes: T,
 }
 
-impl<T: SizedTuple> TupleSet<T> {
+impl<T: SizedTuple + Copy> TupleSet<T> {
     #[inline]
     pub fn new(sizes: T) -> Self {
         let mut total_size = 1;
@@ -249,12 +285,41 @@ impl<T: SizedTuple> TupleSet<T> {
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
+
+    #[inline]
+    pub fn iter(&self) -> TupleSetIter<'_, T> {
+        TupleSetIter {
+            iter: self.data.iter(),
+            sizes: self.sizes,
+        }
+    }
+}
+
+pub struct TupleSetIter<'a, T> {
+    iter: BitSetIter<'a>,
+    sizes: T,
+}
+
+impl<T: SizedTuple> Iterator for TupleSetIter<'_, T> {
+    type Item = T;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.next().map(|mut v| {
+            let mut out = T::zero();
+            for i in (0..T::LEN).rev() {
+                out.set(i, v % self.sizes.get(i));
+                v /= self.sizes.get(i);
+            }
+            out
+        })
+    }
 }
 
 #[allow(clippy::len_without_is_empty)]
 pub trait SizedTuple {
     const LEN: usize;
+    fn zero() -> Self;
     fn get(&self, i: usize) -> usize;
+    fn set(&mut self, i: usize, v: usize);
 }
 
 impl<A, B> SizedTuple for (A, B)
@@ -265,10 +330,24 @@ where
     const LEN: usize = 2;
 
     #[inline]
+    fn zero() -> Self {
+        (A::zero(), B::zero())
+    }
+
+    #[inline]
     fn get(&self, i: usize) -> usize {
         match i {
             0 => self.0.get(),
             1 => self.1.get(),
+            _ => panic!("invalid index {i}"),
+        }
+    }
+
+    #[inline]
+    fn set(&mut self, i: usize, v: usize) {
+        match i {
+            0 => self.0 = A::set(v),
+            1 => self.1 = B::set(v),
             _ => panic!("invalid index {i}"),
         }
     }
@@ -283,6 +362,11 @@ where
     const LEN: usize = 3;
 
     #[inline]
+    fn zero() -> Self {
+        (A::zero(), B::zero(), C::zero())
+    }
+
+    #[inline]
     fn get(&self, i: usize) -> usize {
         match i {
             0 => self.0.get(),
@@ -291,21 +375,42 @@ where
             _ => panic!("invalid index {i}"),
         }
     }
+
+    #[inline]
+    fn set(&mut self, i: usize, v: usize) {
+        match i {
+            0 => self.0 = A::set(v),
+            1 => self.1 = B::set(v),
+            2 => self.2 = C::set(v),
+            _ => panic!("invalid index {i}"),
+        }
+    }
 }
 
 trait SizedTupleElement {
+    fn zero() -> Self;
+    fn set(v: usize) -> Self;
     fn get(&self) -> usize;
 }
 
 impl<T> SizedTupleElement for T
 where
-    T: TryInto<usize> + Copy,
+    T: TryInto<usize> + Copy + TryFrom<usize>,
     <T as TryInto<usize>>::Error: std::fmt::Debug,
+    <T as TryFrom<usize>>::Error: std::fmt::Debug,
 {
+    fn zero() -> Self {
+        T::try_from(0usize).unwrap()
+    }
+    fn set(v: usize) -> Self {
+        Self::try_from(v).unwrap()
+    }
     fn get(&self) -> usize {
         (*self).try_into().unwrap()
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum Dir {
@@ -384,5 +489,23 @@ impl std::fmt::Display for Dir {
                 Dir::W => 'N',
             }
         )
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn bit_set_iter() {
+        let mut b = BitSet::new(10);
+        b.insert(3);
+        b.insert(7);
+        let mut iter = b.iter();
+        assert_eq!(iter.next(), Some(3));
+        assert_eq!(iter.next(), Some(7));
+        assert_eq!(iter.next(), None);
     }
 }
