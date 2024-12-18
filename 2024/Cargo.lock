@@ -627,6 +627,7 @@ name = "day18"
 version = "0.1.0"
 dependencies = [
  "indoc",
+ "util",
 ]
 
 [[package]]
