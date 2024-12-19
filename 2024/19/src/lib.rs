@@ -1,43 +1,46 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-fn check<'a>(s: &'a str, can_make: &mut HashMap<&'a str, bool>) -> bool {
-    if let Some(v) = can_make.get(s) {
+fn check<'a>(
+    s: &'a str,
+    count: &mut HashMap<&'a str, u64>,
+    roots: &HashSet<&'a str>,
+) -> u64 {
+    if let Some(v) = count.get(s) {
         return *v;
-    } else if s.len() == 1 {
-        return false;
     }
 
-    for i in 1..s.len() {
-        let (a, b) = s.split_at(i);
-        println!("checking {a:?}, {b:?}");
-        if check(a, can_make) && check(b, can_make) {
-            can_make.insert(s, true);
-            return true;
-        }
-    }
-    can_make.insert(s, false);
-    false
+    let n = roots.contains(s) as u64
+        + (1..s.len())
+            .map(|i| {
+                let (a, b) = s.split_at(i);
+                if roots.contains(a) {
+                    check(b, count, roots)
+                } else {
+                    0
+                }
+            })
+            .sum::<u64>();
+    count.insert(s, n);
+    n
 }
 
-pub fn solve(s: &str) -> (usize, usize) {
+pub fn solve(s: &str) -> (u64, u64) {
     let mut iter = s.lines();
-    let mut can_make = iter
-        .next()
-        .unwrap()
-        .split(", ")
-        .map(|s| (s, true))
-        .collect::<HashMap<_, _>>();
-    can_make.insert("", true); // we can always make the empty string
+    let roots = iter.next().unwrap().split(", ").collect::<HashSet<_, _>>();
+    let mut count = HashMap::new();
 
+    let mut can_make = 0;
     iter.next().unwrap(); // skip the blank link
-    let count = iter
-        .filter(|t| {
-            println!();
-            check(t, &mut can_make)
-        })
-        .count();
+    let mut combinations = 0;
+    for t in iter {
+        let n = check(t, &mut count, &roots);
+        if n > 0 {
+            can_make += 1;
+        }
+        combinations += n;
+    }
 
-    (count, 0)
+    (can_make, combinations)
 }
 
 #[cfg(test)]
