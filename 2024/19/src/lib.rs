@@ -9,17 +9,12 @@ fn check<'a>(
         return *v;
     }
 
-    let n = roots.contains(s) as u64
-        + (1..s.len())
-            .map(|i| {
-                let (a, b) = s.split_at(i);
-                if roots.contains(a) {
-                    check(b, count, roots)
-                } else {
-                    0
-                }
-            })
-            .sum::<u64>();
+    let n = (1..s.len())
+        .map(|i| s.split_at(i))
+        .filter(|(a, _b)| roots.contains(a))
+        .map(|(_, b)| check(b, count, roots))
+        .sum::<u64>()
+        + roots.contains(s) as u64;
     count.insert(s, n);
     n
 }
@@ -27,10 +22,10 @@ fn check<'a>(
 pub fn solve(s: &str) -> (u64, u64) {
     let mut iter = s.lines();
     let roots = iter.next().unwrap().split(", ").collect::<HashSet<_, _>>();
-    let mut count = HashMap::new();
-
-    let mut can_make = 0;
     iter.next().unwrap(); // skip the blank link
+                          //
+    let mut count = HashMap::new();
+    let mut can_make = 0;
     let mut combinations = 0;
     for t in iter {
         let n = check(t, &mut count, &roots);
