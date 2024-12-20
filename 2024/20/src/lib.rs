@@ -18,8 +18,8 @@ pub fn solve_with(s: &str, cheat_length: u64) -> HashMap<u64, usize> {
     let start = start.unwrap();
     let end = end.unwrap();
 
+    // Make a map of distances from a particular point
     let flood = |pos: (i64, i64)| {
-        // Make a map of distance-to-the-end
         let mut todo = VecDeque::new();
         let mut dist = HashMap::new();
         todo.push_back((0, pos.0, pos.1));
