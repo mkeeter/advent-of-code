@@ -1,99 +1,89 @@
-use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use util::{Dir, Grid};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
 struct Pos {
+    t: usize,
     x: i64,
     y: i64,
-    t: usize,
     cheat: Option<Cheat>,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 struct Cheat {
-    t: usize,
-    x: i64,
-    y: i64,
+    start: (i64, i64),
+    end: (i64, i64),
 }
 
-fn recurse(
-    g: &Grid,
-    p: Pos,
+struct Recurse<'a> {
+    g: Grid<'a>,
     end: (i64, i64),
     max_time: usize,
-    seen: &mut HashSet<(i64, i64)>,
-    found: &mut HashMap<(i64, i64), usize>,
-) {
-    if p.t >= max_time {
-        return;
-    } else if (p.x, p.y) == end {
-        if let Some(c) = p.cheat {
-            let e = found.entry((c.x, c.y)).or_insert(p.t);
-            *e = (*e).min(p.t);
-        }
-        return;
-    } else if !seen.insert((p.x, p.y)) {
-        return;
-    }
-
-    for d in Dir::iter() {
-        let nx = p.x + d.x();
-        let ny = p.y + d.y();
-        let blocked = matches!(g.get(nx, ny), None | Some(b'#'));
-        if !blocked {
-            recurse(
-                g,
-                Pos {
-                    t: p.t + 1,
-                    x: nx,
-                    y: ny,
-                    cheat: p.cheat,
-                },
-                end,
-                max_time,
-                seen,
-                found,
-            );
-        } else if let Some(c) = p.cheat {
-            if c.t == p.t {
-                recurse(
-                    g,
-                    Pos {
-                        t: p.t + 1,
-                        x: nx,
-                        y: ny,
-                        cheat: Some(c),
-                    },
-                    end,
-                    max_time,
-                    seen,
-                    found,
-                );
-            }
-        } else {
-            recurse(
-                g,
-                Pos {
-                    t: p.t + 1,
-                    x: nx,
-                    y: ny,
-                    cheat: Some(Cheat {
-                        t: p.t,
-                        x: p.x,
-                        y: p.y,
-                    }),
-                },
-                end,
-                max_time,
-                seen,
-                found,
-            );
-        }
-    }
-    seen.remove(&(p.x, p.y));
+    seen: HashSet<(i64, i64)>,
+    found: HashMap<Cheat, usize>,
 }
 
-pub fn solve(s: &str) -> (u64, u64) {
+impl<'a> Recurse<'a> {
+    fn new(g: Grid<'a>, max_time: usize, end: (i64, i64)) -> Self {
+        Recurse {
+            g,
+            max_time,
+            end,
+            seen: HashSet::new(),
+            found: HashMap::new(),
+        }
+    }
+
+    fn recurse(&mut self, p: Pos) {
+        if p.t >= self.max_time {
+            return;
+        } else if (p.x, p.y) == self.end {
+            if let Some(c) = p.cheat {
+                let e = self.found.entry(c).or_insert(p.t);
+                *e = (*e).min(p.t);
+            }
+            return;
+        } else if !self.seen.insert((p.x, p.y)) {
+            return;
+        }
+
+        for d in Dir::iter() {
+            let x = p.x + d.x();
+            let y = p.y + d.y();
+            if !self.blocked(x, y) {
+                self.recurse(Pos {
+                    t: p.t + 1,
+                    x,
+                    y,
+                    cheat: p.cheat,
+                });
+            } else if p.cheat.is_none() {
+                for d in Dir::iter() {
+                    let x = x + d.x();
+                    let y = y + d.y();
+                    if !self.blocked(x, y) {
+                        self.recurse(Pos {
+                            t: p.t + 2,
+                            x,
+                            y,
+                            cheat: Some(Cheat {
+                                start: (p.x, p.y),
+                                end: (x, y),
+                            }),
+                        });
+                    }
+                }
+            }
+        }
+        self.seen.remove(&(p.x, p.y));
+    }
+
+    fn blocked(&self, x: i64, y: i64) -> bool {
+        matches!(self.g.get(x, y), None | Some(b'#'))
+    }
+}
+
+pub fn solve(s: &str) -> (usize, u64) {
     let g = Grid::new(s);
     let mut start = None;
     let mut end = None;
@@ -133,25 +123,33 @@ pub fn solve(s: &str) -> (u64, u64) {
     let shortest = shortest.unwrap();
     println!("shortest path: {shortest}");
 
-    let mut todo = VecDeque::new();
+    let mut r = Recurse::new(g, shortest, end);
+
+    let mut todo = BTreeSet::new();
     let mut seen = HashSet::new();
-    todo.push_back(Pos {
+    todo.insert(Pos {
+        t: 0,
         x: start.0,
         y: start.1,
-        t: 0,
         cheat: None,
     });
     let mut found = HashMap::new();
-    while let Some(p) = todo.pop_front() {
+    while let Some(p) = todo.pop_first() {
         if p.t >= shortest {
             continue;
         } else if (p.x, p.y) == end {
             if let Some(c) = p.cheat {
-                let e = found.entry((c.x, c.y)).or_insert(p.t);
+                println!(
+                    "found path saving {} with cheat at {:?},{:?}",
+                    shortest - p.t,
+                    c.start,
+                    c.end,
+                );
+                let e = found.entry(c).or_insert(p.t);
                 *e = (*e).min(p.t);
             }
             continue;
-        } else if !seen.insert((p.x, p.y, p.cheat.map(|c| (c.x, c.y)))) {
+        } else if !seen.insert((p.x, p.y, p.cheat)) {
             continue;
         }
 
@@ -160,33 +158,29 @@ pub fn solve(s: &str) -> (u64, u64) {
             let ny = p.y + d.y();
             let blocked = matches!(g.get(nx, ny), None | Some(b'#'));
             if !blocked {
-                todo.push_back(Pos {
+                todo.insert(Pos {
                     t: p.t + 1,
                     x: nx,
                     y: ny,
                     cheat: p.cheat,
                 });
-            } else if let Some(c) = p.cheat {
-                if c.t == p.t {
-                    println!("!!");
-                    todo.push_back(Pos {
-                        t: p.t + 1,
-                        x: nx,
-                        y: ny,
-                        cheat: Some(c),
-                    });
+            } else if p.cheat.is_none() {
+                for d in Dir::iter() {
+                    let cx = nx + d.x();
+                    let cy = ny + d.y();
+                    let blocked = matches!(g.get(cx, cy), None | Some(b'#'));
+                    if !blocked {
+                        todo.insert(Pos {
+                            t: p.t + 2,
+                            x: cx,
+                            y: cy,
+                            cheat: Some(Cheat {
+                                start: (p.x, p.y),
+                                end: (cx, cy),
+                            }),
+                        });
+                    }
                 }
-            } else {
-                todo.push_back(Pos {
-                    t: p.t + 1,
-                    x: nx,
-                    y: ny,
-                    cheat: Some(Cheat {
-                        t: p.t,
-                        x: p.x,
-                        y: p.y,
-                    }),
-                });
             }
         }
     }
@@ -194,12 +188,15 @@ pub fn solve(s: &str) -> (u64, u64) {
     for t in found.values() {
         *skip_count.entry(shortest - t).or_default() += 1;
     }
-    for (n, count) in &skip_count {
-        println!("{n} => {count}");
+    let mut out = 0;
+    for (saved, count) in &skip_count {
+        println!("{saved} => {count}");
+        if *saved >= 100 {
+            out += count;
+        }
     }
-    println!("{}", found.len());
 
-    (0, 0)
+    (out, 0)
 }
 
 #[cfg(test)]
@@ -235,6 +232,21 @@ mod test {
             #######
         "};
         assert_eq!(solve(SIMPLE), (0, 0));
+        */
+
+        /*
+        const EXAMPLE: &str = indoc::indoc! {"
+            ###############
+            #...#...#.....#
+            #.#.#.#.#.###.#
+            #S#...#.#.#...#
+            #######.#.#.###
+            #######.#.#...#
+            #######.#.###.#
+            ###...#...#E..#
+            ###############
+        "};
+        assert_eq!(solve(EXAMPLE), (0, 0));
         */
     }
 }
