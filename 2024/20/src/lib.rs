@@ -1,66 +1,81 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::{hash_map::Entry, HashMap, VecDeque};
 use util::{Dir, Grid};
 
-pub fn solve_with(s: &str, cheat_length: u64) -> HashMap<u64, usize> {
-    let g = Grid::new(s);
-    let mut start = None;
-    let mut end = None;
-    for y in 0..g.height() {
-        for x in 0..g.width() {
-            match g[(x, y)] {
-                b'S' => start = Some((x, y)),
-                b'E' => end = Some((x, y)),
-                b'#' | b'.' => (),
-                c => panic!("invalid grid character '{c}'"),
-            }
-        }
-    }
-    let start = start.unwrap();
-    let end = end.unwrap();
+struct Map {
+    distance_to_start: HashMap<(i64, i64), u64>,
+    distance_to_end: HashMap<(i64, i64), u64>,
+    shortest_path: u64,
+}
 
-    // Make a map of distances from a particular point
-    let flood = |pos: (i64, i64)| {
-        let mut todo = VecDeque::new();
-        let mut dist = HashMap::new();
-        todo.push_back((0, pos.0, pos.1));
-        while let Some((t, x, y)) = todo.pop_front() {
-            match dist.entry((x, y)) {
-                std::collections::hash_map::Entry::Vacant(v) => v.insert(t),
-                std::collections::hash_map::Entry::Occupied(..) => continue,
-            };
-            for d in Dir::iter() {
-                let x = x + d.x();
-                let y = y + d.y();
-                if g[(x, y)] != b'#' {
-                    todo.push_back((t + 1, x, y));
+impl Map {
+    fn new(s: &str) -> Self {
+        let g = Grid::new(s);
+        let mut start = None;
+        let mut end = None;
+        for y in 0..g.height() {
+            for x in 0..g.width() {
+                match g[(x, y)] {
+                    b'S' => start = Some((x, y)),
+                    b'E' => end = Some((x, y)),
+                    b'#' | b'.' => (),
+                    c => panic!("invalid grid character '{c}'"),
                 }
             }
         }
-        dist
-    };
-    let distance_to_start = flood(start);
-    let distance_to_end = flood(end);
-    let shortest_path = distance_to_end[&start];
+        let start = start.unwrap();
+        let end = end.unwrap();
 
-    let mut skip_count: HashMap<u64, usize> = HashMap::new();
-    for ((sx, sy), sd) in &distance_to_start {
-        for ((ex, ey), ed) in &distance_to_end {
-            let d = ex.abs_diff(*sx) + ey.abs_diff(*sy);
-            if d <= cheat_length {
-                let path_len = d + sd + ed;
-                if path_len < shortest_path {
-                    let delta = shortest_path - path_len;
-                    *skip_count.entry(delta).or_default() += 1;
+        // Make a map of distances from a particular point
+        let flood = |pos: (i64, i64)| {
+            let mut todo = VecDeque::new();
+            let mut dist = HashMap::new();
+            todo.push_back((0, pos.0, pos.1));
+            while let Some((t, x, y)) = todo.pop_front() {
+                match dist.entry((x, y)) {
+                    Entry::Vacant(v) => v.insert(t),
+                    Entry::Occupied(..) => continue,
+                };
+                for d in Dir::iter() {
+                    let x = x + d.x();
+                    let y = y + d.y();
+                    if g[(x, y)] != b'#' {
+                        todo.push_back((t + 1, x, y));
+                    }
+                }
+            }
+            dist
+        };
+        let distance_to_start = flood(start);
+        let distance_to_end = flood(end);
+        Self {
+            shortest_path: distance_to_end[&start],
+            distance_to_start,
+            distance_to_end,
+        }
+    }
+
+    fn run(&self, cheat_length: u64) -> HashMap<u64, usize> {
+        let mut skip_count: HashMap<u64, usize> = HashMap::new();
+        for ((sx, sy), sd) in &self.distance_to_start {
+            for ((ex, ey), ed) in &self.distance_to_end {
+                let d = ex.abs_diff(*sx) + ey.abs_diff(*sy);
+                if d <= cheat_length {
+                    let path_len = d + *sd + *ed;
+                    if path_len < self.shortest_path {
+                        let delta = self.shortest_path - path_len;
+                        *skip_count.entry(delta).or_default() += 1;
+                    }
                 }
             }
         }
+        skip_count
     }
-    skip_count
 }
 
 pub fn solve(s: &str) -> (usize, usize) {
+    let m = Map::new(s);
     let run = |i| {
-        solve_with(s, i)
+        m.run(i)
             .iter()
             .filter(|(saved, _count)| **saved >= 100)
             .map(|(_saved, count)| *count)
@@ -93,7 +108,9 @@ mod test {
             #...#...#...###
             ###############
         "};
-        let s = solve_with(EXAMPLE, 2);
+        let m = Map::new(EXAMPLE);
+
+        let s = m.run(2);
         assert_eq!(s[&2], 14);
         assert_eq!(s[&4], 14);
         assert_eq!(s[&6], 2);
@@ -106,7 +123,7 @@ mod test {
         assert_eq!(s[&40], 1);
         assert_eq!(s[&64], 1);
 
-        let s = solve_with(EXAMPLE, 20);
+        let s = m.run(20);
         assert_eq!(s[&50], 32);
         assert_eq!(s[&52], 31);
         assert_eq!(s[&54], 29);
