@@ -1,9 +1,9 @@
-use std::collections::{hash_map::Entry, HashMap, VecDeque};
+use std::collections::{hash_map::Entry, BTreeMap, HashMap, VecDeque};
 use util::{Dir, Grid};
 
 struct Map {
     distance_to_start: HashMap<(i64, i64), u64>,
-    distance_to_end: HashMap<(i64, i64), u64>,
+    distance_to_end: BTreeMap<i64, BTreeMap<i64, u64>>,
     shortest_path: u64,
 }
 
@@ -46,20 +46,32 @@ impl Map {
             dist
         };
         let distance_to_start = flood(start);
-        let distance_to_end = flood(end);
+        let de = flood(end);
+        let mut distance_to_end: BTreeMap<i64, BTreeMap<i64, u64>> =
+            BTreeMap::new();
+        for ((x, y), v) in de {
+            distance_to_end.entry(x).or_default().insert(y, v);
+        }
         Self {
-            shortest_path: distance_to_end[&start],
+            shortest_path: distance_to_start[&end],
             distance_to_start,
             distance_to_end,
         }
     }
 
-    fn run(&self, cheat_length: u64) -> HashMap<u64, usize> {
+    fn run(&self, cheat_length: i64) -> HashMap<u64, usize> {
         let mut skip_count: HashMap<u64, usize> = HashMap::new();
         for ((sx, sy), sd) in &self.distance_to_start {
-            for ((ex, ey), ed) in &self.distance_to_end {
+            for ((ex, ey), ed) in self
+                .distance_to_end
+                .range(*sx - cheat_length..=*sx + cheat_length)
+                .flat_map(|(ex, cols)| {
+                    cols.range(*sy - cheat_length..=*sy + cheat_length)
+                        .map(move |(ey, ed)| ((ex, ey), ed))
+                })
+            {
                 let d = ex.abs_diff(*sx) + ey.abs_diff(*sy);
-                if d <= cheat_length {
+                if d <= cheat_length as u64 {
                     let path_len = d + *sd + *ed;
                     if path_len < self.shortest_path {
                         let delta = self.shortest_path - path_len;
