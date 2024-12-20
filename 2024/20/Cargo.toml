@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 indoc.workspace = true
-smallvec.workspace = true
+util.workspace = true
