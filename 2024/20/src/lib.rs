@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use util::{Dir, Grid};
 
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq)]
@@ -124,68 +124,14 @@ pub fn solve(s: &str) -> (usize, u64) {
     println!("shortest path: {shortest}");
 
     let mut r = Recurse::new(g, shortest, end);
-
-    let mut todo = BTreeSet::new();
-    let mut seen = HashSet::new();
-    todo.insert(Pos {
+    r.recurse(Pos {
         t: 0,
         x: start.0,
         y: start.1,
         cheat: None,
     });
-    let mut found = HashMap::new();
-    while let Some(p) = todo.pop_first() {
-        if p.t >= shortest {
-            continue;
-        } else if (p.x, p.y) == end {
-            if let Some(c) = p.cheat {
-                println!(
-                    "found path saving {} with cheat at {:?},{:?}",
-                    shortest - p.t,
-                    c.start,
-                    c.end,
-                );
-                let e = found.entry(c).or_insert(p.t);
-                *e = (*e).min(p.t);
-            }
-            continue;
-        } else if !seen.insert((p.x, p.y, p.cheat)) {
-            continue;
-        }
-
-        for d in Dir::iter() {
-            let nx = p.x + d.x();
-            let ny = p.y + d.y();
-            let blocked = matches!(g.get(nx, ny), None | Some(b'#'));
-            if !blocked {
-                todo.insert(Pos {
-                    t: p.t + 1,
-                    x: nx,
-                    y: ny,
-                    cheat: p.cheat,
-                });
-            } else if p.cheat.is_none() {
-                for d in Dir::iter() {
-                    let cx = nx + d.x();
-                    let cy = ny + d.y();
-                    let blocked = matches!(g.get(cx, cy), None | Some(b'#'));
-                    if !blocked {
-                        todo.insert(Pos {
-                            t: p.t + 2,
-                            x: cx,
-                            y: cy,
-                            cheat: Some(Cheat {
-                                start: (p.x, p.y),
-                                end: (cx, cy),
-                            }),
-                        });
-                    }
-                }
-            }
-        }
-    }
     let mut skip_count: BTreeMap<usize, usize> = BTreeMap::new();
-    for t in found.values() {
+    for t in r.found.values() {
         *skip_count.entry(shortest - t).or_default() += 1;
     }
     let mut out = 0;
