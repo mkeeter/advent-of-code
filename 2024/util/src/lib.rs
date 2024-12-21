@@ -478,6 +478,17 @@ impl Dir {
     }
 }
 
+impl From<Dir> for char {
+    fn from(value: Dir) -> Self {
+        match value {
+            Dir::N => '^',
+            Dir::E => '>',
+            Dir::S => 'v',
+            Dir::W => '<',
+        }
+    }
+}
+
 impl std::fmt::Display for Dir {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
