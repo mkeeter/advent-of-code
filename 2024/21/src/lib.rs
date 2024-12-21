@@ -79,16 +79,19 @@ fn build_paths(
     paths
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 /// Takes a chunk of directions and returns the length of the minimum expansion
 ///
 /// The chunk has an implicit trailing `A`
-fn expand_chunk(
-    chunk: &str,
+fn expand_chunk<'a>(
+    chunk: &'a str,
     depth: usize,
-    cache: &mut HashMap<(String, usize), usize>,
+    dir_cache: &'a HashMap<(char, char), Vec<String>>,
+    seen: &mut HashMap<(&'a str, usize), usize>,
 ) -> usize {
     assert!(!chunk.contains('A'));
-    if let Some(v) = cache.get(&(chunk.to_owned(), depth)) {
+    if let Some(v) = seen.get(&(chunk, depth)) {
         *v
     } else if depth == 0 {
         chunk.len() + 1 // for the trailing `A`
@@ -98,29 +101,31 @@ fn expand_chunk(
             chunk.chars().chain(std::iter::once('A')),
         )
         .map(|(a, b)| {
-            dir_paths(a, b)
+            dir_cache[&(a, b)]
                 .iter()
-                .map(|p| expand_chunk(p, depth - 1, cache))
+                .map(|p| expand_chunk(p, depth - 1, dir_cache, seen))
                 .min()
                 .unwrap()
         })
         .sum();
-        cache.insert((chunk.to_owned(), depth), length);
+        seen.insert((chunk, depth), length);
         length
     }
 }
 
-fn run(
+fn run<'a>(
     line: &str,
     depth: usize,
-    cache: &mut HashMap<(String, usize), usize>,
+    np_cache: &'a HashMap<(char, char), Vec<String>>,
+    dir_cache: &'a HashMap<(char, char), Vec<String>>,
+    seen: &mut HashMap<(&'a str, usize), usize>,
 ) -> usize {
     let min_length: usize =
         std::iter::zip(std::iter::once('A').chain(line.chars()), line.chars())
             .map(|(a, b)| {
-                num_paths(a, b)
+                np_cache[&(a, b)]
                     .iter()
-                    .map(|chunk| expand_chunk(chunk, depth, cache))
+                    .map(|chunk| expand_chunk(chunk, depth, dir_cache, seen))
                     .min()
                     .unwrap()
             })
@@ -130,9 +135,30 @@ fn run(
 }
 
 pub fn solve(s: &str) -> (usize, usize) {
-    let mut cache = HashMap::new();
-    let p1 = s.lines().map(|line| run(line, 2, &mut cache)).sum();
-    let p2 = s.lines().map(|line| run(line, 25, &mut cache)).sum();
+    let mut np_cache = HashMap::new();
+    const NUMS: &str = "0123456789A";
+    for a in NUMS.chars() {
+        for b in NUMS.chars() {
+            np_cache.insert((a, b), num_paths(a, b));
+        }
+    }
+    const DIRS: &str = "^v<>A";
+    let mut dir_cache = HashMap::new();
+    for a in DIRS.chars() {
+        for b in DIRS.chars() {
+            dir_cache.insert((a, b), dir_paths(a, b));
+        }
+    }
+
+    let mut seen = HashMap::new();
+    let p1 = s
+        .lines()
+        .map(|line| run(line, 2, &np_cache, &dir_cache, &mut seen))
+        .sum();
+    let p2 = s
+        .lines()
+        .map(|line| run(line, 25, &np_cache, &dir_cache, &mut seen))
+        .sum();
 
     (p1, p2)
 }
