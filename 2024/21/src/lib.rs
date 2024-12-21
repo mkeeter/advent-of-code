@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 use util::Dir;
 
 fn num_pos(a: char) -> (i64, i64) {
@@ -19,7 +19,7 @@ fn num_pos(a: char) -> (i64, i64) {
 }
 
 fn num_valid(x: i64, y: i64) -> bool {
-    x >= 0 && x < 3 && y >= 0 && y < 4 && !(x == 0 && y == 3)
+    (0..3).contains(&x) && (0..4).contains(&y) && !(x == 0 && y == 3)
 }
 
 fn dir_pos(a: char) -> (i64, i64) {
@@ -34,7 +34,7 @@ fn dir_pos(a: char) -> (i64, i64) {
 }
 
 fn dir_valid(x: i64, y: i64) -> bool {
-    x >= 0 && x < 3 && y >= 0 && y < 2 && !(x == 0 && y == 0)
+    (0..3).contains(&x) && (0..2).contains(&y) && !(x == 0 && y == 0)
 }
 
 fn num_paths(a: char, b: char) -> Vec<String> {
@@ -79,72 +79,85 @@ fn build_paths(
     paths
 }
 
-pub fn solve(s: &str) -> (usize, u64) {
-    let mut out = 0;
-    for line in s.lines() {
-        let mut paths = vec!["".to_owned()];
-        let mut min_length = usize::MAX;
-        for (a, b) in std::iter::zip(
-            std::iter::once('A').chain(line.chars()),
-            line.chars(),
-        ) {
-            let mut next = vec![];
-            for d in num_paths(a, b) {
-                for p in &paths {
-                    let mut p = p.clone();
-                    p += &d;
-                    p += "A";
-                    next.push(p);
-                }
-            }
-            paths = next;
-        }
-        for line in paths {
-            let mut paths = vec!["".to_owned()];
-            for (a, b) in std::iter::zip(
-                std::iter::once('A').chain(line.chars()),
-                line.chars(),
-            ) {
-                let mut next = vec![];
-                for d in dir_paths(a, b) {
-                    for p in &paths {
-                        let mut p = p.clone();
-                        p += &d;
-                        p += "A";
-                        next.push(p);
-                    }
-                }
-                paths = next;
-            }
-            for line in paths {
-                let mut paths = vec!["".to_owned()];
-                for (a, b) in std::iter::zip(
-                    std::iter::once('A').chain(line.chars()),
-                    line.chars(),
-                ) {
-                    let mut next = vec![];
-                    for d in dir_paths(a, b) {
-                        for p in &paths {
-                            let mut p = p.clone();
-                            p += &d;
-                            p += "A";
-                            next.push(p);
-                        }
-                    }
-                    paths = next;
-                }
-                for p in paths {
-                    min_length = min_length.min(p.len());
-                }
-            }
-        }
-        println!("{} x {}", min_length, s[0..3].parse::<usize>().unwrap());
-        out += min_length * line[0..3].parse::<usize>().unwrap();
+/// Takes a chunk of directions and returns the length of the minimum expansion
+///
+/// The chunk has an implicit trailing `A`
+pub fn expand_chunk(
+    chunk: &str,
+    depth: usize,
+    cache: &mut HashMap<(String, usize), usize>,
+) -> usize {
+    assert!(!chunk.contains('A'));
+    if let Some(v) = cache.get(&(chunk.to_owned(), depth)) {
+        *v
+    } else if depth == 0 {
+        chunk.len() + 1 // for the trailing `A`
+    } else {
+        let length = std::iter::zip(
+            std::iter::once('A').chain(chunk.chars()),
+            chunk.chars().chain(std::iter::once('A')),
+        )
+        .map(|(a, b)| {
+            dir_paths(a, b)
+                .iter()
+                .map(|p| expand_chunk(p, depth - 1, cache))
+                .min()
+                .unwrap()
+        })
+        .sum();
+        cache.insert((chunk.to_owned(), depth), length);
+        length
     }
-    // there are some number of paths for the inner keypad
-    // e.g. A -> 4
-    // Then
-    (out, 0)
+}
+
+pub fn expand_path(
+    path: &str,
+    depth: usize,
+    cache: &mut HashMap<(String, usize), usize>,
+) -> usize {
+    path.split('A').map(|c| expand_chunk(c, depth, cache)).sum()
+}
+
+pub fn run(
+    line: &str,
+    depth: usize,
+    cache: &mut HashMap<(String, usize), usize>,
+) -> usize {
+    // Convert a numerical code to all possible direction codes
+    let mut paths = vec!["".to_owned()];
+    for (a, b) in
+        std::iter::zip(std::iter::once('A').chain(line.chars()), line.chars())
+    {
+        let mut next = vec![];
+        for d in num_paths(a, b) {
+            for p in &paths {
+                let mut p = p.clone();
+                p += &d;
+                p += "A";
+                next.push(p);
+            }
+        }
+        paths = next;
+    }
+
+    // Recursively find the min path length
+    let min_length = paths
+        .iter()
+        .map(|p| expand_path(p, depth, cache))
+        .min()
+        .unwrap()
+        - 1; // ???
+    let v = line[0..3].parse::<usize>().unwrap();
+
+    min_length * v
+}
+
+pub fn solve(s: &str) -> (usize, usize) {
+    let mut cache = HashMap::new();
+    let p1 = s.lines().map(|line| run(line, 2, &mut cache)).sum();
+    let p2 = s.lines().map(|line| run(line, 25, &mut cache)).sum();
+
+    (p1, p2)
 }
 
 #[cfg(test)]
