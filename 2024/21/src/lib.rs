@@ -82,7 +82,7 @@ fn build_paths(
 /// Takes a chunk of directions and returns the length of the minimum expansion
 ///
 /// The chunk has an implicit trailing `A`
-pub fn expand_chunk(
+fn expand_chunk(
     chunk: &str,
     depth: usize,
     cache: &mut HashMap<(String, usize), usize>,
@@ -110,46 +110,22 @@ pub fn expand_chunk(
     }
 }
 
-pub fn expand_path(
-    path: &str,
-    depth: usize,
-    cache: &mut HashMap<(String, usize), usize>,
-) -> usize {
-    // remove final A, which would otherwise produce an empty chunk
-    let path = path.strip_suffix('A').unwrap();
-    path.split('A').map(|c| expand_chunk(c, depth, cache)).sum()
-}
-
-pub fn run(
+fn run(
     line: &str,
     depth: usize,
     cache: &mut HashMap<(String, usize), usize>,
 ) -> usize {
-    // Convert a numerical code to all possible direction codes
-    let mut paths = vec!["".to_owned()];
-    for (a, b) in
+    let min_length: usize =
         std::iter::zip(std::iter::once('A').chain(line.chars()), line.chars())
-    {
-        let mut next = vec![];
-        for d in num_paths(a, b) {
-            for p in &paths {
-                let mut p = p.clone();
-                p += &d;
-                p += "A";
-                next.push(p);
-            }
-        }
-        paths = next;
-    }
-
-    // Recursively find the min path length
-    let min_length = paths
-        .iter()
-        .map(|p| expand_path(p, depth, cache))
-        .min()
-        .unwrap();
+            .map(|(a, b)| {
+                num_paths(a, b)
+                    .iter()
+                    .map(|chunk| expand_chunk(chunk, depth, cache))
+                    .min()
+                    .unwrap()
+            })
+            .sum();
     let v = line[0..3].parse::<usize>().unwrap();
-
     min_length * v
 }
 
