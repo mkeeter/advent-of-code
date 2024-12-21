@@ -115,6 +115,8 @@ pub fn expand_path(
     depth: usize,
     cache: &mut HashMap<(String, usize), usize>,
 ) -> usize {
+    // remove final A, which would otherwise produce an empty chunk
+    let path = path.strip_suffix('A').unwrap();
     path.split('A').map(|c| expand_chunk(c, depth, cache)).sum()
 }
 
@@ -145,8 +147,7 @@ pub fn run(
         .iter()
         .map(|p| expand_path(p, depth, cache))
         .min()
-        .unwrap()
-        - 1; // ???
+        .unwrap();
     let v = line[0..3].parse::<usize>().unwrap();
 
     min_length * v
