@@ -1,5 +1,4 @@
-use rayon::prelude::*;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use util::get_integers;
 
 const MASK: u32 = 0xFFFFFF;
@@ -10,21 +9,25 @@ fn step(mut v: u32) -> u32 {
     ((v << 11) ^ v) & MASK
 }
 
-fn find_prices(mut v: u32) -> (HashMap<u32, u8>, u32) {
+fn run(seed: u32, cache: &mut HashMap<u32, HashMap<u32, u8>>) -> u32 {
+    let mut v = seed;
     let mut key = 0u32; // [4 x i8]
     let mut prev_price = (v % 10) as i8;
-    let mut out = HashMap::new();
     for r in 0..2000 {
         v = step(v);
         let price = (v % 10) as i8;
-        let d = price - prev_price;
-        key = (key >> 8) | (d as u8 as u32) << 24;
+        let delta = price - prev_price;
+        key = (key >> 8) | (delta as u8 as u32) << 24;
         if r >= 3 {
-            out.entry(key).or_insert(price as u8);
+            cache
+                .entry(key)
+                .or_default()
+                .entry(seed)
+                .or_insert(price as u8);
         }
         prev_price = price;
     }
-    (out, v)
+    v
 }
 
 pub fn solve(s: &str) -> (u64, u64) {
@@ -32,25 +35,12 @@ pub fn solve(s: &str) -> (u64, u64) {
     let seeds = get_integers::<u32>(s).collect::<Vec<_>>();
     let mut prices = HashMap::new();
     for i in seeds.iter().cloned() {
-        let (p, v) = find_prices(i);
-        prices.insert(i, p);
-        sum += u64::from(v);
+        sum += u64::from(run(i, &mut prices));
     }
 
-    let mut all_seq: HashSet<u32> = HashSet::new();
-    for p in prices.values() {
-        all_seq.extend(p.keys());
-    }
-
-    let best_price = all_seq
-        .into_par_iter()
-        .map(|seq| {
-            prices
-                .values()
-                .flat_map(|v| v.get(&seq))
-                .map(|v| *v as u64)
-                .sum::<u64>()
-        })
+    let best_price = prices
+        .values()
+        .map(|k| k.values().map(|v| u64::from(*v)).sum())
         .max()
         .unwrap();
 
