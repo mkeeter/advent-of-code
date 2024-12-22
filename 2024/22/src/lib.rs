@@ -10,17 +10,17 @@ fn step(mut v: u32) -> u32 {
     ((v << 11) ^ v) & MASK
 }
 
-fn find_prices(mut v: u32) -> (HashMap<[i8; 4], u8>, u32) {
-    let mut deltas = [i8::MAX; 4];
+fn find_prices(mut v: u32) -> (HashMap<u32, u8>, u32) {
+    let mut key = 0u32; // [4 x i8]
     let mut prev_price = (v % 10) as i8;
     let mut out = HashMap::new();
-    for _r in 0..2000 {
+    for r in 0..2000 {
         v = step(v);
         let price = (v % 10) as i8;
-        deltas.rotate_left(1);
-        deltas[3] = price - prev_price;
-        if deltas.iter().all(|d| d.abs() <= 9) {
-            out.entry(deltas).or_insert(price as u8);
+        let d = price - prev_price;
+        key = (key >> 8) | (d as u8 as u32) << 24;
+        if r >= 3 {
+            out.entry(key).or_insert(price as u8);
         }
         prev_price = price;
     }
@@ -37,7 +37,7 @@ pub fn solve(s: &str) -> (u64, u64) {
         sum += u64::from(v);
     }
 
-    let mut all_seq: HashSet<[i8; 4]> = HashSet::new();
+    let mut all_seq: HashSet<u32> = HashSet::new();
     for p in prices.values() {
         all_seq.extend(p.keys());
     }
