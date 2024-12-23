@@ -33,6 +33,37 @@ impl Graph {
         self.edges
             .contains(&(std::cmp::min(a, b), std::cmp::max(a, b)))
     }
+
+    /// Returns the largest clique starting at the given node
+    fn max_clique(&self) -> Vec<Name> {
+        let mut seen = HashSet::new();
+        let mut best = vec![];
+        for n in &self.nodes {
+            if !seen.contains(n) {
+                let mut clique = vec![];
+                self.recurse(&mut vec![*n], &mut clique);
+                seen.extend(clique.iter().cloned());
+                if clique.len() > best.len() {
+                    best = clique;
+                }
+            }
+        }
+        best
+    }
+
+    fn recurse(&self, clique: &mut Vec<Name>, best: &mut Vec<Name>) {
+        if clique.len() > best.len() {
+            *best = clique.clone();
+        }
+        let last = *clique.last().unwrap();
+        for n in self.nodes.range(last..).skip(1) {
+            if clique.iter().all(|p| self.contains_edge(*p, *n)) {
+                clique.push(*n);
+                self.recurse(clique, best);
+                clique.pop();
+            }
+        }
+    }
 }
 
 pub fn solve(s: &str) -> (usize, String) {
@@ -45,44 +76,23 @@ pub fn solve(s: &str) -> (usize, String) {
         graph.insert(a, b);
     }
 
-    let mut cliques = graph
-        .edges
-        .iter()
-        .map(|(a, b)| vec![a, b])
-        .collect::<Vec<_>>();
     let mut count = 0;
-    for size in 3.. {
-        let mut next = vec![];
-        for c in &cliques {
-            let last = *c.last().unwrap();
-            for n in graph.nodes.range(*last..).skip(1) {
-                if c.iter().all(|p| graph.contains_edge(**p, *n)) {
-                    let mut c = c.clone();
-                    c.push(n);
-                    next.push(c);
-                }
+    for (a, b) in &graph.edges {
+        for n in graph.nodes.range(*b..).skip(1) {
+            if [a, b, n].iter().any(|c| c.starts_with('t'))
+                && graph.contains_edge(*a, *n)
+                && graph.contains_edge(*b, *n)
+            {
+                count += 1;
             }
         }
-        if next.is_empty() {
-            break;
-        }
-        cliques = next;
-        if size == 3 {
-            count = cliques
-                .iter()
-                .filter(|a| a.iter().any(|n| n.starts_with('t')))
-                .count();
-        }
     }
-    assert_eq!(cliques.len(), 1);
 
-    let c = cliques.pop().unwrap();
-    assert!(c.is_sorted());
+    let clique = graph.max_clique();
     let mut password = String::new();
-    for (i, name) in c.iter().enumerate() {
+    for (i, name) in clique.iter().enumerate() {
         password += &format!("{}{name}", if i == 0 { "" } else { "," });
     }
-
     (count, password)
 }
 
