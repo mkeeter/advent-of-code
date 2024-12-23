@@ -1,4 +1,7 @@
-use std::collections::{BTreeSet, HashSet};
+use bimap::BiHashMap;
+use util::{BitSet, TupleSet};
+
+////////////////////////////////////////////////////////////////////////////////
 
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 struct Name([char; 2]);
@@ -15,34 +18,40 @@ impl std::fmt::Display for Name {
     }
 }
 
-#[derive(Default)]
+////////////////////////////////////////////////////////////////////////////////
+
 struct Graph {
-    edges: HashSet<(Name, Name)>,
-    nodes: BTreeSet<Name>,
+    edges: TupleSet<(usize, usize)>,
+    count: usize,
 }
 
 impl Graph {
-    fn insert(&mut self, a: Name, b: Name) {
-        self.edges
-            .insert((std::cmp::min(a, b), std::cmp::max(a, b)));
-        self.nodes.insert(a);
-        self.nodes.insert(b);
+    fn new(count: usize) -> Self {
+        Self {
+            edges: TupleSet::new((count, count)),
+            count,
+        }
     }
 
-    fn contains_edge(&self, a: Name, b: Name) -> bool {
-        self.edges
-            .contains(&(std::cmp::min(a, b), std::cmp::max(a, b)))
+    fn insert(&mut self, a: usize, b: usize) {
+        self.edges.insert((a.min(b), b.max(a)));
+    }
+
+    fn contains_edge(&self, a: usize, b: usize) -> bool {
+        self.edges.contains((a.min(b), b.max(a)))
     }
 
     /// Returns the largest clique starting at the given node
-    fn max_clique(&self) -> Vec<Name> {
-        let mut seen = HashSet::new();
+    fn max_clique(&self) -> Vec<usize> {
+        let mut seen = BitSet::new(self.count);
         let mut best = vec![];
-        for n in &self.nodes {
-            if !seen.contains(n) {
+        for n in 0..self.count {
+            if !seen.get(n) {
                 let mut clique = vec![];
-                self.recurse(&mut vec![*n], &mut clique);
-                seen.extend(clique.iter().cloned());
+                self.recurse(&mut vec![n], &mut clique);
+                for c in &clique {
+                    seen.insert(*c);
+                }
                 if clique.len() > best.len() {
                     best = clique;
                 }
@@ -51,14 +60,14 @@ impl Graph {
         best
     }
 
-    fn recurse(&self, clique: &mut Vec<Name>, best: &mut Vec<Name>) {
+    fn recurse(&self, clique: &mut Vec<usize>, best: &mut Vec<usize>) {
         if clique.len() > best.len() {
             *best = clique.clone();
         }
         let last = *clique.last().unwrap();
-        for n in self.nodes.range(last..).skip(1) {
-            if clique.iter().all(|p| self.contains_edge(*p, *n)) {
-                clique.push(*n);
+        for n in (last + 1)..self.count {
+            if clique.iter().all(|p| self.contains_edge(*p, n)) {
+                clique.push(n);
                 self.recurse(clique, best);
                 clique.pop();
             }
@@ -66,35 +75,64 @@ impl Graph {
     }
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
 pub fn solve(s: &str) -> (usize, String) {
-    let mut graph = Graph::default();
+    let mut name_to_index = BiHashMap::new();
+    let mut edges = Vec::new();
     for line in s.lines() {
         let mut iter = line.chars();
         let a = Name([iter.next().unwrap(), iter.next().unwrap()]);
         assert_eq!(iter.next().unwrap(), '-');
         let b = Name([iter.next().unwrap(), iter.next().unwrap()]);
+
+        for n in [a, b] {
+            let i = name_to_index.len();
+            let _ = name_to_index.insert_no_overwrite(n, i);
+        }
+        edges.push((
+            *name_to_index.get_by_left(&a).unwrap(),
+            *name_to_index.get_by_left(&b).unwrap(),
+        ));
+    }
+    let mut has_t = BitSet::new(name_to_index.len());
+    for (n, i) in &name_to_index {
+        if n.starts_with('t') {
+            has_t.insert(*i);
+        }
+    }
+
+    let mut graph = Graph::new(name_to_index.len());
+    for (a, b) in edges {
         graph.insert(a, b);
     }
 
     let mut count = 0;
-    for (a, b) in &graph.edges {
-        for n in graph.nodes.range(*b..).skip(1) {
-            if [a, b, n].iter().any(|c| c.starts_with('t'))
-                && graph.contains_edge(*a, *n)
-                && graph.contains_edge(*b, *n)
+    for (a, b) in graph.edges.iter() {
+        for n in b + 1..graph.count {
+            if graph.contains_edge(a, n)
+                && graph.contains_edge(b, n)
+                && [a, b, n].iter().any(|c| has_t.get(*c))
             {
                 count += 1;
             }
         }
     }
 
-    let clique = graph.max_clique();
+    let mut clique = graph
+        .max_clique()
+        .into_iter()
+        .map(|i| *name_to_index.get_by_right(&i).unwrap())
+        .collect::<Vec<Name>>();
+    clique.sort();
     let mut password = String::new();
     for (i, name) in clique.iter().enumerate() {
-        password += &format!("{}{name}", if i == 0 { "" } else { "," });
+        password += &format!("{}{name}", if i == 0 { "" } else { "," },);
     }
     (count, password)
 }
+
+////////////////////////////////////////////////////////////////////////////////
 
 #[cfg(test)]
 mod test {
