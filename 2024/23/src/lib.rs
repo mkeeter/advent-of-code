@@ -33,12 +33,16 @@ impl Graph {
         }
     }
 
+    fn key(a: usize, b: usize) -> (usize, usize) {
+        (a.min(b), b.max(a))
+    }
+
     fn insert(&mut self, a: usize, b: usize) {
-        self.edges.insert((a.min(b), b.max(a)));
+        self.edges.insert(Self::key(a, b));
     }
 
     fn contains_edge(&self, a: usize, b: usize) -> bool {
-        self.edges.contains((a.min(b), b.max(a)))
+        self.edges.contains(Self::key(a, b))
     }
 
     /// Returns the largest clique starting at the given node
