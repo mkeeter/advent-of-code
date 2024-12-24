@@ -81,8 +81,8 @@ impl Gate {
 
 #[derive(Debug)]
 enum Error {
-    CouldNotFind(Gate, u32),
-    BadOutput(Name, Name, u32),
+    CouldNotFind(Gate),
+    BadOutput(Name, Name),
 }
 
 #[derive(Default)]
@@ -128,12 +128,12 @@ impl Gates {
         out
     }
 
-    fn find(&self, a: Name, b: Name, op: Opcode) -> Result<Name, Gate> {
+    fn find(&self, a: Name, b: Name, op: Opcode) -> Result<Name, Error> {
         let g = Gate::new(a, b, op);
-        self.gates.get(&g).cloned().ok_or(g)
+        self.gates.get(&g).cloned().ok_or(Error::CouldNotFind(g))
     }
 
-    fn swap(&mut self, a: Name, b: Name) {
+    fn swap_inner(&mut self, a: Name, b: Name) {
         for v in self.gates.values_mut() {
             if *v == a {
                 *v = b;
@@ -141,6 +141,16 @@ impl Gates {
                 *v = a;
             }
         }
+    }
+
+    fn swap(&mut self, a: Name, b: Name) {
+        self.swap_inner(a, b);
+        self.swaps.push((a, b));
+    }
+
+    fn unswap(&mut self, a: Name, b: Name) {
+        self.swap_inner(a, b);
+        self.swaps.retain(|s| *s != (a, b));
     }
 
     fn width(&self) -> u32 {
@@ -154,12 +164,11 @@ impl Gates {
 
     fn solve(&mut self) {
         let outputs: Vec<Name> = self.gates.values().cloned().collect();
-        'outer: while let Err(e) = self.check() {
-            let (g, i) = match e {
-                Error::CouldNotFind(g, i) => (g, i),
-                Error::BadOutput(a, b, _) => {
+        'outer: while let Err((i, e)) = self.check() {
+            let g = match e {
+                Error::CouldNotFind(g) => g,
+                Error::BadOutput(a, b) => {
                     self.swap(a, b);
-                    self.swaps.push((a, b));
                     continue 'outer;
                 }
             };
@@ -170,19 +179,14 @@ impl Gates {
                         self.swap(target, o);
                         match self.check() {
                             Ok(()) => {
-                                self.swaps.push((target, o));
                                 return; // we did it!
                             }
-                            Err(
-                                Error::CouldNotFind(_, j)
-                                | Error::BadOutput(_, _, j),
-                            ) if j > i => {
-                                self.swaps.push((target, o));
+                            Err((j, _e)) if j > i => {
                                 continue 'outer; // we got better
                             }
                             Err(..) => (), // we didn't get better
                         }
-                        self.swap(target, o); // unswap
+                        self.unswap(target, o);
                     }
                 }
             }
@@ -190,7 +194,7 @@ impl Gates {
         }
     }
 
-    fn check(&self) -> Result<(), Error> {
+    fn check(&self) -> Result<(), (u32, Error)> {
         let width = self.width();
         let mut carry = None;
         for i in 0..width {
@@ -198,38 +202,25 @@ impl Gates {
             let b = Name::new(&format!("y{i:02}"));
             let expected_sum = Name::new(&format!("z{i:02}"));
 
+            let e = |err| (i, err); // tag the error with our width
             if let Some(c) = carry {
-                let vsum = self
-                    .find(a, b, Opcode::Xor)
-                    .map_err(|g| Error::CouldNotFind(g, i))?;
-                let vcarry = self
-                    .find(a, b, Opcode::And)
-                    .map_err(|g| Error::CouldNotFind(g, i))?;
-                let sum = self
-                    .find(vsum, c, Opcode::Xor)
-                    .map_err(|g| Error::CouldNotFind(g, i))?;
+                let vsum = self.find(a, b, Opcode::Xor).map_err(e)?;
+                let vcarry = self.find(a, b, Opcode::And).map_err(e)?;
+                let sum = self.find(vsum, c, Opcode::Xor).map_err(e)?;
 
                 // Easy fix:
                 if sum != expected_sum {
-                    return Err(Error::BadOutput(sum, expected_sum, i));
+                    return Err(e(Error::BadOutput(sum, expected_sum)));
                 }
 
-                let scarry = self
-                    .find(c, vsum, Opcode::And)
-                    .map_err(|g| Error::CouldNotFind(g, i))?;
-                carry = Some(
-                    self.find(vcarry, scarry, Opcode::Or)
-                        .map_err(|g| Error::CouldNotFind(g, i))?,
-                );
+                let scarry = self.find(c, vsum, Opcode::And).map_err(e)?;
+                carry = Some(self.find(vcarry, scarry, Opcode::Or).map_err(e)?);
             } else {
                 let sum = self.find(a, b, Opcode::Xor).unwrap();
                 if sum != expected_sum {
-                    return Err(Error::BadOutput(sum, expected_sum, i));
+                    return Err(e(Error::BadOutput(sum, expected_sum)));
                 }
-                carry = Some(
-                    self.find(a, b, Opcode::And)
-                        .map_err(|g| Error::CouldNotFind(g, i))?,
-                );
+                carry = Some(self.find(a, b, Opcode::And).map_err(e)?);
             }
         }
         Ok(())
