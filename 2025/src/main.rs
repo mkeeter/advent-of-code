@@ -62,8 +62,12 @@ struct Args {
 }
 
 async fn read_input_for(day: u32) -> Result<String> {
-    let path: std::path::PathBuf =
-        ["input", &format!("{day:02}")].into_iter().collect();
+    let input_dir = std::path::Path::new("input");
+    if !input_dir.exists() {
+        std::fs::create_dir(input_dir)?;
+    }
+
+    let path = input_dir.with_file_name(format!("{day:02}"));
 
     // Check for a pre-existing input file
     if path.exists() {
