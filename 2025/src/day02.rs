@@ -1,24 +1,28 @@
 use rayon::prelude::*;
 
 pub fn solve(s: &str) -> (usize, usize) {
-    let mut part1 = 0;
-    let mut part2 = 0;
-    for pair in s.trim().split(',') {
-        let mut iter = pair.split('-');
-        let a = iter.next().unwrap();
-        let b = iter.next().unwrap();
-        assert!(iter.next().is_none());
-        let a: usize = a.parse().unwrap();
-        let b: usize = b.parse().unwrap();
-        part1 += (a..=b)
-            .into_par_iter()
-            .map(|v| if is_symmetrical(v) { v } else { 0 })
-            .sum::<usize>();
-        part2 += (a..=b)
-            .into_par_iter()
-            .map(|v| if is_repeated(v) { v } else { 0 })
-            .sum::<usize>();
-    }
+    let pairs = s
+        .trim()
+        .split(',')
+        .map(|pair| {
+            let mut iter = pair.split('-').map(|s| s.parse().unwrap());
+            let a: usize = iter.next().unwrap();
+            let b: usize = iter.next().unwrap();
+            assert!(iter.next().is_none());
+            (a, b)
+        })
+        .collect::<Vec<_>>();
+
+    let part1 = pairs
+        .par_iter()
+        .flat_map(|(a, b)| *a..=*b)
+        .filter(|v| is_symmetrical(*v))
+        .sum();
+    let part2 = pairs
+        .par_iter()
+        .flat_map(|(a, b)| *a..=*b)
+        .filter(|v| is_repeated(*v))
+        .sum();
     (part1, part2)
 }
 
