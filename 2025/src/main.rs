@@ -67,7 +67,7 @@ async fn read_input_for(day: u32) -> Result<String> {
         std::fs::create_dir(input_dir)?;
     }
 
-    let path = input_dir.with_file_name(format!("{day:02}"));
+    let path = input_dir.join(format!("{day:02}"));
 
     // Check for a pre-existing input file
     if path.exists() {
