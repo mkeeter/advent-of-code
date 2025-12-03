@@ -1,22 +1,32 @@
-fn get_joltage(s: &str) -> u64 {
+fn get_joltage(s: &str, digits: usize) -> u64 {
+    recurse(s.as_bytes(), digits)
+}
+
+fn recurse(s: &[u8], digits: usize) -> u64 {
+    let Some(digits) = digits.checked_sub(1) else {
+        return 0;
+    };
+
+    // Find the largest number, preferring earlier values in the list
     let n = s.len();
-    let (i, tens) = s.as_bytes()[..n - 1]
+    let (i, v) = s[..n - digits]
         .iter()
         .enumerate()
         .max_by_key(|(i, v)| (*v, std::cmp::Reverse(*i)))
         .unwrap();
-    let ones = s.as_bytes()[i + 1..].iter().max().unwrap();
-    u64::from(tens - b'0') * 10 + u64::from(ones - b'0')
+
+    u64::from(v - b'0') * 10u64.pow(u32::try_from(digits).unwrap())
+        + recurse(&s[i + 1..], digits)
 }
 
 pub fn solve(s: &str) -> (u64, u64) {
-    let mut out = 0;
+    let mut part1 = 0;
+    let mut part2 = 0;
     for line in s.lines() {
-        let j = get_joltage(line);
-        println!("{line} => {j}");
-        out += get_joltage(line);
+        part1 += get_joltage(line, 2);
+        part2 += get_joltage(line, 12);
     }
-    (out, 0)
+    (part1, part2)
 }
 
 #[cfg(test)]
@@ -25,10 +35,15 @@ mod test {
 
     #[test]
     fn test_joltage() {
-        assert_eq!(get_joltage("987654321111111"), 98);
-        assert_eq!(get_joltage("811111111111119"), 89);
-        assert_eq!(get_joltage("234234234234278"), 78);
-        assert_eq!(get_joltage("818181911112111"), 92);
+        assert_eq!(get_joltage("987654321111111", 2), 98);
+        assert_eq!(get_joltage("811111111111119", 2), 89);
+        assert_eq!(get_joltage("234234234234278", 2), 78);
+        assert_eq!(get_joltage("818181911112111", 2), 92);
+
+        assert_eq!(get_joltage("987654321111111", 12), 987654321111);
+        assert_eq!(get_joltage("811111111111119", 12), 811111111119);
+        assert_eq!(get_joltage("234234234234278", 12), 434234234278);
+        assert_eq!(get_joltage("818181911112111", 12), 888911112111);
     }
 
     #[test]
