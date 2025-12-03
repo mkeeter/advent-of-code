@@ -1,3 +1,5 @@
+use rayon::prelude::*;
+
 fn get_joltage(s: &str, digits: usize) -> u64 {
     recurse(s.as_bytes(), digits)
 }
@@ -20,13 +22,9 @@ fn recurse(s: &[u8], digits: usize) -> u64 {
 }
 
 pub fn solve(s: &str) -> (u64, u64) {
-    let mut part1 = 0;
-    let mut part2 = 0;
-    for line in s.lines() {
-        part1 += get_joltage(line, 2);
-        part2 += get_joltage(line, 12);
-    }
-    (part1, part2)
+    s.par_lines()
+        .map(|line| (get_joltage(line, 2), get_joltage(line, 12)))
+        .reduce(|| (0, 0), |(a, b), (c, d)| (a + c, b + d))
 }
 
 #[cfg(test)]
