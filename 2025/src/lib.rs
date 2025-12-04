@@ -71,7 +71,7 @@ where
 
 ////////////////////////////////////////////////////////////////////////////////
 
-/// Dense immutable grid based on a borrowed string
+/// Dense immutable grid based on a borrowed string and indexed by `(x, y)`
 #[derive(Copy, Clone)]
 pub struct Grid<'a> {
     bytes: &'a [u8],
