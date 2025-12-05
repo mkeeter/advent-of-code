@@ -27,38 +27,25 @@ pub fn solve(s: &str) -> (u64, u64) {
         }
     }
 
-    let mut range_tree: BTreeMap<u64, u64> = BTreeMap::new();
+    let mut range_tree: BTreeMap<u64, i64> = BTreeMap::new();
     for r in ranges {
-        let mut prev = range_tree.range(..r.end());
-        println!("inserting {r:?}");
-        match prev.next_back() {
-            None => {
-                println!("  no match");
-                // empty tree
-                range_tree.insert(*r.start(), *r.end());
-            }
-            Some((&start, &end)) => {
-                println!("  got {start}, {end}");
-                if end < *r.start() {
-                    println!("    non-overlapping");
-                    // non-overlapping intervals
-                    range_tree.insert(*r.start(), *r.end());
-                } else {
-                    range_tree.remove(&start);
-                    println!("    overlapping");
-                    // overlapping intervals, grow the range
-                    range_tree
-                        .insert((*r.start()).min(start), (*r.end()).max(end));
-                }
-            }
+        *range_tree.entry(*r.start()).or_default() += 1;
+        *range_tree.entry(*r.end()).or_default() -= 1;
+    }
+    let mut start_pos = 0;
+    let mut depth = 0;
+    let mut sum = 0;
+    for (v, delta) in range_tree {
+        if depth == 0 {
+            start_pos = v;
+        }
+        depth += delta;
+        if depth == 0 {
+            sum += v - start_pos + 1;
         }
     }
-    for r in &range_tree {
-        println!("{r:?}");
-    }
-    let all_valid = range_tree.iter().map(|(start, end)| end - start + 1).sum();
-
-    (item_count, all_valid)
+    assert_eq!(depth, 0);
+    (item_count, sum)
 }
 
 #[cfg(test)]
