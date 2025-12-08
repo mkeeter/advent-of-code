@@ -58,25 +58,29 @@ pub fn run(pts: &[[u64; 3]], connections: usize) -> (u64, u64) {
         .map(|(_d, i, j)| (i, j))
         .collect::<Vec<_>>();
     let mut ids = (0..pts.len()).collect::<Vec<_>>();
+    let mut cliques = std::iter::repeat_n(1, pts.len()).collect::<Vec<_>>();
+    let mut live_count = pts.len();
     for i in 0..cs.len() {
         let mut changed = true;
         while std::mem::take(&mut changed) {
             for &(lo, hi) in &cs[0..i] {
                 if ids[hi] != ids[lo] {
                     changed = true;
-                    if ids[hi] < ids[lo] {
-                        ids[lo] = ids[hi];
+                    let (to, from) = if ids[hi] < ids[lo] {
+                        (lo, hi)
                     } else {
-                        ids[hi] = ids[lo];
+                        (hi, lo)
+                    };
+                    cliques[ids[to]] -= 1;
+                    if cliques[ids[to]] == 0 {
+                        live_count -= 1;
                     }
+                    ids[to] = ids[from];
+                    cliques[ids[from]] += 1;
                 }
             }
         }
-        let mut cliques = HashMap::<usize, u64>::new();
-        for i in &ids {
-            *cliques.entry(*i).or_default() += 1;
-        }
-        if cliques.len() == 1 {
+        if live_count == 1 {
             let (a, b) = cs[i - 1];
             return (part1, pts[a][0] * pts[b][0]);
         }
