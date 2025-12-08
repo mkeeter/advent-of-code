@@ -17,14 +17,17 @@ pub fn solve(s: &str) -> (u64, u64) {
 }
 
 pub fn run(pts: &[[u64; 3]], connections: usize) -> (u64, u64) {
-    let mut distances = BTreeSet::new();
-    for (j, a) in pts.iter().enumerate() {
-        for (i, b) in pts[0..j].iter().enumerate() {
-            let d: u64 =
-                a.iter().zip(b).map(|(a, b)| a.abs_diff(*b).pow(2)).sum();
-            distances.insert((d, i, j));
-        }
-    }
+    let distances = pts
+        .iter()
+        .enumerate()
+        .flat_map(|(j, a)| {
+            pts[0..j].iter().enumerate().map(move |(i, b)| {
+                let d: u64 =
+                    a.iter().zip(b).map(|(a, b)| a.abs_diff(*b).pow(2)).sum();
+                (d, i, j)
+            })
+        })
+        .collect::<BTreeSet<(u64, usize, usize)>>();
     let cs = distances
         .iter()
         .take(connections)
