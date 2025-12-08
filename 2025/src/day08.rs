@@ -63,8 +63,9 @@ pub fn run(pts: &[[u64; 3]], connections: usize) -> (u64, u64) {
     let mut ids = (0..pts.len()).collect::<Vec<_>>();
     let mut cliques = std::iter::repeat_n(1, pts.len()).collect::<Vec<_>>();
     let mut live_count = pts.len();
-    for i in 0..cs.len() {
-        let mut changed = true;
+    for i in 1..cs.len() {
+        let (a, b) = cs[i - 1];
+        let mut changed = ids[a] != ids[b];
         while std::mem::take(&mut changed) {
             for &(lo, hi) in &cs[0..i] {
                 if ids[hi] != ids[lo] {
@@ -84,7 +85,6 @@ pub fn run(pts: &[[u64; 3]], connections: usize) -> (u64, u64) {
             }
         }
         if live_count == 1 {
-            let (a, b) = cs[i - 1];
             return (part1, pts[a][0] * pts[b][0]);
         }
     }
