@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap};
 
 fn parse(s: &str) -> Vec<[u64; 3]> {
     s.lines()
@@ -13,11 +13,10 @@ fn parse(s: &str) -> Vec<[u64; 3]> {
 
 pub fn solve(s: &str) -> (u64, u64) {
     let pts = parse(s);
-    let p1 = part1(&pts, 1000);
-    (p1, 0)
+    run(&pts, 1000)
 }
 
-pub fn part1(pts: &[[u64; 3]], connections: usize) -> u64 {
+pub fn run(pts: &[[u64; 3]], connections: usize) -> (u64, u64) {
     let mut distances = BTreeSet::new();
     for (j, a) in pts.iter().enumerate() {
         for (i, b) in pts[0..j].iter().enumerate() {
@@ -27,10 +26,10 @@ pub fn part1(pts: &[[u64; 3]], connections: usize) -> u64 {
         }
     }
     let cs = distances
-        .into_iter()
+        .iter()
         .take(connections)
-        .map(|(_d, i, j)| (i, j))
-        .collect::<BTreeSet<_>>();
+        .map(|(_d, i, j)| (*i, *j))
+        .collect::<Vec<_>>();
     let mut ids = (0..pts.len()).collect::<Vec<_>>();
     let mut changed = true;
     while std::mem::take(&mut changed) {
@@ -51,8 +50,38 @@ pub fn part1(pts: &[[u64; 3]], connections: usize) -> u64 {
     }
     let mut sorted = cliques.into_values().collect::<Vec<_>>();
     sorted.sort();
-    sorted[sorted.len() - 3..].iter().product()
-    // 10304 is too low
+    let part1 = sorted[sorted.len() - 3..].iter().product();
+
+    // Dumb brute-force approach
+    let cs = distances
+        .into_iter()
+        .map(|(_d, i, j)| (i, j))
+        .collect::<Vec<_>>();
+    let mut ids = (0..pts.len()).collect::<Vec<_>>();
+    for i in 0..cs.len() {
+        let mut changed = true;
+        while std::mem::take(&mut changed) {
+            for &(lo, hi) in &cs[0..i] {
+                if ids[hi] != ids[lo] {
+                    changed = true;
+                    if ids[hi] < ids[lo] {
+                        ids[lo] = ids[hi];
+                    } else {
+                        ids[hi] = ids[lo];
+                    }
+                }
+            }
+        }
+        let mut cliques = HashMap::<usize, u64>::new();
+        for i in &ids {
+            *cliques.entry(*i).or_default() += 1;
+        }
+        if cliques.len() == 1 {
+            let (a, b) = cs[i - 1];
+            return (part1, pts[a][0] * pts[b][0]);
+        }
+    }
+    unreachable!()
 }
 
 #[cfg(test)]
@@ -85,6 +114,8 @@ mod test {
             425,690,689
         "};
         let pts = parse(s);
-        assert_eq!(part1(&pts, 10), 40);
+        let (a, b) = run(&pts, 10);
+        assert_eq!(a, 40);
+        assert_eq!(b, 25272);
     }
 }
