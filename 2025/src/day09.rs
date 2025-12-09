@@ -40,42 +40,37 @@ pub fn solve(s: &str) -> (u64, u64) {
         }
     }
     let inside = |x, y| {
-        hlines
-            .get(&y)
-            .is_some_and(|rs| rs.iter().any(|r| r.contains(&x)))
-            || hlines
-                .range(0..=y)
-                .filter(|(_y, rs)| rs.iter().any(|r| r.contains(&x)))
-                .count()
-                % 2
-                == 1
-            || hlines
-                .range(y..)
-                .filter(|(_y, rs)| rs.iter().any(|r| r.contains(&x)))
-                .count()
-                % 2
-                == 1
+        let mut count = 0;
+        let mut start_count = 0;
+        let mut end_count = 0;
+        for (v, rs) in hlines.range(0..=y) {
+            for r in rs {
+                if r.contains(&x) && y == *v {
+                    return true;
+                } else if *r.start() == x {
+                    start_count += 1;
+                } else if *r.end() == x {
+                    end_count += 1;
+                } else if r.contains(&x) {
+                    count += 1;
+                }
+            }
+        }
+        while start_count > 0 && end_count > 0 {
+            start_count -= 1;
+            end_count -= 1;
+            count += 1;
+        }
+        count % 2 == 1 || start_count % 2 == 1 || end_count % 2 == 1
     };
     'outer: for (size, (xmin, ymin), (xmax, ymax)) in rects.into_iter().rev() {
-        println!("{size}");
         assert!(xmin <= xmax);
         assert!(ymin <= ymax);
+        // We need to prove that all four lines are inside, along with a point
+        // in the center.  We'll start with the corners and center, because
+        // those allow us to quickly weed out rectangles.
         for x in [xmin, xmax] {
             for y in [ymin, ymax] {
-                if !inside(x, y) {
-                    continue 'outer;
-                }
-            }
-        }
-        for x in xmin..=xmax {
-            for y in [ymin, ymax] {
-                if !inside(x, y) {
-                    continue 'outer;
-                }
-            }
-        }
-        for x in [xmin, xmax] {
-            for y in ymin..=ymax {
                 if !inside(x, y) {
                     continue 'outer;
                 }
@@ -84,8 +79,16 @@ pub fn solve(s: &str) -> (u64, u64) {
         if !inside((xmin + xmax) / 2, (ymin + ymax) / 2) {
             continue 'outer;
         }
+        // Then exhaustively check the edges
         for x in xmin..=xmax {
-            for y in ymin..=ymax {
+            for y in [ymax, ymin] {
+                if !inside(x, y) {
+                    continue 'outer;
+                }
+            }
+        }
+        for y in ymin..=ymax {
+            for x in [xmin, xmax] {
                 if !inside(x, y) {
                     continue 'outer;
                 }
