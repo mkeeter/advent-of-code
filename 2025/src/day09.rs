@@ -132,7 +132,6 @@ mod test {
 
     #[test]
     fn test() {
-        // Trailing spaces are load-bearing here!
         let s = indoc::indoc! {"
             7,1
             11,1
