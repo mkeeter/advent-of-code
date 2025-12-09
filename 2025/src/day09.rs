@@ -1,4 +1,7 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 pub fn solve(s: &str) -> (u64, u64) {
     let pts = s
@@ -63,40 +66,64 @@ pub fn solve(s: &str) -> (u64, u64) {
         }
         count % 2 == 1 || start_count % 2 == 1 || end_count % 2 == 1
     };
-    'outer: for (size, (xmin, ymin), (xmax, ymax)) in rects.into_iter().rev() {
+    let rect_inside = |a: (u64, u64), b: (u64, u64)| {
+        let (xmin, ymin) = a;
+        let (xmax, ymax) = b;
         assert!(xmin <= xmax);
         assert!(ymin <= ymax);
-        // We need to prove that all four lines are inside, along with a point
+        // We need to prove that all four edges are inside, along with a point
         // in the center.  We'll start with the corners and center, because
-        // those allow us to quickly weed out rectangles.
+        // those are most likely to fail (allowing us to fail faster).
         for x in [xmin, xmax] {
             for y in [ymin, ymax] {
                 if !inside(x, y) {
-                    continue 'outer;
+                    return false;
                 }
             }
         }
         if !inside((xmin + xmax) / 2, (ymin + ymax) / 2) {
-            continue 'outer;
+            return false;
         }
         // Then exhaustively check the edges
         for x in xmin..=xmax {
             for y in [ymax, ymin] {
                 if !inside(x, y) {
-                    continue 'outer;
+                    return false;
                 }
             }
         }
         for y in ymin..=ymax {
             for x in [xmin, xmax] {
                 if !inside(x, y) {
-                    continue 'outer;
+                    return false;
                 }
             }
         }
-        return (part1, size);
-    }
-    panic!("no containing rectangle found")
+        true
+    };
+
+    // Stride through the array with worker threads
+    let best = AtomicU64::new(0);
+    rayon::scope(|s| {
+        let nt = rayon::current_num_threads();
+        let rects = &rects;
+        let best = &best;
+        for i in 0..nt {
+            s.spawn(move |_s| {
+                for r in rects.iter().rev().skip(i).step_by(nt) {
+                    let (size, a, b) = *r;
+                    if size <= best.load(Ordering::Relaxed) {
+                        break;
+                    } else if rect_inside(a, b) {
+                        best.fetch_max(size, Ordering::Relaxed);
+                        break;
+                    }
+                }
+            });
+        }
+    });
+    let part2 = best.load(Ordering::Relaxed);
+    (part1, part2)
 }
 
 #[cfg(test)]
