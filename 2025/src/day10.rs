@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use std::{
     fmt::Write as _,
     io::Write as _,
@@ -59,81 +60,95 @@ pub fn solve(s: &str) -> (u64, u64) {
             joltage: joltage.expect("missing joltage"),
         })
     }
-    let mut part1 = 0;
-    for m in &machines {
-        // Iterate over all button combinations
-        let mut best = u64::MAX;
-        for i in 0..(1usize << m.buttons.len()) {
-            let out = m
-                .buttons
-                .iter()
-                .enumerate()
-                .filter(|(j, _b)| i & (1 << j) != 0)
-                .fold(0, |a, (_j, b)| a ^ b);
-            if out == m.expected {
-                best = best.min(u64::from(i.count_ones()));
-            }
-        }
-        assert!(best < u64::MAX);
-        part1 += best;
-    }
-    let mut smt = String::new();
-    for (k, m) in machines.iter().enumerate() {
-        let mut light_to_buttons = vec![];
-        light_to_buttons.resize_with(m.width, Vec::new);
-        for (i, b) in m.buttons.iter().enumerate() {
-            writeln!(&mut smt, "(declare-const m{k}_b{i} Int)").unwrap();
-            writeln!(&mut smt, "(assert (>= m{k}_b{i} 0))").unwrap();
-            for j in 0..m.width {
-                if b & (1 << j) != 0 {
-                    light_to_buttons[m.width - j - 1].push(i);
+    let part1 = machines
+        .par_iter()
+        .map(|m| {
+            // Iterate over all button combinations
+            let mut best = u64::MAX;
+            for i in 0..(1usize << m.buttons.len()) {
+                let out = m
+                    .buttons
+                    .iter()
+                    .enumerate()
+                    .filter(|(j, _b)| i & (1 << j) != 0)
+                    .fold(0, |a, (_j, b)| a ^ b);
+                if out == m.expected {
+                    best = best.min(u64::from(i.count_ones()));
                 }
             }
-        }
-        writeln!(&mut smt, "(declare-const m{k}_sum Int)").unwrap();
-        assert_eq!(light_to_buttons.len(), m.joltage.len());
-        for (buttons, joltage) in light_to_buttons.iter().zip(m.joltage.iter())
-        {
-            let sum = buttons
-                .iter()
-                .map(|b| format!("m{k}_b{b}"))
+            assert!(best < u64::MAX);
+            best
+        })
+        .sum();
+
+    // TIME FOR Z3!
+    let part2 = machines
+        .par_iter()
+        .map(|m| {
+            let mut smt = String::new();
+            let mut light_to_buttons = vec![];
+            light_to_buttons.resize_with(m.width, Vec::new);
+            for (i, b) in m.buttons.iter().enumerate() {
+                writeln!(
+                    &mut smt,
+                    "(declare-const b{i} Int)
+                     (assert (>= b{i} 0))"
+                )?;
+                for j in 0..m.width {
+                    if b & (1 << j) != 0 {
+                        light_to_buttons[m.width - j - 1].push(i);
+                    }
+                }
+            }
+            writeln!(&mut smt, "(declare-const sum Int)")?;
+            assert_eq!(light_to_buttons.len(), m.joltage.len());
+            for (buttons, joltage) in
+                light_to_buttons.iter().zip(m.joltage.iter())
+            {
+                let sum = buttons
+                    .iter()
+                    .map(|b| format!("b{b}"))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                writeln!(&mut smt, "(assert (= {joltage} (+ {sum})))")?;
+            }
+            let all_buttons = (0..m.buttons.len())
+                .map(|i| format!("b{i}"))
                 .collect::<Vec<_>>()
                 .join(" ");
-            writeln!(&mut smt, "(assert (= {joltage} (+ {sum})))").unwrap();
-        }
-        let all_buttons = (0..m.buttons.len())
-            .map(|i| format!("m{k}_b{i}"))
-            .collect::<Vec<_>>()
-            .join(" ");
-        writeln!(&mut smt, "(assert (= m{k}_sum (+ {all_buttons})))").unwrap();
-        writeln!(&mut smt, "(minimize m{k}_sum)").unwrap();
-        writeln!(&mut smt).unwrap();
-    }
-    writeln!(&mut smt, "(check-sat)").unwrap();
-    let sum = (0..machines.len())
-        .map(|k| format!("m{k}_sum"))
-        .collect::<Vec<_>>()
-        .join(" ");
-    writeln!(&mut smt, "(eval (+ {sum}))").unwrap();
+            writeln!(
+                &mut smt,
+                "(assert (= sum (+ {all_buttons}))))?;
+                 (minimize sum))?;
+                 (check-sat)
+                 (eval sum)"
+            )?;
 
-    let mut z3 = Command::new("z3")
-        .arg("-in")
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect("failed to call `z3`; is it installed?");
+            let mut z3 = Command::new("z3")
+                .arg("-in")
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .spawn()
+                .expect("failed to call `z3`; is it installed?");
 
-    let mut stdin = z3.stdin.take().expect("Failed to open stdin");
-    stdin
-        .write_all(smt.as_bytes())
-        .expect("failed to write to z3");
-    drop(stdin);
-    let output = z3.wait_with_output().expect("failed to read stdout");
-    let out = String::from_utf8(output.stdout).unwrap();
-    let mut iter = out.lines();
-    assert_eq!(iter.next().unwrap(), "sat");
-    let part2: u64 = iter.next().unwrap().parse().unwrap();
-    assert!(iter.next().is_none());
+            let mut stdin = z3.stdin.take().expect("Failed to open stdin");
+            stdin
+                .write_all(smt.as_bytes())
+                .expect("failed to write to z3");
+            drop(stdin);
+            let output = z3.wait_with_output().expect("failed to read stdout");
+            let out = String::from_utf8(output.stdout).unwrap();
+
+            // Z3 should print two lines of output: `sat`, then our sum
+            let mut iter = out.lines();
+            assert_eq!(iter.next().unwrap(), "sat");
+            let out = iter.next().unwrap().parse::<u64>().unwrap();
+            assert!(iter.next().is_none());
+            Ok(out)
+        })
+        .map(|i: Result<u64, std::fmt::Error>| i.unwrap())
+        .sum();
+
     (part1, part2)
 }
 
