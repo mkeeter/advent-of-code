@@ -1,6 +1,7 @@
 */target
 **/*.rs.bk
 example*
+*/input
 input*
 .ipynb_checkpoints
 __pycache__
