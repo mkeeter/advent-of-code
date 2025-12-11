@@ -118,8 +118,8 @@ pub fn solve(s: &str) -> (u64, u64) {
                 .join(" ");
             writeln!(
                 &mut smt,
-                "(assert (= sum (+ {all_buttons}))))?;
-                 (minimize sum))?;
+                "(assert (= sum (+ {all_buttons})));
+                 (minimize sum);
                  (check-sat)
                  (eval sum)"
             )?;
