@@ -15,18 +15,11 @@ fn get_edges(s: &str) -> HashMap<&str, Vec<&str>> {
 }
 
 fn part1<'a, 'b>(edges: &'b HashMap<&'a str, Vec<&'a str>>) -> u64 {
-    search(
-        "you",
-        "out",
-        &edges,
-        &mut Default::default(),
-        &mut Default::default(),
-    )
+    search("you", "out", edges, &[])
 }
 
 fn part2<'a, 'b>(edges: &'b HashMap<&'a str, Vec<&'a str>>) -> u64 {
-    let mut required = ["dac", "fft"].into_iter().collect();
-    search("svr", "out", &edges, &mut required, &mut Default::default())
+    search("svr", "out", edges, &["dac", "fft"])
 }
 
 pub fn solve(s: &str) -> (u64, u64) {
@@ -38,28 +31,37 @@ fn search<'a, 'b>(
     start: &'a str,
     end: &'a str,
     edges: &'b HashMap<&'a str, Vec<&'a str>>,
-    required: &'b mut HashSet<&'a str>,
-    cache: &'b mut HashMap<Vec<&'a str>, u64>,
+    required: &'b [&'a str],
+) -> u64 {
+    let required = required.into_iter().cloned().collect();
+    recurse(start, end, 0, edges, &required, &mut HashMap::new())
+}
+
+fn recurse<'a, 'b>(
+    start: &'a str,
+    end: &'a str,
+    seen: usize,
+    edges: &'b HashMap<&'a str, Vec<&'a str>>,
+    required: &'b HashSet<&'a str>,
+    cache: &'b mut HashMap<(&'a str, &'a str, usize), u64>,
 ) -> u64 {
     if start == end {
-        if required.is_empty() { 1 } else { 0 }
+        if seen == required.len() { 1 } else { 0 }
     } else {
-        let mut key = required.iter().cloned().collect::<Vec<_>>();
-        key.sort();
-        key.push(start);
-        key.push(end);
+        let key = (start, end, seen);
         if let Some(v) = cache.get(&key) {
             *v
         } else {
-            let prev = required.remove(start);
+            let seen = if required.contains(start) {
+                seen + 1
+            } else {
+                seen
+            };
             let out = edges[start]
                 .iter()
-                .map(|start| search(start, end, edges, required, cache))
+                .map(|start| recurse(start, end, seen, edges, required, cache))
                 .sum();
             cache.insert(key, out);
-            if prev {
-                required.insert(start);
-            }
             out
         }
     }
