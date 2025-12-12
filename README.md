@@ -1,4 +1,4 @@
-Solutions to [Advent of Code](https://adventofcode.com) for all years (2015-2024).
+Solutions to [Advent of Code](https://adventofcode.com) for all years (2015-2025).
 
 |🗓 Year                                |🌟 Stars |🔠 Languages        |
 |---------------------------------------|---------|---------------------|
@@ -14,6 +14,5 @@ Solutions to [Advent of Code](https://adventofcode.com) for all years (2015-2024
 | [2024](https://adventofcode.com/2024) | 50      | Rust                |
 | [2025](https://adventofcode.com/2025) | 24      | Rust                |
 
-2025 is in progress!
-2017-2024 were solved live;
+2017-2025 were solved live;
 2015 and 2016 were solved after 2019.
