@@ -83,11 +83,13 @@ async fn read_input_for(day: u32) -> Result<String> {
         bail!("cannot request inputs from the future");
     }
     let jar = {
-        let mut cookie_path =
-            dirs::home_dir().ok_or_else(|| anyhow!("could not get home directory"))?;
+        let mut cookie_path = dirs::home_dir()
+            .ok_or_else(|| anyhow!("could not get home directory"))?;
         cookie_path.push(".aoc-cookie");
-        let cookie = std::fs::read_to_string(&cookie_path)
-            .with_context(|| format!("failed to read cookie from {cookie_path:?}"))?;
+        let cookie =
+            std::fs::read_to_string(&cookie_path).with_context(|| {
+                format!("failed to read cookie from {cookie_path:?}")
+            })?;
 
         let jar = reqwest::cookie::Jar::default();
         let url = "https://adventofcode.com".parse::<url::Url>()?;
@@ -121,7 +123,8 @@ async fn read_input_for(day: u32) -> Result<String> {
         bail!("login failed; perhaps your cookie is stale?");
     }
 
-    std::fs::write(&path, &text).with_context(|| "failed to write output to {path}")?;
+    std::fs::write(&path, &text)
+        .with_context(|| "failed to write output to {path}")?;
 
     Ok(text)
 }
@@ -182,12 +185,15 @@ async fn main() -> Result<()> {
 
     for day in days {
         let input = if args.example {
-            let f = std::fs::read("example").context("failed to read `./example`")?;
+            let f = std::fs::read("example")
+                .context("failed to read `./example`")?;
             String::from_utf8(f).context("example is not valid UTF-8")?
         } else if args.paste {
             ClipboardContext::new()
                 .and_then(|mut ctx| ctx.get_contents())
-                .map_err(|e| anyhow!("failed to create clipboard context: {e:?}"))?
+                .map_err(|e| {
+                    anyhow!("failed to create clipboard context: {e:?}")
+                })?
         } else {
             read_input_for(day).await?
         };
