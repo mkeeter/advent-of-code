@@ -54,9 +54,11 @@ struct Args {
     #[arg(short, long, conflicts_with_all = ["bench"])]
     paste: bool,
 
+    /// Run benchmarking on the inputs
     #[arg(long)]
     bench: bool,
 
+    /// Run all available days
     #[arg(long, conflicts_with = "day")]
     all: bool,
 }
