@@ -14,11 +14,11 @@ fn get_edges(s: &str) -> HashMap<&str, Vec<&str>> {
     edges
 }
 
-fn part1<'a, 'b>(edges: &'b HashMap<&'a str, Vec<&'a str>>) -> u64 {
+fn part1<'a>(edges: &HashMap<&'a str, Vec<&'a str>>) -> u64 {
     search("you", "out", edges, &[])
 }
 
-fn part2<'a, 'b>(edges: &'b HashMap<&'a str, Vec<&'a str>>) -> u64 {
+fn part2<'a>(edges: &HashMap<&'a str, Vec<&'a str>>) -> u64 {
     search("svr", "out", edges, &["dac", "fft"])
 }
 
@@ -33,7 +33,7 @@ fn search<'a, 'b>(
     edges: &'b HashMap<&'a str, Vec<&'a str>>,
     required: &'b [&'a str],
 ) -> u64 {
-    let required = required.into_iter().cloned().collect();
+    let required = required.iter().cloned().collect();
     recurse(start, end, 0, edges, &required, &mut HashMap::new())
 }
 

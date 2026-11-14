@@ -38,7 +38,7 @@ pub fn solve(s: &str) -> (u64, u64) {
             } else {
                 panic!("invalid set start character in '{set}'");
             };
-            let set = set.trim_matches(&['{', '}', '(', ')']);
+            let set = set.trim_matches(['{', '}', '(', ')']);
             let vs = set
                 .split(',')
                 .map(|i| i.parse().unwrap())
